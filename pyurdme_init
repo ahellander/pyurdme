@@ -1,0 +1,6 @@
+#!/bin/bash
+
+# Initalize pyurdme. Set PYURMDEHOME and PYTHONPATH
+wd=$(pwd)
+export PYURDMEHOME=$wd
+export PYTHONPATH=$PYTHONPATH:$PYURDMEHOME

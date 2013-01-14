@@ -1,4 +1,4 @@
-""" Model file for the dimerization example. """
+""" pyurdme model file for reversible dimerization on a surface. """
 import os
 from pyurdme.urdme import *
 
@@ -10,10 +10,9 @@ def dimerization(model_name=""):
     model = URDMEModel(name=model_name);
 
     # Species
-    # TODO: Extend species with reaction_radius property and diffusion_constant property?
-    A = Species(name="A",initial_value=0);
-    B = Species(name="B",initial_value=0);
-    C = Species(name="C",initial_value=100);
+    A = Species(name="A",initial_value=0,reaction_radius=1e-9,diffusion_constant=1e-14);
+    B = Species(name="B",initial_value=0,reaction_radius=1e-9,diffusion_constant=1e-14);
+    C = Species(name="C",initial_value=100,reaction_radius=1e-9,diffusion_constant=1e-14);
 
     model.addSpecies([A,B,C])
 
@@ -28,8 +27,16 @@ def dimerization(model_name=""):
     R2 = Reaction(name="R2",reactants={C:1},products={A:1,B:1},massaction=True,rate=k2)
     model.addReaction([R1,R2])
 
-    # Import a mesh
-    #mesh = ImportGmshMesh('meshes/surfacef4.msh')
+    # Import a Gmsh mesh and physical regions (subdomains)
+    # mesh = dolfin.Mesh('meshes/surface.xml')
+    # sd = dolfin.MeshFunction('meshes/surface_physical_region.xml')
+
+    # model.mesh = mesh
+    
+    # Create extended mesh (Will this be necessary?) for use with URDME
+    # model.meshextend()
+    
+    # Read the Physical IDs.
 
     # Define the spatial distribution of the molecules
     #mesh.

@@ -121,9 +121,11 @@ class Model():
 class Species():
     """ Models a chemical species. """
     
-    def __init__(self,name="",initial_value=0):
+    def __init__(self,name="",initial_value=0,diffusion_constant=None,reaction_radius=None):
         self.name = name
         self.initial_value = initial_value
+        self.diffusion_constant=diffusion_constant
+        self.reaction_radius=reaction_radius
 
 # TODO: Should the parameter, being evaluable, be implemented as a Functor object?
 class Parameter():

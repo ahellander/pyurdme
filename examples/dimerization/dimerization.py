@@ -10,9 +10,9 @@ def dimerization(model_name=""):
     model = URDMEModel(name=model_name);
 
     # Species
-    A = Species(name="A",initial_value=0,reaction_radius=1e-9,diffusion_constant=1e-14);
-    B = Species(name="B",initial_value=0,reaction_radius=1e-9,diffusion_constant=1e-14);
-    C = Species(name="C",initial_value=100,reaction_radius=1e-9,diffusion_constant=1e-14);
+    A = Species(name="A",initial_value=100,reaction_radius=1e-9,diffusion_constant=1e-14);
+    B = Species(name="B",initial_value=100,reaction_radius=1e-9,diffusion_constant=1e-14);
+    C = Species(name="C",initial_value=0,reaction_radius=1e-9,diffusion_constant=1e-14);
 
     model.addSpecies([A,B,C])
 
@@ -32,11 +32,18 @@ def dimerization(model_name=""):
     # sd = dolfin.MeshFunction('meshes/surface_physical_region.xml')
 
     # model.mesh = mesh
-    
     # Create extended mesh (Will this be necessary?) for use with URDME
     # model.meshextend()
     
-    # Read the Physical IDs.
+    model.num_voxels  = 1000
+    model.num_species = len(model.listOfSpecies)
+    model.num_reactions = len(model.listOfReactions)
+    model.meshextend()
+
+    # Distribute the Species' initial values over the mesh
+    model.scatter(A,subdomain=2)
+    model.scatter(B,subdomain=2)
+    model.scatter(C,subdomain=2)
 
     # Define the spatial distribution of the molecules
     #mesh.
@@ -47,5 +54,4 @@ def dimerization(model_name=""):
 if __name__ == '__main__':
     """ Create a model and assemble the URDME input file. """
     model = dimerization()
-    
-#model.serialize()
+    model.serialize(filename='testdimerization.mat')

@@ -2,7 +2,8 @@ from model import *
 import numpy as np
 import scipy.sparse as scisp
 import scipy.io as spio
-#import dolfin
+
+import os
 
 # A URDME Model is an extenstion of Model
 class URDMEModel(Model):
@@ -16,10 +17,21 @@ class URDMEModel(Model):
     def createStoichiometricMatrix(self):
         """ Create a sparse stoichiometric matrix
             from the model's listOfReactions. """
-        N = numpy.zeros((self.num_species,self.num_reactions))
-        for i in range(len(self.listOfReactions)):
-            R = self.listOfReactions[i]
-            N[i,]
+        ND = np.zeros((self.num_species,self.num_reactions))
+        i=0
+        for r in self.listOfReactions:
+            R = self.listOfReactions[r]
+            reactants = R.reactants
+            products = R.products
+            
+            for s in reactants:
+                ND[self.species_map[s],i]=-reactants[s]
+            for s in products:
+                ND[self.species_map[s],i]=products[s]
+            i = i+1
+    
+        self.N = scisp.csc_matrix(ND)
+
 
     def createDependencyGraph(self):
         """ Dependecy graph. """
@@ -27,21 +39,40 @@ class URDMEModel(Model):
         GF = np.ones((self.num_reactions,self.num_reactions+self.num_species))
         self.G=scisp.csc_matrix(GF)
     
+    def createPropensityFile(self):
+        """ Generate a C propensity file for use with the 
+            URDME Core C solvers. """
+        
+    
     def assemble(self):
-        """ Assemble the diffusion matrix. """
+        """ Assemble the diffusion matrix and volume vector. """
+        #M =
+    
     
     def meshextend(self):
         """ Extend the raw mesh datastructure to include
             information about degrees of freedom. Initialize
             URDME datastructures that depend on the size 
             of the mesh. """
+        # Construct a species map (dict mapping species name to integer index)
+        i=0
+        self.species_map = {}
+        for S in self.listOfSpecies:
+            self.species_map[S]=i
+            i = i+1;
     
         # Initialize the Dolfin mesh object.
         # model.mesh.init()
         # self.num_voxels  = self.mesh.num_vertices()
         # self.num_species = len(self.listOfSpecies)
+        #xmesh = URDMEXmesh()
+        #xmesh.dofs =
+    
+    
+    def InitInitialValue(self):
+        """ Create all-zeros inital condition matrix. """    
         self.u0 = np.zeros((self.num_species,self.num_voxels))
-        # model.dofs = [...]
+    
     
     def scatter(self,species,subdomain=None):
         """ Scatter an initial number of molecules over the 
@@ -49,10 +80,12 @@ class URDMEModel(Model):
     
         Sname = species.name
         numS = species.initial_value
-    
+        specindx= self.species_map[Sname]
+        
+        # TODO: USE THE SUBDOMAIN INFO
         for i in range(numS):
             vtx=np.random.randint(0,self.num_voxels)
-            self.u0[0,vtx]+=1
+            self.u0[specindx,vtx]+=1
     
         # Is the initial condition matrix constructed?
         # Check for exisitence of u0 here.
@@ -68,11 +101,10 @@ class URDMEModel(Model):
             
         """
         # Stoichimetric matrix
-        # N = createStochiometricMatrix(self)
+        N = self.createStoichiometricMatrix()
 
         # Dependency Graph
         G = self.createDependencyGraph()
-
 
         # Diffusion matrix
         # D =
@@ -87,7 +119,7 @@ class URDMEModel(Model):
         # Data vector
         # data = []
         filename = filename
-        spio.savemat(filename,{'num_species':self.num_species,'u0':self.u0,'G':self.G})
+        spio.savemat(filename,{'num_species':self.num_species,'N':self.N,'u0':self.u0,'G':self.G},oned_as='column')
 
 
 class URDMEMesh():
@@ -101,8 +133,9 @@ class URDMEXmesh():
     """ Extended mesh object. """
     
 
-def urdme():
+def urdme(model=None,solver='nsm'):
     """ URDME solver interface, similar to the Matlab function interface. """
 
     # Shell out and compile the solver  
-
+    #URDME_ROOT = os.popen('urdme_init -r')
+    #print URDME_ROOT

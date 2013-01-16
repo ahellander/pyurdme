@@ -10,7 +10,7 @@ def dimerization(model_name=""):
     model = URDMEModel(name=model_name);
 
     # Species
-    A = Species(name="A",initial_value=100,reaction_radius=1e-9,diffusion_constant=1e-14);
+    A = Species(name="A",initial_value=50,reaction_radius=1e-9,diffusion_constant=1e-14);
     B = Species(name="B",initial_value=100,reaction_radius=1e-9,diffusion_constant=1e-14);
     C = Species(name="C",initial_value=0,reaction_radius=1e-9,diffusion_constant=1e-14);
 
@@ -40,6 +40,8 @@ def dimerization(model_name=""):
     model.num_reactions = len(model.listOfReactions)
     model.meshextend()
 
+
+    model.InitInitialValue()
     # Distribute the Species' initial values over the mesh
     model.scatter(A,subdomain=2)
     model.scatter(B,subdomain=2)
@@ -55,3 +57,6 @@ if __name__ == '__main__':
     """ Create a model and assemble the URDME input file. """
     model = dimerization()
     model.serialize(filename='testdimerization.mat')
+    
+    # Run URDME
+    #urdme(model)

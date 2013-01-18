@@ -80,6 +80,7 @@ dt = 0.3
 
 
 a = u1*v1*dx + u2*v2*dx + u3*v3*ds + u4*v4*ds + u5*v5*ds + dt*(Dcyt*dot(grad(u1), grad(v1))*dx + Dcyt*dot(grad(u2), grad(v2))*dx + Dmem*dot(grad(u3), grad(v3))*ds +Dmem*dot(grad(u4), grad(v4))*ds + Dmem*dot(grad(u5), grad(v5))*ds)
+
 L = u_1a*v1*dx + u_1b*v2*dx + u_1c*v3*ds + u_1d*v4*ds + u_1e*v5*ds
 
 

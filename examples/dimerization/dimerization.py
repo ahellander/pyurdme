@@ -40,8 +40,8 @@ def dimerization(model_name=""):
     model.num_reactions = len(model.listOfReactions)
     model.meshextend()
 
-
     model.InitInitialValue()
+    model.initializeSubdomainVector()
     # Distribute the Species' initial values over the mesh
     model.scatter(A,subdomain=2)
     model.scatter(B,subdomain=2)
@@ -59,4 +59,4 @@ if __name__ == '__main__':
     model.serialize(filename='testdimerization.mat')
     
     # Run URDME
-    #urdme(model)
+    urdme(model)

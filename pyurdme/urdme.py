@@ -2,7 +2,7 @@ from model import *
 import numpy as np
 import scipy.sparse as scisp
 import scipy.io as spio
-
+import subprocess
 import os
 
 # A URDME Model is an extenstion of Model
@@ -42,12 +42,23 @@ class URDMEModel(Model):
     def createPropensityFile(self):
         """ Generate a C propensity file for use with the 
             URDME Core C solvers. """
-        
+    
+    def initializeSubdomainVector(self):
+        """ Create URDME 'sd' vector. """
+        # TODO: Support arbitrary sd-numbers and more than one subdomain
+        self.sd = np.ones((1,self.num_voxels))
+    
     
     def assemble(self):
         """ Assemble the diffusion matrix and volume vector. """
-        #M =
     
+        # Build function space
+        T = []
+        for s in self.num_species:
+            T.append(dolfin.FunctionSpace(self.mesh,"CG",1))
+
+#V =
+
     
     def meshextend(self):
         """ Extend the raw mesh datastructure to include
@@ -119,7 +130,7 @@ class URDMEModel(Model):
         # Data vector
         # data = []
         filename = filename
-        spio.savemat(filename,{'num_species':self.num_species,'N':self.N,'u0':self.u0,'G':self.G},oned_as='column')
+        spio.savemat(filename,{'num_species':self.num_species,'N':self.N,'u0':self.u0,'G':self.G,'sd':self.sd},oned_as='column')
 
 
 class URDMEMesh():
@@ -136,6 +147,18 @@ class URDMEXmesh():
 def urdme(model=None,solver='nsm'):
     """ URDME solver interface, similar to the Matlab function interface. """
 
-    # Shell out and compile the solver  
-    #URDME_ROOT = os.popen('urdme_init -r')
-    #print URDME_ROOT
+    # Shell out and compile the solver
+    
+    #Set URDME_ROOT
+    URDME_ROOT = subprocess.check_output(['urdme_init','-r'])
+    # Trim newline
+    URDME_ROOT = URDME_ROOT[:-1]
+    #subprocess.call(['export','URDME_ROOT='+URDME_ROOT],stderr=subprocess.STDOUT,shell=True)
+    #print subprocess.STDOUT
+    #test = subprocess.check_output(['echo','$URDME_ROOT'])
+    #print test
+
+    # Compile the solver
+    #makefile = 'Makefile.' + solver
+    #subprocess.call(['make','-f',URDME_ROOT+'build/'+makefile],stderr=subprocess.STDOUT)
+#print subprocess.STDOUT

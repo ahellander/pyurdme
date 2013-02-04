@@ -15,6 +15,13 @@ class URDMEModel(Model):
         An URDME Model extends Model with spatial information and methods 
         to create URDME solver input.
     """
+    def __init__(self,name=""):
+	Model.__init__(self)
+
+	self.tspan = None
+	self.mesh = None
+	self.D = None
+		
 
     def createStoichiometricMatrix(self):
         """ Create a sparse stoichiometric matrix

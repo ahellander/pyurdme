@@ -41,6 +41,8 @@ a_M = u*v*dx
 
 M = assemble(a_M)
 K = assemble(a_K)
+
+
 A = M + dt*K
 
 

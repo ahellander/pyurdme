@@ -5,6 +5,7 @@ import scipy.io as spio
 import subprocess
 import os
 import tempfile
+import re
 
 try:
     import dolfin
@@ -17,7 +18,7 @@ class URDMEModel(Model):
         to create URDME solver input.
     """
     def __init__(self,name=""):
-	Model.__init__(self)
+	Model.__init__(self,name)
 
 	self.tspan = None
 	self.mesh = None
@@ -48,9 +49,54 @@ class URDMEModel(Model):
         GF = np.ones((self.getNumReactions(),self.getNumReactions()+self.getNumSpecies()))
         self.G=scisp.csc_matrix(GF)
     
-    def createPropensityFile(self):
+    def createPropensityFile(self,file_name=None):
         """ Generate a C propensity file for used to compile the URDME solvers. """
-        template = load()
+        
+        template = open(os.path.abspath(os.path.dirname(__file__))+'/data/propensity_file_template.c','r')
+        propfile = open(file_name,"w")
+        propfilestr = template.read()
+        #propfile.write(templatestr)
+        
+        speciesdef = ""
+        i=0
+        for S in self.listOfSpecies:
+            speciesdef += "#define "+S+" " +"x["+str(i)+"]"+"\n"
+            i+=1
+        
+        propfilestr = propfilestr.replace("__DEFINE_SPECIES__",speciesdef)
+        
+        propfilestr= propfilestr.replace("__NUMBER_OF_REACTIONS__",str(self.getNumReactions()))
+        
+        parameters = ""
+        for p in self.listOfParameters:
+            parameters += "const double "+p+" = " +str(self.listOfParameters[p].value)+";\n"
+        propfilestr=propfilestr.replace("__DEFINE_PARAMETERS__",str(parameters))
+    
+        # Reactions
+        funheader = "double __NAME__(const int *x, double t, const double vol, const double *data, int sd)"
+    
+        funcs = ""
+        funcinits = ""
+        i = 0
+        for R in self.listOfReactions:
+            func = ""
+            rname=self.listOfReactions[R].name
+            func += funheader.replace("__NAME__",rname) + "\n{\n"
+            func += "    return " + self.listOfReactions[R].propensity_function + ";"
+            func +="\n}"
+            funcs += func + "\n\n"
+            funcinits += "    ptr["+str(i)+"] = " + rname +";\n"
+            i+=1
+              
+        propfilestr = propfilestr.replace("__DEFINE_REACTIONS__",funcs)
+        propfilestr = propfilestr.replace("__DEFINE_PROPFUNS__",funcinits)
+                
+                
+        propfile.write(propfilestr)
+        propfile.close()
+    
+        
+    
     
     def initializeSubdomainVector(self):
         """ Create URDME 'sd' vector. """
@@ -297,9 +343,16 @@ def urdme(model=None,solver='nsm'):
     URDME_ROOT = URDME_ROOT[:-1]
     URDME_BUILD = URDME_ROOT + '/build/'
 
-    # Compile the solver
+    # Write the propensity file
+    #propfile = tempfile.NamedTemporaryFile(delete=False)
+    #propfile.close()
+    subprocess.call(['mkdir','.urdme'])
+    propfilename= model.name+'_pyurdme_generated_model'
+    model.createPropensityFile(file_name='.urdme/'+propfilename+'.c')
+
+    # Build the solver
     makefile = 'Makefile.' + solver
-    subprocess.call(['make','-f',URDME_BUILD+makefile,'URDME_ROOT='+URDME_ROOT,'URDME_MODEL='+'dimerization'],stderr=subprocess.STDOUT)
+    subprocess.call(['make','-f',URDME_BUILD+makefile,'URDME_ROOT='+URDME_ROOT,'URDME_MODEL='+propfilename],stderr=subprocess.STDOUT)
 
     # Get temporary input and output files
     infile = tempfile.NamedTemporaryFile(delete=False)
@@ -307,9 +360,10 @@ def urdme(model=None,solver='nsm'):
     infile.close
     outfile = tempfile.NamedTemporaryFile(delete=False)
     outfile.close()
-
+    
     # Execute the solver
-    subprocess.call(['.urdme/dimerization.nsm',infile.name,'slask.mat'],stderr=subprocess.STDOUT)
+    subprocess.call(['.urdme/'+propfilename+'.'+solver,infile.name,'slask.mat'],stderr=subprocess.STDOUT)
+
     #Load the result.
     #AH: TODO! SciPy fails to read the file (But it loads fine in Matlab)!.
     try:

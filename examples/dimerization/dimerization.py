@@ -28,13 +28,17 @@ def dimerization(model_name=""):
 
     # A square domain with Cartesian discretization
     model.mesh  = CartesianMesh(geometry="line",side_length=1e-6,hmax=1e-7)
+    # We could wrap around Gmsh, if we wanted to:
+    #geom = open('surface.geo')
+    #mesh,physical_ids=meshInit(geom) -> Shells out and calls Gmsh
+    # Or simply load a Gmsh mesh
     #model.mesh = importmesh('meshes/surface.msh')
     meshextend(model)
 
     # Distribute the Species' initial values over the mesh
-    model.scatter(A,subdomain=2)
-    model.scatter(B,subdomain=2)
-    model.scatter(C,subdomain=2)
+    model.scatter(A,subdomain=1)
+    model.scatter(B,subdomain=1)
+    model.scatter(C,subdomain=1)
 
     # Time span of the simulation
     model.tspan = range(100)

@@ -27,37 +27,17 @@ def dimerization(model_name=""):
     model.addReaction([R1,R2])
 
     # A square domain with Cartesian discretization
-    model.mesh  = CartesianMesh(geometry="line",side_length=1e-6,hmax=1e-7)
-    #model.mesh = importmesh('meshes/surface.msh')  
-    model.meshextend()
-    # self.D = assemble(model)
+    model.mesh  = CartesianMesh(geometry="line",side_length=1e-6,hmax=1e-8)
+    #model.mesh = importmesh('meshes/surface.msh')
+    meshextend(model)
 
-    #vol,D = model.assemble()
-    #model.vol = vol
-    #model.D = D
-    
-    # Import a Gmsh mesh and physical regions (subdomains)
-    # mesh = dolfin.Mesh('meshes/surface.xml')
-    # sd = dolfin.MeshFunction('meshes/surface_physical_region.xml')
-
-    # model.mesh = mesh
-    # Create extended mesh (Will this be necessary?) for use with URDME
-    # model.meshextend()
-    model.num_voxels  = 1000
-    model.num_species = len(model.listOfSpecies)
-    model.num_reactions = len(model.listOfReactions)
-    #model.meshextend()
-
-    model.InitInitialValue()
-    model.initializeSubdomainVector()
-    
     # Distribute the Species' initial values over the mesh
     model.scatter(A,subdomain=2)
     model.scatter(B,subdomain=2)
     model.scatter(C,subdomain=2)
 
-    # Define the spatial distribution of the molecules
-    #mesh.
+    # Time span of the simulation
+    model.tspan = range(100)
 
     return model
 
@@ -68,4 +48,4 @@ if __name__ == '__main__':
     model.serialize(filename='testdimerization.mat')
     
     # Run URDME
-    #urdme(model)
+    urdme(model)

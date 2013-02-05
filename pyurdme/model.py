@@ -35,6 +35,9 @@ class Model():
 
     def getSpecies(self, sname):
         return self.listOfSpecies[sname]
+
+    def getNumSpecies(self):
+        return len(self.listOfSpecies)
     
     def getAllSpecies(self):
         return self.listOfSpecies
@@ -105,6 +108,9 @@ class Model():
 
     def getReaction(self, rname):
         return reactions[rname]
+    
+    def getNumReactions(self):
+        return len(self.listOfReactions)
 
     def getAllReactions(self):
         return self.listOfReactions

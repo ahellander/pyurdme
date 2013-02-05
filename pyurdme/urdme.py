@@ -26,7 +26,7 @@ class URDMEModel(Model):
     def createStoichiometricMatrix(self):
         """ Create a sparse stoichiometric matrix
             from the model's listOfReactions. """
-        ND = np.zeros((self.num_species,self.num_reactions))
+        ND = np.zeros((self.getNumSpecies(),self.getNumReactions()))
         i=0
         for r in self.listOfReactions:
             R = self.listOfReactions[r]
@@ -45,7 +45,7 @@ class URDMEModel(Model):
     def createDependencyGraph(self):
         """ Construct the sparse dependecy graph. """
         #TODO: Create a better dependency graph
-        GF = np.ones((self.num_reactions,self.num_reactions+self.num_species))
+        GF = np.ones((self.getNumReactions(),self.getNumReactions()+self.getNumSpecies()))
         self.G=scisp.csc_matrix(GF)
     
     def createPropensityFile(self):
@@ -54,72 +54,13 @@ class URDMEModel(Model):
     def initializeSubdomainVector(self):
         """ Create URDME 'sd' vector. """
         # TODO: Support arbitrary sd-numbers and more than one subdomain
-        self.sd = np.ones((1,self.num_voxels))
+        self.sd = np.ones((1,self.mesh.getNumVoxels()))
     
-    def assemble(self):
-        """ 
-            Assemble the diffusion matrix and volume vector.
-            Here, we will need to use Fenics to build function spaces
-            and assemble.
-        """
-    
-        if self.mesh.mesh_type == "Cartesian":
-            vol,D = self.assembleCartesian()
-        elif self.mesh.mesh_type == "Dolfin":
-            """ Assemble using Dolfin. """
-        # Build function space
-        #T = []
-        #for s in self.num_species:
-        #    T.append(dolfin.FunctionSpace(self.mesh,"CG",1))
-
-        #V =
-    
-    def assembleCartesian(self):
-        """ 
-            Assemble the jump-coefficient matrix for the case of
-            a Cartesian mesh and a simple geomtry. 
-        """
-        
-        # Allocate space
-        Ndofs = self.xmesh.Ndofs
-        vol = np.zeros((Ndofs,1))
-        DF = np.zeros((Ndofs,Ndofs))
-    
-        
-    def meshextend(self):
-        """ 
-            Extend the primary mesh with information about degrees of freedom. 
-            Initialize URDME datastructures that depend on the size of the mesh.
-        """
-        
-        xmesh = Xmesh()
-        
-        # Construct a species map (dict mapping model species name to an integer index)
-        i=0
-        self.species_map = {}
-        for S in self.listOfSpecies:
-            self.species_map[S]=i
-            i = i+1;
-        
-        dims = np.shape(self.mesh.p)
-        xmesh.Ndofs = dims[1]*len(self.species_map)
-        xmesh.dof_names = []
-        #for i in self.listOfSpecies
-        #     xmesh.dof_names[i]=
-        xmesh.dofs = np.zeros((1,xmesh.Ndofs))
-        
-        # Initialize the Dolfin mesh object.
-        # model.mesh.init()
-        # self.num_voxels  = self.mesh.num_vertices()
-        # self.num_species = len(self.listOfSpecies)
-        #xmesh = URDMEXmesh()
-        #xmesh.dofs =
-        self.xmesh = xmesh
-    
-    
-    def InitInitialValue(self):
-        """ Create all-zeros inital condition matrix. """    
-        self.u0 = np.zeros((self.num_species,self.num_voxels))
+    def initializeInitialValue(self):
+        """ Create all-zeros inital condition matrix. """
+        ns = self.getNumSpecies()
+        nv = self.mesh.getNumVoxels()
+        self.u0 = np.zeros((ns,nv))
     
     
     def scatter(self,species,subdomain=None):
@@ -130,9 +71,12 @@ class URDMEModel(Model):
         numS = species.initial_value
         specindx= self.species_map[Sname]
         
+        if not hasattr(self,"u0"):
+            self.initializeInitialValue()
+        
         # TODO: USE THE SUBDOMAIN INFO
         for i in range(numS):
-            vtx=np.random.randint(0,self.num_voxels)
+            vtx=np.random.randint(0,self.mesh.getNumVoxels())
             self.u0[specindx,vtx]+=1
     
         # Is the initial condition matrix constructed?
@@ -162,11 +106,19 @@ class URDMEModel(Model):
 
         # Volume vector
         # vol =
-
-        # Data vector
+        
+        # Subdomain vector
+        if not hasattr(self,"sd"):
+            self.initializeSubdomainVector()
+        
+        # Data vector. If not present in model, it defaults to a vector with all
+        # elements zero.
+        if not hasattr(self,"data"):
+            data = np.zeros((1,self.mesh.getNumVoxels()))
+        
         # data = []
         filename = filename
-        spio.savemat(filename,{'num_species':self.num_species,'N':self.N,'u0':self.u0,'G':self.G,'sd':self.sd,'D':D,'vol':vol},oned_as='column')
+        spio.savemat(filename,{'N':self.N,'u0':self.u0,'G':self.G,'sd':self.sd,'D':D,'vol':vol[0::3],'tspan':np.asarray(self.tspan,dtype=np.float),'data':data},oned_as='column')
 
 
 class Mesh():
@@ -180,6 +132,10 @@ class Mesh():
             self.mesh = dolfin.Mesh()
         elif mesh_type == "Cartesian":
             return
+
+    def getNumVoxels(self):
+        dims = np.shape(self.p)
+        return dims[1]
 
 def CartesianMesh(geometry=None,side_length=None,hmax=None):
     """
@@ -238,28 +194,41 @@ def assemble(model):
         and assemble.
     """
     if model.mesh.mesh_type == "Cartesian":
-        # Allocate space
+
         Ndofs = model.xmesh.Ndofs
-        vol = np.zeros((Ndofs,1))
-        DF = np.zeros((Ndofs,Ndofs))
+        DF  = np.zeros((Ndofs,Ndofs),dtype=np.float)
         vol = np.zeros(Ndofs)
         dim,nt = np.shape(model.mesh.t)
+        nodes2dofs = model.xmesh.nodes["dofs"]
+        dof_names = model.xmesh.dofs["names"]
         
         for t in range(nt):
+            
             nodes = model.mesh.t[:,t]
+            
             # Stupid numpy indexing
             coords = model.mesh.p[:,nodes]
             coords = coords[0]
             h = abs(coords[0]-coords[1])
             h2 = pow(h,2)
             
-            vol[nodes[0]]+=h2/2
-            vol[nodes[1]]+=h2/2
-            
-            DF[nodes[0],nodes[1]] = 1.0/h2
-            DF[nodes[0],nodes[0]] -= 1.0/h2
-            DF[nodes[1],nodes[0]] = 1.0/h2
-            DF[nodes[1],nodes[1]] -= 1.0/h2
+            dofs  = nodes2dofs[:,nodes]
+            dims= np.shape(dofs)
+            ns = dims[0]
+
+            for j in range(ns):
+                dof = dofs[j]
+                vol[dof[0]]+=h/2
+                vol[dof[1]]+=h/2
+                
+                # Diffusion constant
+                d1 = model.listOfSpecies[dof_names[j]].diffusion_constant
+
+                
+                DF[dof[0],dof[1]]  = d1/h2
+                DF[dof[0],dof[0]] -= d1/h2
+                DF[dof[1],dof[0]]  = d1/h2
+                DF[dof[1],dof[1]] -= d1/h2
 
         D = scisp.csc_matrix(DF)
         return (vol,D)
@@ -267,9 +236,54 @@ def assemble(model):
 
 class Xmesh():
     """ Extended mesh object. """
-    #dofs.coords
-    #dofs.names
+
+    def __init__(self):
+        self.dofs = {}
+        self.nodes = {}
+        #dofs.coords = []
+        #dofs.names = []
+        #nodes.dofs = []
+
+def meshextend(model):
+    """
+        Extend the primary mesh with information about degrees of freedom.
+        Initialize URDME datastructures that depend on the size of the mesh.
+        """
     
+    xmesh = Xmesh()
+    
+    # Construct a species map (dict mapping model species name to an integer index)
+    i=0
+    model.species_map = {}
+    for S in model.listOfSpecies:
+        model.species_map[S]=i
+        i = i+1;
+    
+    dims = np.shape(model.mesh.p)
+    Nvoxels = dims[1]
+    xmesh.Ndofs = Nvoxels*len(model.species_map)
+    
+    #dof_names = np.zeros(len(model.species_map),dtype=np.int)
+    dof_names = [""]*len(model.species_map)
+    for S in model.species_map:
+        dof_names[model.species_map[S]] = S
+
+    dofs = np.zeros((len(model.species_map),Nvoxels))
+    nodes = np.zeros(xmesh.Ndofs)
+    dof = 0
+    for i in range(Nvoxels):
+        for S in model.species_map:
+             dofs[model.species_map[S],i]=dof
+             nodes[dof]=i
+             dof+=1
+                 
+    xmesh.nodes["dofs"]=dofs
+    xmesh.dofs["nodes"]=nodes
+    xmesh.dofs["names"]=dof_names
+   
+    model.xmesh = xmesh
+
+
 
 def urdme(model=None,solver='nsm'):
     """ URDME solver interface, similar to the Matlab function interface. """
@@ -280,13 +294,19 @@ def urdme(model=None,solver='nsm'):
     URDME_ROOT = subprocess.check_output(['urdme_init','-r'])
     # Trim newline
     URDME_ROOT = URDME_ROOT[:-1]
-
-    #subprocess.call(['export','URDME_ROOT='+URDME_ROOT],stderr=subprocess.STDOUT,shell=True)
-    #print subprocess.STDOUT
-    #test = subprocess.check_output(['echo','$URDME_ROOT'])
-    #print test
+    URDME_BUILD = URDME_ROOT + '/build/'
 
     # Compile the solver
-    #makefile = 'Makefile.' + solver
-    #subprocess.call(['make','-f',URDME_ROOT+'build/'+makefile],stderr=subprocess.STDOUT)
-#print subprocess.STDOUT
+    makefile = 'Makefile.' + solver
+    subprocess.call(['make','-f',URDME_BUILD+makefile,'URDME_ROOT='+URDME_ROOT,'URDME_MODEL='+'dimerization'],stderr=subprocess.STDOUT)
+
+    # Get temporary input and output files
+    tempinput = ...
+    model.serialize(tempinput)
+
+    subprocess.call(['.urdme/dimerization.nsm',inputfile,outputfile], stderr=subprocess.STDOUT)
+    
+
+    # Execute solver
+
+

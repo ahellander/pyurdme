@@ -1,5 +1,4 @@
 /* Model file for simple dimerization example. */ 
-
 #include <stdlib.h>
 #include <math.h>
 #include "propensities.h"

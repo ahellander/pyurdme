@@ -27,7 +27,7 @@ def dimerization(model_name=""):
     model.addReaction([R1,R2])
 
     # A square domain with Cartesian discretization
-    model.mesh  = CartesianMesh(geometry="line",side_length=1e-6,hmax=1e-8)
+    model.mesh  = CartesianMesh(geometry="line",side_length=1e-6,hmax=1e-7)
     #model.mesh = importmesh('meshes/surface.msh')
     meshextend(model)
 
@@ -45,7 +45,8 @@ def dimerization(model_name=""):
 if __name__ == '__main__':
     """ Create a model and assemble the URDME input file. """
     model = dimerization()
-    model.serialize(filename='testdimerization.mat')
+    #model.serialize(filename='testdimerization.mat')
     
     # Run URDME
     urdme(model)
+    #model.dumpresults("simulationoutput.mat")

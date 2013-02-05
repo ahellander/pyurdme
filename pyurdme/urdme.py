@@ -4,6 +4,7 @@ import scipy.sparse as scisp
 import scipy.io as spio
 import subprocess
 import os
+import tempfile
 
 try:
     import dolfin
@@ -41,7 +42,6 @@ class URDMEModel(Model):
     
         self.N = scisp.csc_matrix(ND)
 
-
     def createDependencyGraph(self):
         """ Construct the sparse dependecy graph. """
         #TODO: Create a better dependency graph
@@ -50,6 +50,7 @@ class URDMEModel(Model):
     
     def createPropensityFile(self):
         """ Generate a C propensity file for used to compile the URDME solvers. """
+        template = load()
     
     def initializeSubdomainVector(self):
         """ Create URDME 'sd' vector. """
@@ -301,12 +302,38 @@ def urdme(model=None,solver='nsm'):
     subprocess.call(['make','-f',URDME_BUILD+makefile,'URDME_ROOT='+URDME_ROOT,'URDME_MODEL='+'dimerization'],stderr=subprocess.STDOUT)
 
     # Get temporary input and output files
-    tempinput = ...
-    model.serialize(tempinput)
+    infile = tempfile.NamedTemporaryFile(delete=False)
+    model.serialize(filename=infile)
+    infile.close
+    outfile = tempfile.NamedTemporaryFile(delete=False)
+    outfile.close()
 
-    subprocess.call(['.urdme/dimerization.nsm',inputfile,outputfile], stderr=subprocess.STDOUT)
-    
+    # Execute the solver
+    subprocess.call(['.urdme/dimerization.nsm',infile.name,'slask.mat'],stderr=subprocess.STDOUT)
+    #Load the result.
+    #AH: TODO! SciPy fails to read the file (But it loads fine in Matlab)!.
+    try:
+        result = spio.loadmat('slask.mat')
+        i = result["iU"]
+        j = result["jU"]
+        data = result["sU"]
+        M = result["mU"]
+        N = result["nU"]
+        ij = [i,j]
+        model.U = scisp.csc_matrix((data,ij),shape=(M,N))
+        result.close()
+    except:
+        pass
 
-    # Execute solver
+    # Clean up
+    subprocess.call(['rm','-rf',infile.name])
+    subprocess.call(['rm','-rf',outfile.name])
+
+
+class URDMEError(Exception):
+    pass
+
+
+
 
 

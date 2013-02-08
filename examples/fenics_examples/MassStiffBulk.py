@@ -8,7 +8,7 @@ with only BULK diffusion of one species on the ecoli mesh with homogeneous Neuma
 from dolfin import *
 import scipy.io
 import numpy
-#parameters["linear_algebra_backend"] = "uBLAS"
+parameters["linear_algebra_backend"] = "uBLAS"
 
 #Create mesh from Coli problem
 mesh = Mesh('coli.xml')
@@ -17,7 +17,35 @@ print mesh
 
 #Diffusion constants for membrane and cytoplasm
 Dmem = 1E-14
-Dcyt = 2.5E-12
+Dcyt = 2.5
+
+subdomains = MeshFunction("uint", mesh, 3)
+
+print subdomains
+
+class Omega0(SubDomain):
+	def inside(self, x, on_boundary):
+		return True if x[1] <= 1 else False
+class Omega1(SubDomain):
+	def inside(self, x, on_boundary):
+		return True if x[1] >= 1 else False
+
+# Mark subdomains with numbers 0 and 1
+subdomains.set_all(0)
+subdomain0 = Omega0()
+subdomain0.mark(subdomains, 0)
+subdomain1 = Omega1()
+subdomain1.mark(subdomains, 1)
+plot(subdomains)
+
+V0 = FunctionSpace(mesh, 'DG', 0)
+k = Function(V0)
+
+k_values = [1.5, 5] # values of k (diffusion constant) in the two subdomains
+for cell_no in range(len(subdomains.array())):
+	subdomain_no = subdomains.array()[cell_no]
+	k.vector()[cell_no] = k_values[subdomain_no]
+
 
 # Define initial conditions
 alpha = 2; beta = 1; gamma=8;
@@ -26,7 +54,7 @@ u0 = Expression('1 + x[0]*x[0] + alpha*x[1]*x[1] + beta*x[2]*x[2] + gamma*t',
 u0i = interpolate(u0, V)
 plot(u0i)
 
-T = 20  # total simulation time
+T = 3  # total simulation time
 dt = 0.3      # time step
 
 # Define variational problem
@@ -34,15 +62,13 @@ dt = 0.3      # time step
 # Laplace term
 u = TrialFunction(V)
 v = TestFunction(V)
-a_K = Dcyt*inner(nabla_grad(u), nabla_grad(v))*dx
+a_K = k*inner(nabla_grad(u), nabla_grad(v))*dx
 
 # "Mass matrix" term
 a_M = u*v*dx
 
 M = assemble(a_M)
 K = assemble(a_K)
-
-
 A = M + dt*K
 
 

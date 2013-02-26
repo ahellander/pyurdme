@@ -8,5 +8,6 @@ Dependencies
 =============
 pyurdme depends on the following packages
 
-numpy
-scipy
+- numpy
+- scipy
+- Gmsh

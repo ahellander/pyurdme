@@ -19,7 +19,7 @@ print mesh
 Dmem = 1E-14
 Dcyt = 2.5
 
-subdomains = MeshFunction("uint", mesh, 3)
+subdomains = MeshFunction("size_t", mesh, 3)
 
 print subdomains
 
@@ -89,14 +89,14 @@ while t <= T:
     u0i.assign(u)
 
 #Try to get solution evaluated at vertex points instead of cell centers
-VertexSolution = numpy.zeros(mesh.num_vertices(), dtype='d')
-u.compute_vertex_values(VertexSolution, mesh)
+#VertexSolution = numpy.zeros(mesh.num_vertices(), dtype='d')
+#u.compute_vertex_values(VertexSolution, mesh)
 
 Mbulk = M.array()
 Kbulk = K.array()
 
 # export to MATLAB as a dense matrix
-scipy.io.savemat("rdBULKdense.mat", {"Mbulkdense": Mbulk, "Kbulkdense": Kbulk, "VertexSolution" : VertexSolution})
+scipy.io.savemat("rdBULKdense.mat", {"Mbulkdense": Mbulk, "Kbulkdense": Kbulk})#, "VertexSolution" : VertexSolution})
 
 file = File("BulkDiffusion.pvd")
 file << u

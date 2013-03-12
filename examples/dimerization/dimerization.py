@@ -1,6 +1,7 @@
 """ pyurdme model file for reversible dimerization on a surface. """
 import os
 from pyurdme.urdme import *
+from pyurdme.gmsh import *
 
 def dimerization(model_name=""):
     """ Dimerization. The reversible reaction A+B<->C on a surface. """
@@ -28,8 +29,12 @@ def dimerization(model_name=""):
 
     # A square domain with Cartesian discretization
     model.mesh  = CartesianMesh(geometry="line",side_length=1e-6,hmax=1e-7)
-    # We could wrap around Gmsh, if we wanted to:
-    #geom = open('surface.geo')
+
+    # We could wrap around Gmsh like this, if we wanted to:
+    model.geometry = gmshGeometry(file='meshes/surface.geo')
+    meshinit(model.geometry)
+
+
     #mesh,physical_ids=meshInit(geom) -> Shells out and calls Gmsh
     # Or simply load a Gmsh mesh
     #model.mesh = importmesh('meshes/surface.msh')
@@ -50,7 +55,6 @@ if __name__ == '__main__':
     """ Create a model and assemble the URDME input file. """
     model = dimerization()
     #model.serialize(filename='testdimerization.mat')
-    
-    # Run URDME
-    urdme(model)
+    #Run URDME
+    #urdme(model)
     #model.dumpresults("simulationoutput.mat")

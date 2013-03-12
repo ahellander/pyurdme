@@ -271,7 +271,6 @@ def assemble(model):
                 # Diffusion constant
                 d1 = model.listOfSpecies[dof_names[j]].diffusion_constant
 
-                
                 DF[dof[0],dof[1]]  = d1/h2
                 DF[dof[0],dof[0]] -= d1/h2
                 DF[dof[1],dof[0]]  = d1/h2
@@ -333,10 +332,8 @@ def meshextend(model):
 
 
 def urdme(model=None,solver='nsm'):
-    """ URDME solver interface, similar to the Matlab function interface. """
+    """ URDME solver interface, analogous to the Matlab URDME function interface. """
 
-    # Shell out and compile the solver
-    
     # Set URDME_ROOT
     URDME_ROOT = subprocess.check_output(['urdme_init','-r'])
     # Trim newline
@@ -344,8 +341,6 @@ def urdme(model=None,solver='nsm'):
     URDME_BUILD = URDME_ROOT + '/build/'
 
     # Write the propensity file
-    #propfile = tempfile.NamedTemporaryFile(delete=False)
-    #propfile.close()
     subprocess.call(['mkdir','.urdme'])
     propfilename= model.name+'_pyurdme_generated_model'
     model.createPropensityFile(file_name='.urdme/'+propfilename+'.c')
@@ -386,6 +381,9 @@ def urdme(model=None,solver='nsm'):
 
 class URDMEError(Exception):
     pass
+
+if __name__ == '__main__':
+    """ Command line interface to URDME. Execute URDME given a model file. """ 
 
 
 

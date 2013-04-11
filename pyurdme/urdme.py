@@ -7,6 +7,8 @@ import os
 import tempfile
 import re
 import tables
+import sys
+import shutil
 
 try:
     import dolfin
@@ -328,7 +330,7 @@ def meshextend(model):
     model.xmesh = xmesh
 
 
-def urdme(model=None,solver='nsm',seed=None):
+def urdme(model=None,solver='nsm',seed=None,report_level=1):
     """ URDME solver interface, analogous to the Matlab URDME function interface. """
 
     # Set URDME_ROOT
@@ -338,13 +340,20 @@ def urdme(model=None,solver='nsm',seed=None):
     URDME_BUILD = URDME_ROOT + '/build/'
 
     # Write the propensity file
-    subprocess.call(['mkdir','.urdme'])
+    try:
+      os.mkdir('.urdme')
+    except:
+      pass
+    
     propfilename= model.name+'_pyurdme_generated_model'
     model.createPropensityFile(file_name='.urdme/'+propfilename+'.c')
 
     # Build the solver
     makefile = 'Makefile.' + solver
-    subprocess.call(['make','-f',URDME_BUILD+makefile,'URDME_ROOT='+URDME_ROOT,'URDME_MODEL='+propfilename],stderr=subprocess.STDOUT)
+    handle = subprocess.Popen(['make','-f',URDME_BUILD+makefile,'URDME_ROOT='+URDME_ROOT,'URDME_MODEL='+propfilename], stdout = subprocess.PIPE, stderr=subprocess.PIPE)
+    if report_level >=1:
+      print handle.stdout.read()
+      print handle.stderr.read()
 
     # Get temporary input and output files
     infile = tempfile.NamedTemporaryFile(delete=False)
@@ -357,12 +366,18 @@ def urdme(model=None,solver='nsm',seed=None):
     
     if seed is not None:
      try: 
-      subprocess.call(['.urdme/'+propfilename+'.'+solver,infile.name,'slask.mat',str(seed)],stderr=subprocess.STDOUT)
+      handle = subprocess.Popen(['.urdme/'+propfilename+'.'+solver,infile.name,'slask.mat',str(seed)], stdout = subprocess.PIPE, stderr=subprocess.PIPE)
+      if report_level >= 1:
+        print handle.stdout.read()
+        print handle.stderr.read()
      except:
-       return 'Call to URDME failed miserably'
+      return 'Call to URDME failed miserably'
     else:
-      subprocess.call(['.urdme/'+propfilename+'.'+solver,infile.name,'slask.mat'],stderr=subprocess.STDOUT)
-    
+      handle = subprocess.Popen(['.urdme/'+propfilename+'.'+solver,infile.name,'slask.mat'], stdout = subprocess.PIPE, stderr=subprocess.PIPE)
+      if report_level >= 1:
+        print handle.stdout.read()
+        print handle.stderr.read()
+
     #Load the result.
     #AH: TODO! SciPy fails to read the file (But it loads fine in Matlab)!.
     try:
@@ -373,8 +388,8 @@ def urdme(model=None,solver='nsm',seed=None):
         # SciPy (Matlab <= 7.1)
         result = spio.loadmat('slask.mat',mat_dtype=True,matlab_compatible=True)
         # Clean up
-        subprocess.call(['rm','-rf',infile.name])
-        subprocess.call(['rm','-rf',outfile.name])
+        shutil.rmtree(infile.name)
+        shutil.rmtree(outfile.name)
         return result
     except:
        # Clean up

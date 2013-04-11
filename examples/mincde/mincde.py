@@ -29,6 +29,7 @@ def mincde(model_name=""):
 	model.addParameter([sigma_d,sigma_dD,sigma_e,sigma_de,sigma_dt])
 
 	# Reactions
+	# TODO: These reactions will serialize without volume dependency. This needs to be adressed in the model.py module
 	R1 = Reaction(name="R1",reactants={MinD_c_atp:1},products={MinD_m:1},massaction=True,rate=sigma_d)
 	R2 = Reaction(name="R2",reactants={MinD_c_atp:1,MinD_m:1},products={MinD_m:2},massaction=True,rate=sigma_dD)
 	R3 = Reaction(name="R3",reactants={MinD_m:1,MinD_e:1},products={MinDE:1},massaction=True,rate=sigma_e)
@@ -39,8 +40,7 @@ def mincde(model_name=""):
 	model.addReaction([R1,R2,R3,R4,R5,R6])
 	
 	# Load mesh
-	
-
+    # model.mesh = 
 	return model
 
 if __name__=="__main__":

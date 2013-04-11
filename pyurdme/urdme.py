@@ -6,6 +6,7 @@ import subprocess
 import os
 import tempfile
 import re
+import tables
 
 try:
     import dolfin
@@ -23,7 +24,6 @@ class URDMEModel(Model):
 	self.tspan = None
 	self.mesh = None
 	self.D = None
-		
 
     def createStoichiometricMatrix(self):
         """ Create a sparse stoichiometric matrix
@@ -94,8 +94,6 @@ class URDMEModel(Model):
                 
         propfile.write(propfilestr)
         propfile.close()
-    
-        
     
     
     def initializeSubdomainVector(self):
@@ -330,8 +328,7 @@ def meshextend(model):
     model.xmesh = xmesh
 
 
-
-def urdme(model=None,solver='nsm'):
+def urdme(model=None,solver='nsm',seed=None):
     """ URDME solver interface, analogous to the Matlab URDME function interface. """
 
     # Set URDME_ROOT
@@ -357,26 +354,33 @@ def urdme(model=None,solver='nsm'):
     outfile.close()
     
     # Execute the solver
-    subprocess.call(['.urdme/'+propfilename+'.'+solver,infile.name,'slask.mat'],stderr=subprocess.STDOUT)
-
+    
+    if seed is not None:
+     try: 
+      subprocess.call(['.urdme/'+propfilename+'.'+solver,infile.name,'slask.mat',str(seed)],stderr=subprocess.STDOUT)
+     except:
+       return 'Call to URDME failed miserably'
+    else:
+      subprocess.call(['.urdme/'+propfilename+'.'+solver,infile.name,'slask.mat'],stderr=subprocess.STDOUT)
+    
     #Load the result.
     #AH: TODO! SciPy fails to read the file (But it loads fine in Matlab)!.
     try:
-        result = spio.loadmat('slask.mat')
-        i = result["iU"]
-        j = result["jU"]
-        data = result["sU"]
-        M = result["mU"]
-        N = result["nU"]
-        ij = [i,j]
-        model.U = scisp.csc_matrix((data,ij),shape=(M,N))
-        result.close()
+        # Pytables (Matlab >= 7.3)
+        #file = tables.openFile('slask.mat')
+        #U = file.root.U[:]
+        #tspan = file.root.tspan[:]
+        # SciPy (Matlab <= 7.1)
+        result = spio.loadmat('slask.mat',mat_dtype=True,matlab_compatible=True)
+        # Clean up
+        subprocess.call(['rm','-rf',infile.name])
+        subprocess.call(['rm','-rf',outfile.name])
+        return result
     except:
-        pass
-
-    # Clean up
-    subprocess.call(['rm','-rf',infile.name])
-    subprocess.call(['rm','-rf',outfile.name])
+       # Clean up
+       subprocess.call(['rm','-rf',infile.name])
+       subprocess.call(['rm','-rf',outfile.name])  
+       return 'Matfile load failed.' 
 
 
 class URDMEError(Exception):

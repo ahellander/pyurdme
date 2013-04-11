@@ -54,7 +54,5 @@ def dimerization(model_name=""):
 if __name__ == '__main__':
     """ Create a model and assemble the URDME input file. """
     model = dimerization()
-    #model.serialize(filename='testdimerization.mat')
     #Run URDME
-    #urdme(model)
-    #model.dumpresults("simulationoutput.mat")
+    result = urdme(model,seed=10)

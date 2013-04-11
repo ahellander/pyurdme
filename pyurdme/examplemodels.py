@@ -1,97 +1,44 @@
-""" Well mixed (StochKit2) example models for StochSS. """
+""" Example models for pyurdme """
 import os
 from model import *
-from stochkit import *
 
-def dimerdecay(model_name=""):
-    """ 
-        Dimerdecay. Tests basic functionality and support for the 
-        'mass-action' propensity function flag. 
-    """
+from pyurdme.urdme import *
+from pyurdme.gmsh import *
+
+def dimerization(model_name=""):
+    """ Dimerization. The reversible reaction A+B<->C on a surface. """
     if model_name == "":
-        model_name = "dimerdecay"
-    model = StochKitModel(name=model_name);
+        model_name = "dimerization"
+    model = URDMEModel(name=model_name);
 
     # Species
-    S1 = Species(name="S1",initial_value=10000);
-    S2 = Species(name="S2",initial_value=0);
-    S3 = Species(name="S3",initial_value=0);
- 
-    model.addSpecies([S1,S2,S3])
+    A = Species(name="A",initial_value=50,reaction_radius=1e-9,diffusion_constant=1e-14);
+    B = Species(name="B",initial_value=100,reaction_radius=1e-9,diffusion_constant=1e-14);
+    C = Species(name="C",initial_value=0,reaction_radius=1e-9,diffusion_constant=1e-14);
+
+    model.addSpecies([A,B,C])
 
     # Parameters
-    c1 = Parameter(name="c1",expression=1.0)
-    c2 = Parameter(name="c2",expression=0.002)
-    c3 = Parameter(name="c3",expression=0.5)
-    c4 = Parameter(name="c4",expression=0.04)
-    
-    model.addParameter([c1,c2,c3,c4])
-    
+    k1 = Parameter(name="k1",expression=1.0e6)
+    k2 = Parameter(name="k2",expression=1.0)
+
+    model.addParameter([k1,k2])
+
     # Reactions
-    R1 = Reaction(name="R1",reactants={S1:1},massaction=True,rate=c1)
-    R2 = Reaction(name="R2",reactants={S1:2},products={S2:1},massaction=True,rate=c2)
-    R3 = Reaction(name="R3",reactants={S2:1},products={S1:2},massaction=True,rate=c3);
-    R4 = Reaction(name="R4",reactants={S2:1},products={S3:1},massaction=True,rate=c4)
-    
-    model.addReaction([R1,R2,R3,R4])
-    
-    return model
-
-def MichaelisMenten(model_name=""):
-    """ 
-        A simple Michaelis-Menten model. Tests parameters defined as a function of other parameters,
-        and the 'custom' propensity function type.
-    """
-
-    if model_name == "":
-        model_name = "michaelismenten"
-    model = StochKitModel(name=model_name)
-
-    # Species
-    S = Species(name="S",initial_value=1000)
-    P = Species(name="P",initial_value=0)
-    
-    model.addSpecies([S,P])
-
-    # Parameters
-    k1   = Parameter(name="k1",expression=0.1)
-    k2   = Parameter(name="k2",expression=10)
-    k3   = Parameter(name="k3",expression=1)
-    Etot = Parameter(name="Etot",expression=10)
-    Vmax = Parameter(name="Vmax",expression='k3*Etot')
-    Km   = Parameter(name="Km",expression='(k2+k3)/k1')
-    
-    model.addParameter([k1,k2,k3,Etot,Vmax,Km])
-    
-    # Reactions
-    R1 = Reaction(name="R1", reactants={S:1}, products={P:1}, propensity_function="Vmax*S/(Km+S)",annotation="S->P")
-    R2 = Reaction(name="R2", reactants={P:1}, propensity_function="k3*P", annotation="P->0")
-    
+    R1 = Reaction(name="R1",reactants={A:1,B:1},products={C:1},massaction=True,rate=k1)
+    R2 = Reaction(name="R2",reactants={C:1},products={A:1,B:1},massaction=True,rate=k2)
     model.addReaction([R1,R2])
-    
+
+    # A square domain with Cartesian discretization
+    model.mesh  = CartesianMesh(geometry="line",side_length=1e-6,hmax=1e-7)
+    meshextend(model)
+
+    # Distribute the Species' initial values over the mesh
+    model.scatter(A,subdomain=1)
+    model.scatter(B,subdomain=1)
+    model.scatter(C,subdomain=1)
+
+    # Time span of the simulation
+    model.tspan = range(100)
+
     return model
-
-def Vilar():
-    """ 
-        The Vilar Ocillator.
-        Demonstrates how to create a StochKitModel instance from an existing StochML document.
-    """
-    try:
-        # The environmental variable STOCHSSHOME needs to be defines and should point at the base directory
-        basepath = os.environ['STOCHSSHOME']
-        doc = StochMLDocument.fromFile(basepath+ "/stochss/vilar.xml")
-    except:
-        raise NameError("Could not open vilar.xml")
-    model = doc.toModel('vilar')
-    return model
-
-if __name__ == '__main__':
-    """ Create a model and print it to StochML. """
-    #model = dimerdecay()
-    #model = MichaelisMenten()
-    model = Vilar()
-    
-    model.serialize()
-   
-
-    

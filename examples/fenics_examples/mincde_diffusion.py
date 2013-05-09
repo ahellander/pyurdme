@@ -95,7 +95,30 @@ A3 = M3 + dt*K3
 A4 = M4 + dt*K4
 A5 = M5 + dt*K5
 
-#Now use row sums to compute the lumped mass matrix and store diagonal elements in a volume vector
+
+#Write a loop to create one large stifness matrix from K1,...,K5 DENSE
+K1bulk = K1.array()
+K2bulk = K2.array()
+K3bulk = K3.array()
+K4bulk = K4.array()
+K5bulk = K5.array()
+
+size = K1bulk.shape
+size = size[0]
+
+K = numpy.zeros(shape=(5*size,size))
+
+j=0;
+for i in range(0,size):
+	K[j] = K1bulk[i]
+	K[j+1] = K2bulk[i]
+	K[j+2] = K3bulk[i]
+	K[j+3] = K4bulk[i]
+	K[j+4] = K5bulk[i]
+	j=j+5
+	
+
+#Now use row sums to compute the lumped mass matrix and store diagonal elements in a volume vector DENSE
 M1bulk = M1.array()
 M2bulk = M2.array()
 M3bulk = M3.array()
@@ -185,7 +208,7 @@ while t <= T:
     #u_1e.assign(u5)
 
 
-scipy.io.savemat("MinCDE_Matrices", {"M1": M1bulk, "M2": M2bulk, "Volume": volume, "Size": size, "rowsumM1": rowsumM1, "M4": M4bulk})
+scipy.io.savemat("MinCDE_Matrices", {"M1": M1bulk, "M2": M2bulk, "Volume": volume, "Size": size, "rowsumM1": rowsumM1, "M4": M4bulk, "BigK": K, "K1": K1bulk,"K2": K2bulk,"K3": K3bulk})
 
 plot(u1)
 #plot(u2)

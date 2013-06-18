@@ -14,9 +14,9 @@ class GmshMesh():
     def __init__(self,meshfile=None):
         importmesh(meshfile)
 
-        def refine(self):
-            """ Refine the mesh. """
-            
+    def refine(self):
+        """ Refine the mesh """
+
 def importMesh(meshfile):
     """ Import a Gmsh .msh file. """
     meshf = open(meshfile,'r')

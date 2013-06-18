@@ -6,7 +6,7 @@ from pyurdme.urdme import *
 def mincde(model_name=""):
 
 	if model_name == "":
-		model_name = "dimerization"
+		model_name = "mincde"
 	model = URDMEModel(name=model_name)
 
 	# Species
@@ -32,21 +32,23 @@ def mincde(model_name=""):
 	# TODO: These reactions will serialize without volume dependency. This needs to be adressed in the model.py module.
     # How do we get the voxel volumes into the propensity functions in the .c model file ?
 	R1 = Reaction(name="R1",reactants={MinD_c_atp:1},products={MinD_m:1},massaction=True,rate=sigma_d)
-	R2 = Reaction(name="R2",reactants={MinD_c_atp:1,MinD_m:1},products={MinD_m:2},massaction=True,rate=sigma_dD)
+    R2 = Reaction(name="R2",reactants={MinD_c_atp:1,MinD_m:1},products={MinD_m:2},massaction=True,rate=sigma_dD)
 	R3 = Reaction(name="R3",reactants={MinD_m:1,MinD_e:1},products={MinDE:1},massaction=True,rate=sigma_e)
-	R4 = Reaction(name="R4",reactants={MinDE:1,MinD_e:1},products={MinD_c_adp:1,MinD_e:1},massaction=True,rate=sigma_de)
+    R4 = Reaction(name="R4",reactants={MinDE:1,MinD_e:1},products={MinD_c_adp:1,MinD_e:1},massaction=True,rate=sigma_de)
 	R5 = Reaction(name="R5",reactants={MinD_c_adp:1},products={MinD_c_atp:1},massaction=True,rate=sigma_dt)
 	R6 = Reaction(name="R6",reactants={MinDE:1,MinD_c_atp:1},products={MinD_m:1,MinDE:1},massaction=True,rate=sigma_dD)
 	
 	model.addReaction([R1,R2,R3,R4,R5,R6])
 	
 	# Load mesh
-    # model.mesh = 
+    model.mesh = read_gmsh("coli.xml")
+    
 	return model
 
 if __name__=="__main__":
 	""" Dump model to a file. """
-	model = mincde(model_name="mincde")	
+	model = mincde(model_name="mincde")
+#model.serialize("testmincde.mat")
 	# TODO: This does not work yet. 
 	#urdme(model)
 	

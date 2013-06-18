@@ -6,14 +6,34 @@ import subprocess
 import os
 import tempfile
 import re
-import tables
 import sys
 import shutil
+
+import gmsh
+
+# Need a way to read hdf5 files
+try:
+    import h5py
+except:
+    pass
+
+
+try:
+    from meshpy.gmsh_reader import *
+    #import meshpy
+#import meshpy.gmsh_reader
+#import meshpy.gmsh_reader.GmshMeshRecieverBase
+except Exception,e:
+    print "Failed to import meshpy."+e
+    raise
 
 try:
     import dolfin
 except:
     ONLY_CARTESIAN=True
+
+class MeshImportError(Exception):
+    pass
 
 class URDMEModel(Model):
     """ 
@@ -183,6 +203,17 @@ class Mesh():
     def getNumVoxels(self):
         dims = np.shape(self.p)
         return dims[1]
+
+def read_gmsh_mesh(meshfile):
+    """ Read a Gmsh mesh file """
+    mr = GmshMeshReceiverBase()
+    try:
+        mesh = read_gmsh(mr,filename=meshfile)
+    except:
+        raise MeshImportError("Failed to import mesh: "+filename)
+
+    print mesh
+    return mesh
 
 def CartesianMesh(geometry=None,side_length=None,hmax=None):
     """
@@ -386,16 +417,24 @@ def urdme(model=None,solver='nsm',seed=None,report_level=1):
         #U = file.root.U[:]
         #tspan = file.root.tspan[:]
         # SciPy (Matlab <= 7.1)
-        result = spio.loadmat('slask.mat',mat_dtype=True,matlab_compatible=True)
+        #result = spio.loadmat('slask.mat',mat_dtype=True,matlab_compatible=True)
+        resultfile = h5py.File('testh5.h5','r')
+        U = resultfile['U'].value
+        #print U
+        #print np.shape(U)
+        tspan = resultfile['tspan'].value
+        #print tspan
+        
         # Clean up
-        shutil.rmtree(infile.name)
-        shutil.rmtree(outfile.name)
-        return result
-    except:
+        #shutil.rmtree(infile.name)
+        #shutil.rmtree(outfile.name)
+        return resultfile
+    except Exception,e:
        # Clean up
        subprocess.call(['rm','-rf',infile.name])
-       subprocess.call(['rm','-rf',outfile.name])  
-       return 'Matfile load failed.' 
+       subprocess.call(['rm','-rf',outfile.name])
+       raise
+       return 'Matfile load failed.'
 
 
 class URDMEError(Exception):

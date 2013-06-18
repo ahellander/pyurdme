@@ -34,7 +34,6 @@ def dimerization(model_name=""):
     model.geometry = gmshGeometry(file='meshes/surface.geo')
     meshinit(model.geometry)
 
-
     #mesh,physical_ids=meshInit(geom) -> Shells out and calls Gmsh
     # Or simply load a Gmsh mesh
     #model.mesh = importmesh('meshes/surface.msh')
@@ -55,4 +54,6 @@ if __name__ == '__main__':
     """ Create a model and assemble the URDME input file. """
     model = dimerization()
     #Run URDME
+    #os.environ['URDME_ROOT']='/Users/andreash/github/urdme/urdme'
     result = urdme(model,seed=10)
+    print result

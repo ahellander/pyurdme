@@ -397,14 +397,14 @@ def urdme(model=None,solver='nsm',seed=None,report_level=1):
     
     if seed is not None:
      try: 
-      handle = subprocess.Popen(['.urdme/'+propfilename+'.'+solver,infile.name,'slask.mat',str(seed)], stdout = subprocess.PIPE, stderr=subprocess.PIPE)
+      handle = subprocess.Popen(['.urdme/'+propfilename+'.'+solver,infile.name,outfile.name,str(seed)], stdout = subprocess.PIPE, stderr=subprocess.PIPE)
       if report_level >= 1:
         print handle.stdout.read()
         print handle.stderr.read()
      except:
       return 'Call to URDME failed miserably'
     else:
-      handle = subprocess.Popen(['.urdme/'+propfilename+'.'+solver,infile.name,'slask.mat'], stdout = subprocess.PIPE, stderr=subprocess.PIPE)
+      handle = subprocess.Popen(['.urdme/'+propfilename+'.'+solver,infile.name,outfile.name], stdout = subprocess.PIPE, stderr=subprocess.PIPE)
       if report_level >= 1:
         print handle.stdout.read()
         print handle.stderr.read()
@@ -412,23 +412,16 @@ def urdme(model=None,solver='nsm',seed=None,report_level=1):
     #Load the result.
     #AH: TODO! SciPy fails to read the file (But it loads fine in Matlab)!.
     try:
-        # Pytables (Matlab >= 7.3)
-        #file = tables.openFile('slask.mat')
-        #U = file.root.U[:]
-        #tspan = file.root.tspan[:]
-        # SciPy (Matlab <= 7.1)
-        #result = spio.loadmat('slask.mat',mat_dtype=True,matlab_compatible=True)
-        resultfile = h5py.File('testh5.h5','r')
+        resultfile = h5py.File(outfile.name,'r')
         U = resultfile['U'].value
-        #print U
-        #print np.shape(U)
         tspan = resultfile['tspan'].value
-        #print tspan
-        
+        resultfile.close()
         # Clean up
-        #shutil.rmtree(infile.name)
-        #shutil.rmtree(outfile.name)
-        return resultfile
+        os.remove(infile.name)
+        os.remove(outfile.name)
+        
+        return {'U':U,'tspan':tspan}
+
     except Exception,e:
        # Clean up
        subprocess.call(['rm','-rf',infile.name])

@@ -45,14 +45,13 @@ class URDMEModel(Model):
 	self.D = None
 
     def createStoichiometricMatrix(self):
-        """ Create a sparse stoichiometric matrix
-            from the model's listOfReactions. """
+        """ Create a sparse stoichiometric matrix. """
         ND = np.zeros((self.getNumSpecies(),self.getNumReactions()))
         i=0
         for r in self.listOfReactions:
             R = self.listOfReactions[r]
             reactants = R.reactants
-            products = R.products
+            products  = R.products
             
             for s in reactants:
                 ND[self.species_map[s],i]=-reactants[s]
@@ -125,14 +124,15 @@ class URDMEModel(Model):
         ns = self.getNumSpecies()
         nv = self.mesh.getNumVoxels()
         self.u0 = np.zeros((ns,nv))
-    
+      
     
     def scatter(self,species,subdomain=None):
-        """ Scatter an initial number of molecules over the 
-            voxels in a subdomain. """
+        """ Scatter an initial number of molecules over the voxels in a subdomain. """
     
         Sname = species.name
         numS = species.initial_value
+        if not hasattr(self,'species_map'):
+            createSpeciesMap(self)
         specindx= self.species_map[Sname]
         
         if not hasattr(self,"u0"):
@@ -149,9 +149,18 @@ class URDMEModel(Model):
 
     def createSystemMatrix(self):
         """ Create one merged system matrix in CCS format for input to the URDME solvers """
-                
-        stiffness_matrices = self.stiffness_matrices
-        mass_matrices = self.mass_matrices
+        
+        # Check if the individual matrices has been assembled, otherwise assmble them
+        try:
+            stiffness_matrices = self.stiffness_matrices
+            mass_matrices = self.mass_matrices
+        except:
+            matrices = assemble(self)
+            self.stiffness_matrices = matrices['K']
+            self.mass_matrices = matrices['M']
+            stiffness_matrices = self.stiffness_matrices
+            mass_matrices = self.mass_matrices
+        
         # Make a dok matrix
         #Ddok = scipy.sparse.dok_matrix((Ndofs,Ndofs))
         i=1;
@@ -186,9 +195,9 @@ class URDMEModel(Model):
                 if ind[0] != ind[1] and val > 0.0:
                     val = 0.0
                 if vol[Mspecies*ind[1]+spec]==0:
-		   vi = 1
-		else:
-		   vi = vol[Mspecies*ind[1]+spec]		 			
+                    vi = 1
+                else:
+                    vi = vol[Mspecies*ind[1]+spec]
                 S[Mspecies*ind[0]+spec,Mspecies*ind[1]+spec]=-val/vi
         
             spec = spec+1
@@ -205,21 +214,23 @@ class URDMEModel(Model):
             Serialize the model object to binary file compatible
             with core URDME solvers. 
         """
+    
+        createSpeciesMap(self)
         # Stoichimetric matrix
         N = self.createStoichiometricMatrix()
 
         # Dependency Graph
         G = self.createDependencyGraph()
 
-        # Diffusion matrix
-        vol,D = assemble(self)
-
         # Initial condition
         #u0 =
-
-
+        #self.initializeInitialValue()
+        
         # Volume vector
-        # vol =
+        result =  self.createSystemMatrix()
+        vol = result['vol']
+        vol = vol[::len(self.listOfSpecies)]
+        D = result['D']
         
         # Subdomain vector
         if not hasattr(self,"sd"):
@@ -231,7 +242,7 @@ class URDMEModel(Model):
         
         # data = []
         filename = filename
-        spio.savemat(filename,{'N':self.N,'u0':self.u0,'G':self.G,'sd':self.sd,'D':D,'vol':vol[0::3],'tspan':np.asarray(self.tspan,dtype=np.float),'data':data},oned_as='column')
+        spio.savemat(filename,{'N':self.N,'u0':self.u0,'G':self.G,'sd':self.sd,'D':D,'vol':vol,'tspan':np.asarray(self.tspan,dtype=np.float),'data':data},oned_as='column')
 
 
 
@@ -248,7 +259,6 @@ class Mesh():
             return
 
     def getNumVoxels(self):
-
         return self.mesh.num_vertices()
         #dims = np.shape(self.p)
         #return dims[1]
@@ -416,6 +426,15 @@ class Xmesh():
         #dofs.names = []
         #nodes.dofs = []
 
+
+def createSpeciesMap(model):
+    i=0
+    model.species_map = {}
+    for S in model.listOfSpecies:
+        model.species_map[S]=i
+        i = i+1;
+
+
 def meshextend(model):
     """
         Extend the primary mesh with information about degrees of freedom.
@@ -509,7 +528,6 @@ def urdme(model=None,solver='nsm',solver_path="",seed=None,report_level=1):
         print handle.stderr.read()
 
     #Load the result.
-    #AH: TODO! SciPy fails to read the file (But it loads fine in Matlab)!.
     try:
         resultfile = h5py.File(outfile.name,'r')
         U = resultfile['U'].value

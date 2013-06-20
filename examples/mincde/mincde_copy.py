@@ -43,29 +43,23 @@ def mincde(model_name=""):
     
     # Load mesh
     model.mesh = read_dolfin_mesh('coli.xml')
-    
+    model.scatter(MinD_c_adp)
+    model.scatter(MinD_e)
+
     #print model.mesh
-    matrices = assemble(model)
-    model.stiffness_matrices = matrices["K"]
-    model.mass_matrices = matrices["M"]
+    #matrices = assemble(model)
+    #model.stiffness_matrices = matrices["K"]
+    #model.mass_matrices = matrices["M"]
+    #result = model.createSystemMatrix()
+    #model.vol = result['vol']
+    #model.D = result['D']
 
-    result = model.createSystemMatrix()
-    model.vol = result['vol']
-    model.D = result['D']
-
-#print matrices
-    #stiffness = matrices['K']
-    #rows,cols,vals = stiffness['MinD_c_atp'].data()
-    #print vals
-
-    #model.mesh = read_gmsh_mesh("coli.msh")
-    #print model.mesh
     return model
 
 if __name__=="__main__":
     """ Dump model to a file. """
     model = mincde(model_name="mincde")
-    spio.savemat("testmatrix",{'D':model.D},oned_as='column')
-    #model.serialize("testmincde.mat")
+#spio.savemat("testmatrix",{'D':model.D},oned_as='column')
+    model.serialize("testmincde.mat")
     # TODO: This does not work yet. 
     #urdme(model)

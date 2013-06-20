@@ -127,9 +127,10 @@ class Model():
 class Species():
     """ Models a chemical species. """
     
-    def __init__(self,name="",initial_value=0,diffusion_constant=None,reaction_radius=None):
+    def __init__(self,name="",initial_value=0,diffusion_constant=None,reaction_radius=None,dimension=3):
         self.name = name
         self.initial_value = initial_value
+        self.dimension=dimension
         self.diffusion_constant=diffusion_constant
         self.reaction_radius=reaction_radius
 

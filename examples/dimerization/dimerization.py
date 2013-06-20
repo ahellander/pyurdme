@@ -36,10 +36,10 @@ def dimerization(model_name=""):
 
     #mesh,physical_ids=meshInit(geom) -> Shells out and calls Gmsh
     # Or simply load a Gmsh mesh
-    #model.mesh = importmesh('meshes/surface.msh')
+    #model.mesh = read_gmsh('meshes/surface.msh')
     meshextend(model)
 
-    # Distribute the Species' initial values over the mesh
+    # Distribute the molecues over the mesh
     model.scatter(A,subdomain=1)
     model.scatter(B,subdomain=1)
     model.scatter(C,subdomain=1)
@@ -51,9 +51,9 @@ def dimerization(model_name=""):
 
 
 if __name__ == '__main__':
+
     """ Create a model and assemble the URDME input file. """
     model = dimerization()
-    #Run URDME
-    #os.environ['URDME_ROOT']='/Users/andreash/github/urdme/urdme'
-    result = urdme(model,seed=10)
+    #result = urdme(model,solver='nem',solver_path="/Users/andreash/bitbucket/nllattice/",seed=10)
+    result = urdme(model,solver='nsm',seed=10)
     print result

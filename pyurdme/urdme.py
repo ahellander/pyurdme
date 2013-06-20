@@ -11,25 +11,22 @@ import shutil
 
 import gmsh
 
+import numpy
+import scipy.sparse
+
+
 # Need a way to read hdf5 files
 try:
     import h5py
 except:
-    pass
-
-
-try:
-    from meshpy.gmsh_reader import *
-    #import meshpy
-#import meshpy.gmsh_reader
-#import meshpy.gmsh_reader.GmshMeshRecieverBase
-except Exception,e:
-    print "Failed to import meshpy."+e
+    print "Fatal Error: You are missing the h5py library."
     raise
 
 try:
     import dolfin
+    dolfin.parameters["linear_algebra_backend"] = "uBLAS"
 except:
+    print "Warning: Could not import dolphin. Only simple Cartesain examples will work."
     ONLY_CARTESIAN=True
 
 class MeshImportError(Exception):
@@ -149,7 +146,40 @@ class URDMEModel(Model):
         # Is the initial condition matrix constructed?
         # Check for exisitence of u0 here.
         
-    
+
+    def createSystemMatrix(self):
+        """ Create one merged system matrix in CCS format for input to the URDME solvers """
+                
+        stiffness_matrices = self.stiffness_matrices
+        # Make a dok matrix
+        #Ddok = scipy.sparse.dok_matrix((Ndofs,Ndofs))
+        i=1;
+        Mspecies = len(self.listOfSpecies)
+        Ndofs = self.mesh.getNumVoxels()*Mspecies
+        S = scipy.sparse.dok_matrix((Ndofs,Ndofs))
+        
+        spec = 0
+        for species,K in stiffness_matrices.iteritems():
+
+            rows,cols,vals = K.data()
+           
+            Kcrs = scipy.sparse.csr_matrix((vals,cols,rows))
+            Kdok = Kcrs.todok()
+            for entries in Kdok.items():
+                ind = entries[0]
+                val = entries[1]
+                S[Mspecies*ind[0]+spec,Mspecies*ind[1]+spec]=-val
+
+            spec = spec+1
+
+            # filter the matrix
+            #  for
+            # SK = scipy.sparse.csr_matrix()
+                    # print Kdok.items()
+        D = S.tocsc()
+        return D
+                
+                
     def validate(self):
         """ Validate the model data structures. """
     
@@ -178,8 +208,7 @@ class URDMEModel(Model):
         if not hasattr(self,"sd"):
             self.initializeSubdomainVector()
         
-        # Data vector. If not present in model, it defaults to a vector with all
-        # elements zero.
+        # Data vector. If not present in model, it defaults to a vector with all elements zero.
         if not hasattr(self,"data"):
             data = np.zeros((1,self.mesh.getNumVoxels()))
         
@@ -188,24 +217,27 @@ class URDMEModel(Model):
         spio.savemat(filename,{'N':self.N,'u0':self.u0,'G':self.G,'sd':self.sd,'D':D,'vol':vol[0::3],'tspan':np.asarray(self.tspan,dtype=np.float),'data':data},oned_as='column')
 
 
+
 class Mesh():
     """ A thin wrapper around the Dolfin mesh object. """
 
-    def __init__(self,mesh_type="dolfin"):
+    def __init__(self,mesh=None,mesh_type="Dolfin"):
         
         self.mesh_type = mesh_type
         
-        if mesh_type == "dolfin":
-            self.mesh = dolfin.Mesh()
+        if mesh_type == "Dolfin":
+            self.mesh = mesh
         elif mesh_type == "Cartesian":
             return
 
     def getNumVoxels(self):
-        dims = np.shape(self.p)
-        return dims[1]
+
+        return self.mesh.num_vertices()
+        #dims = np.shape(self.p)
+        #return dims[1]
 
 def read_gmsh_mesh(meshfile):
-    """ Read a Gmsh mesh file """
+    """ Read a Gmsh mesh from file. """
     mr = GmshMeshReceiverBase()
     try:
         mesh = read_gmsh(mr,filename=meshfile)
@@ -215,12 +247,22 @@ def read_gmsh_mesh(meshfile):
     print mesh
     return mesh
 
-def CartesianMesh(geometry=None,side_length=None,hmax=None):
+def read_dolfin_mesh(filename=None):
+    """ Import a mesh in Dolfins native .xml format """
+    try:
+        dolfin_mesh = dolfin.Mesh(filename)
+        mesh = Mesh(mesh=dolfin_mesh,mesh_type="Dolfin")
+        return mesh
+    except Exception,e:
+        raise MeshImportError("Failed to import mesh: "+filename+"\n"+e)
+
+
+def createCartesianMesh(geometry=None,side_length=None,hmax=None):
     """
-        Create a Cartesian mesh for a line, square or cube.
-        This is more or less only useful for debugging and development.
-        
+    Create a simple Cartesian mesh for a line, square or cube.
+    This is more or less only useful for debugging and development.
     """
+    
     valid_geometries = ["line","square","cube"]
     if geometry not in valid_geometries:
         raise
@@ -268,7 +310,7 @@ def CartesianMesh(geometry=None,side_length=None,hmax=None):
 def assemble(model):
     """
         Assemble the diffusion matrix and volume vector.
-        Here, we will need to use Fenics to build function spaces
+        Here, we will need to use Dolfin to build function spaces
         and assemble.
     """
     if model.mesh.mesh_type == "Cartesian":
@@ -309,6 +351,42 @@ def assemble(model):
 
         D = scisp.csc_matrix(DF)
         return (vol,D)
+    else:
+        # Assemble using Dolfin.
+        #
+        #
+        # Returns: A dict of two dicts (stiffness and mass matrices)
+        #          Those dicts in turn has species names as keys and contain
+        #          matrices in CSR format (as returned ny Dolfin)
+        #
+        # TODO: If the mesh is not a Dolfin mesh object, we need to convert to that here...
+        
+        # Create Function spaces, trial functions and test functions for all the species
+        function_space = {}
+        trial_functions = {}
+        test_functions = {}
+        stiffness_matrices = {}
+        mass_matrices = {}
+        
+        for spec in model.listOfSpecies:
+            
+            species = model.listOfSpecies[spec]
+            spec_name = species.name
+            
+            if species.dimension == 2:
+                differential = dolfin.ds
+            else:
+                differential = dolfin.dx
+        
+            function_space[spec_name] = dolfin.FunctionSpace(model.mesh.mesh,"Lagrange",1)
+            trial_functions[spec_name] = dolfin.TrialFunction(function_space[spec_name])
+            test_functions[spec_name] = dolfin.TestFunction(function_space[spec_name])
+            a_K = species.diffusion_constant*dolfin.inner(dolfin.nabla_grad(trial_functions[spec_name]), dolfin.nabla_grad(test_functions[spec_name]))*differential
+            stiffness_matrices[spec_name] = dolfin.assemble(a_K)
+            a_M = trial_functions[spec_name]*test_functions[spec_name]*differential
+            mass_matrices[spec_name] = dolfin.assemble(a_M)
+        
+        return {'K':stiffness_matrices,'M':mass_matrices}
 
 
 class Xmesh():
@@ -361,14 +439,18 @@ def meshextend(model):
     model.xmesh = xmesh
 
 
-def urdme(model=None,solver='nsm',seed=None,report_level=1):
+def urdme(model=None,solver='nsm',solver_path="",seed=None,report_level=1):
     """ URDME solver interface, analogous to the Matlab URDME function interface. """
 
     # Set URDME_ROOT
     URDME_ROOT = subprocess.check_output(['urdme_init','-r'])
     # Trim newline
     URDME_ROOT = URDME_ROOT[:-1]
-    URDME_BUILD = URDME_ROOT + '/build/'
+    if solver_path == "":
+        URDME_BUILD = URDME_ROOT+'/build/'
+    else:
+        URDME_BUILD = solver_path+'/build/'
+        os.environ['SOLVER_ROOT'] = solver_path
 
     # Write the propensity file
     try:

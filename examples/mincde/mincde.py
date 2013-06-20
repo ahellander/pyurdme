@@ -41,7 +41,7 @@ def mincde(model_name=""):
 	model.addReaction([R1,R2,R3,R4,R5,R6])
 	
 	# Load mesh
-    model.mesh = read_gmsh("coli.xml")
+    model.mesh = read_gmsh_mesh("coli.xml")
     
 	return model
 

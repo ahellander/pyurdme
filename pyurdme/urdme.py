@@ -190,8 +190,8 @@ class URDMEModel(Model):
             spec = spec+1
 
         D = S.tocsc()
-        return vol,D
-                
+        return {'vol':vol,'D':D}
+
                 
     def validate(self):
         """ Validate the model data structures. """

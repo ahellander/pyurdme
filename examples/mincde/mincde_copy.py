@@ -47,6 +47,8 @@ def mincde(model_name=""):
     #print model.mesh
     matrices = assemble(model)
     model.stiffness_matrices = matrices["K"]
+    model.mass_matrices = matrices["M"]
+
     model.D = model.createSystemMatrix()
 
 #print matrices

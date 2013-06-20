@@ -151,12 +151,26 @@ class URDMEModel(Model):
         """ Create one merged system matrix in CCS format for input to the URDME solvers """
                 
         stiffness_matrices = self.stiffness_matrices
+        mass_matrices = self.mass_matrices
         # Make a dok matrix
         #Ddok = scipy.sparse.dok_matrix((Ndofs,Ndofs))
         i=1;
         Mspecies = len(self.listOfSpecies)
         Ndofs = self.mesh.getNumVoxels()*Mspecies
         S = scipy.sparse.dok_matrix((Ndofs,Ndofs))
+
+        # Create the volume vector from the mass matrices
+        vol = numpy.zeros((Ndofs,1))
+        spec = 0
+        for species,M in mass_matrices.iteritems():
+            rows,cols,vals = M.data()
+            SM = scipy.sparse.csr_matrix((vals,cols,rows))
+            vols = SM.sum(axis=1)
+            for j in range(0,len(vols)):
+                vol[Mspecies*j+spec,0]=vols[j]
+            spec = 0
+
+        vol = vol.flatten()
         
         spec = 0
         for species,K in stiffness_matrices.iteritems():
@@ -168,16 +182,15 @@ class URDMEModel(Model):
             for entries in Kdok.items():
                 ind = entries[0]
                 val = entries[1]
-                S[Mspecies*ind[0]+spec,Mspecies*ind[1]+spec]=-val
-
+                if ind[0] != ind[1] and val > 0.0:
+                    val = 0.0
+                
+                S[Mspecies*ind[0]+spec,Mspecies*ind[1]+spec]=-val/vol[Mspecies*ind[0]+spec]
+        
             spec = spec+1
 
-            # filter the matrix
-            #  for
-            # SK = scipy.sparse.csr_matrix()
-                    # print Kdok.items()
         D = S.tocsc()
-        return D
+        return vol,D
                 
                 
     def validate(self):

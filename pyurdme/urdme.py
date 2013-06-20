@@ -179,13 +179,17 @@ class URDMEModel(Model):
            
             Kcrs = scipy.sparse.csr_matrix((vals,cols,rows))
             Kdok = Kcrs.todok()
+
             for entries in Kdok.items():
                 ind = entries[0]
                 val = entries[1]
                 if ind[0] != ind[1] and val > 0.0:
                     val = 0.0
-                
-                S[Mspecies*ind[0]+spec,Mspecies*ind[1]+spec]=-val/vol[Mspecies*ind[0]+spec]
+                if vol[Mspecies*ind[1]+spec]==0:
+		   vi = 1
+		else:
+		   vi = vol[Mspecies*ind[1]+spec]		 			
+                S[Mspecies*ind[0]+spec,Mspecies*ind[1]+spec]=-val/vi
         
             spec = spec+1
 

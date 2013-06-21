@@ -133,6 +133,7 @@ class URDMEModel(Model):
         numS = species.initial_value
         if not hasattr(self,'species_map'):
             createSpeciesMap(self)
+        
         specindx= self.species_map[Sname]
         
         if not hasattr(self,"u0"):

@@ -1,7 +1,7 @@
 """ pyurdme model file for reversible dimerization on a surface. """
 import os
 from pyurdme.urdme import *
-from pyurdme.gmsh import *
+#from pyurdme.gmsh import *
 
 def dimerization(model_name=""):
     """ Dimerization. The reversible reaction A+B<->C on a surface. """

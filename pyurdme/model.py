@@ -1,28 +1,39 @@
-""" Module that describes a well mixed model biochemical models. """
+""" 
+    This module describes a model of a well-mixed biochemical system, via the Model class.
+    Model objects should not be instantiated by an application. Instead, use StochKitModel 
+    in 'stochkit.py', which extends Model with StochKit2 specific serialization. Refer to 
+    'stochkit.py' for examples of its use. 
+    
+    Raises: SpeciesError, ParameterError, ReactionError
+    
+    Contact: Andreas Hellander
+    
+"""
 from collections import OrderedDict
 
 class Model():
-    """ Representation of a well mixed model. """
+    """ Representation of a well mixed biochemical model. Interfaces to solvers in StochSS
+        should attempt to extend Model. """
     
     def __init__(self,name="",volume=1.0):
         """ Create an empty model. """
         
-        # The name that the model is referenced by (String)
+        # The name that the model is referenced by (should be a String)
         self.name = name
         
-        # Decription of the model (string)
+        # Optional decription of the model (string)
         self.annotation = ""
         
         # Dictionaries with Species, Reactions and Parameter objects.
-        # Names are used as keys.
+        # Species,Reactio and Paramter names are used as keys.
         self.listOfParameters = OrderedDict()
         self.listOfSpecies    = OrderedDict()
         self.listOfReactions  = OrderedDict()
         
-        # A well mixed model has a volume paramteter
+        # A well mixed model has an optional volume parameter
         self.volume = volume;
         
-        # This dict holds flattended parameters and species for
+        # Dict that holds flattended parameters and species for
         # evaluation of expressions in the scope of the model.
         self.namespace = OrderedDict([])
 
@@ -35,24 +46,28 @@ class Model():
 
     def getSpecies(self, sname):
         return self.listOfSpecies[sname]
-
+    
     def getNumSpecies(self):
         return len(self.listOfSpecies)
+    
     
     def getAllSpecies(self):
         return self.listOfSpecies
 
     def addSpecies(self, obj):
         """ 
-            Add a species to listOfSpecies. 
-            Accepts input either as a single Species object, or
+            Add a species to listOfSpecies. Accepts input either as a single Species object, or
             as a list of Species objects.
         """
-        # TODO, make sure that you don't overwrite an existing species
+                
         if isinstance(obj, Species):
+            if obj.name in self.listOfSpecies:
+                raise ModelError("Can't add species. A species with that name alredy exisits.")
             self.listOfSpecies[obj.name] = obj;
         else: # obj is a list of species
             for S in obj:
+                if S.name in self.listOfSpecies:
+                    raise ModelError("Can't add species. A species with that name alredy exisits.")
                 self.listOfSpecies[S.name] = S;
     
     def deleteSpecies(self, obj):
@@ -62,8 +77,11 @@ class Model():
         self.listOfSpecies.clear()
 
     def getParameter(self,pname):
-        return listOfParameters[pname]
-    
+        try:
+            return self.listOfParameters[pname]
+        except:
+            raise ModelError("No parameter named "+pname)
+
     def getAllParameters(self):
         return self.listOfParameters
     
@@ -88,12 +106,26 @@ class Model():
     def setParameter(self,pname,expression):
         """ Set the expression of an existing paramter. """
         p = self.listOfParameters[pname]
-        p.value = expression
+        p.expression = expression
+        p.evaluate()
+        
+    def resolveParameters(self):
+        """ Attempt to resolve all parameter expressions to scalar floats. This
+            methods must be called before exporting the model. """
+        self.updateNamespace()
+        for param in self.listOfParameters:
+            try:
+                self.listOfParameters[param].evaluate(self.namespace)
+            except:
+                raise ParameterError("Could not resolve Parameter expression "+param + "to a scalar value.")
     
     def deleteAllParameters(self):
         self.listOfParameters.clear()
 
     def addReaction(self,reacs):
+        """ Add reactions to model. Input can be single instance, a list of instances
+            or a dict with name,instance pairs. """
+        
         # TODO, make sure that you cannot overwrite an existing parameter
         param_type = type(reacs).__name__
         if param_type == 'list':
@@ -108,7 +140,7 @@ class Model():
 
     def getReaction(self, rname):
         return reactions[rname]
-    
+
     def getNumReactions(self):
         return len(self.listOfReactions)
 
@@ -124,25 +156,28 @@ class Model():
     def _cmp_(self,other):
         """ Compare """
 
+    
+
 class Species():
-    """ Models a chemical species. """
+    """ Chemical species. """
     
     def __init__(self,name="",initial_value=0,diffusion_constant=None,reaction_radius=None,dimension=3):
+        # A species has a name (string) and an initial value (positive integer)
         self.name = name
         self.initial_value = initial_value
+        assert self.initial_value >= 0, "A species initial value has to be a positive number."
         self.dimension=dimension
         self.diffusion_constant=diffusion_constant
         self.reaction_radius=reaction_radius
 
-# TODO: Should the parameter, being evaluable, be implemented as a Functor object?
 class Parameter():
     """ 
         A parameter can be given as an expression (function) or directly as a value (scalar).
         If given an expression, it should be understood as evaluable in the namespace
         of a parent Model.
     """
-    
-    
+    # AH: Should the parameter, being evaluable, be implemented as a Functor object?
+
     def __init__(self,name="",expression=None,value=None):
 
         self.name = name        
@@ -170,15 +205,25 @@ class Parameter():
             self.value = (float(eval(self.expression, namespace)))
         except:
             self.value = None
+            
+    def setExpression(self,expression):
+        self.expression = expression
+        # We allow expression to be passed in as a non-string type. Invalid strings
+        # will be caught below. It is perfectly fine to give a scalar value as the expression.
+        # This can then be evaluated in an empty namespace to the scalar value.
+        if expression != None:
+            self.expression = str(expression)
+                    
+        if self.expression == None:
+            raise TypeError
+    
+        self.evaluate()
 
 class Reaction():
     """ 
-        Models a reaction. A reaction has its own dictinaries
-        of species (reactants and products) and parameters.
-        The reaction's propensity function needs to be
-        evaluable (and result in a non-negative scalar value)
+        Models a reaction. A reaction has its own dictinaries of species (reactants and products) and parameters.
+        The reaction's propensity function needs to be evaluable (and result in a non-negative scalar value)
         in the namespace defined by the union of those dicts.
-         
     """
 
     def __init__(self, name = "", reactants = {}, products = {}, propensity_function = None, massaction = False, rate=None, annotation=None):
@@ -187,14 +232,14 @@ class Reaction():
             
             Input: 
                 name:                       string that the model is referenced by
-                parameters:                 a list of parmeter instances
+                parameters:                 a list of parameter instances
                 propensity_function:         string with the expression for the reaction's propensity
                 reactants:                  List of (species,stoiciometry) tuples
                 product:                    List of (species,stoiciometry) tuples
                 annotation:                 Description of the reaction (meta)
             
                 massaction True,{False}     is the reaction of mass action type or not?
-                rate                        if mass action, rate is a reference to a paramter onbject.
+                rate                        if mass action, rate is a reference to a paramter instance.
             
             Raises: ReactionError
             
@@ -251,9 +296,8 @@ class Reaction():
         for r in self.reactants:
             total_stoch+=self.reactants[r]
         if total_stoch>2:
-            raise ReactionError("Reaction: " +self.name + "A mass action reaction cannot involve more than two molecules.")
+            raise ReactionError("Reaction: " +self.name + "A mass-action reaction cannot involve more than two species.")
     
-        
         # Case EmptySet -> Y
         propensity_function = self.marate.name;
              
@@ -285,5 +329,14 @@ class Reaction():
         self.annotation = annotation
 
 # Module exceptions
-class ReactionError(Exception):
+class ModelError(Exception):
+    pass
+
+class SpeciesError(ModelError):
+    pass
+
+class ReactionError(ModelError):
+    pass
+
+class ParameterError(ModelError):
     pass

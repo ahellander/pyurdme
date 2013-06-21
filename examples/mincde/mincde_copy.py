@@ -2,12 +2,14 @@
 
 import os
 from pyurdme.urdme import *
-import scipy.io as spio
+
+
 
 def mincde(model_name=""):
 
     if model_name == "":
         model_name = "mincde"
+    
     model = URDMEModel(name=model_name)
 
     # Species
@@ -21,9 +23,9 @@ def mincde(model_name=""):
     model.addSpecies([MinD_m,MinD_c_atp,MinD_c_adp,MinD_e,MinDE])
         
     # Parameters
-    sigma_d = Parameter(name="sigma_d",expression=2.5e-8)
+    sigma_d  = Parameter(name="sigma_d",expression=2.5e-8)
     sigma_dD = Parameter(name="sigma_dD",expression=0.0016e-18)
-    sigma_e = Parameter(name="sigma_e",expression=0.093e-18)
+    sigma_e  = Parameter(name="sigma_e",expression=0.093e-18)
     sigma_de = Parameter(name="sigma_de",expression=0.7)
     sigma_dt = Parameter(name="sigma_dt",expression=1.0)
         
@@ -43,23 +45,18 @@ def mincde(model_name=""):
     
     # Load mesh
     model.mesh = read_dolfin_mesh('coli.xml')
+   
+    # Distribute moelcules randomly over the mesh according to their initial values
     model.scatter(MinD_c_adp)
     model.scatter(MinD_e)
 
-    #print model.mesh
-    #matrices = assemble(model)
-    #model.stiffness_matrices = matrices["K"]
-    #model.mass_matrices = matrices["M"]
-    #result = model.createSystemMatrix()
-    #model.vol = result['vol']
-    #model.D = result['D']
-
+    model.tspan = range(100)
     return model
 
 if __name__=="__main__":
     """ Dump model to a file. """
     model = mincde(model_name="mincde")
-#spio.savemat("testmatrix",{'D':model.D},oned_as='column')
-    model.serialize("testmincde.mat")
+    #model.serialize("testmincde.mat")
     # TODO: This does not work yet. 
-    #urdme(model)
+    result = urdme(model)
+    print result

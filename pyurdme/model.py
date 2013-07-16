@@ -10,6 +10,9 @@
     
 """
 from collections import OrderedDict
+#import quantities as pq
+
+#molar = pq.Unit
 
 class Model():
     """ Representation of a well mixed biochemical model. Interfaces to solvers in StochSS
@@ -59,10 +62,9 @@ class Model():
             Add a species to listOfSpecies. Accepts input either as a single Species object, or
             as a list of Species objects.
         """
-                
         if isinstance(obj, Species):
             if obj.name in self.listOfSpecies:
-                raise ModelError("Can't add species. A species with that name alredy exisits.")
+                raise ModelError("Can't add species. A species with that name alredy exists.")
             self.listOfSpecies[obj.name] = obj;
         else: # obj is a list of species
             for S in obj:

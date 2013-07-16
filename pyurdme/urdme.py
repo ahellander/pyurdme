@@ -82,8 +82,8 @@ class URDMEModel(Model):
             i+=1
         
         propfilestr = propfilestr.replace("__DEFINE_SPECIES__",speciesdef)
-        
-        propfilestr= propfilestr.replace("__NUMBER_OF_REACTIONS__",str(self.getNumReactions()))
+    
+        propfilestr = propfilestr.replace("__NUMBER_OF_REACTIONS__",str(self.getNumReactions()))
         
         parameters = ""
         for p in self.listOfParameters:
@@ -225,7 +225,6 @@ class URDMEModel(Model):
 
         # Initial condition
         #u0 =
-        #self.initializeInitialValue()
         
         # Volume vector
         result =  self.createSystemMatrix()

@@ -85,6 +85,8 @@ class URDMEModel(Model):
     
         propfilestr = propfilestr.replace("__NUMBER_OF_REACTIONS__",str(self.getNumReactions()))
         
+        # Make sure all paramters are evaluated to scalars before we write them to the file.
+        self.resolveParameters()
         parameters = ""
         for p in self.listOfParameters:
             parameters += "const double "+p+" = " +str(self.listOfParameters[p].value)+";\n"
@@ -129,20 +131,21 @@ class URDMEModel(Model):
     def scatter(self,species,subdomain=None):
         """ Scatter an initial number of molecules over the voxels in a subdomain. """
     
-        Sname = species.name
-        numS = species.initial_value
-        if not hasattr(self,'species_map'):
-            createSpeciesMap(self)
-        
-        specindx= self.species_map[Sname]
+        #Sname = species.name
+        #numS = species.initial_value
+            #if not hasattr(self,'species_map'):
+        #   createSpeciesMap(self)
+        #specindx= self.species_map[Sname]
         
         if not hasattr(self,"u0"):
             self.initializeInitialValue()
         
         # TODO: USE THE SUBDOMAIN INFO
-        for i in range(numS):
-            vtx=np.random.randint(0,self.mesh.getNumVoxels())
-            self.u0[specindx,vtx]+=1
+        for i,spec_name in enumerate(self.listOfSpecies):
+            spec_obj=self.listOfSpecies[spec_name]
+            for mol in range(spec_obj.initial_value):
+                vtx=np.random.randint(0,self.mesh.getNumVoxels())
+                self.u0[i,vtx]+=1
     
         # Is the initial condition matrix constructed?
         # Check for exisitence of u0 here.
@@ -151,7 +154,7 @@ class URDMEModel(Model):
     def createSystemMatrix(self):
         """ Create one merged system matrix in CCS format for input to the URDME solvers """
         
-        # Check if the individual matrices has been assembled, otherwise assmble them
+        # Check if the individual matrices has been assembled, otherwise assemble them
         try:
             stiffness_matrices = self.stiffness_matrices
             mass_matrices = self.mass_matrices
@@ -476,7 +479,7 @@ def meshextend(model):
 
 
 def urdme(model=None,solver='nsm',solver_path="",seed=None,report_level=1):
-    """ URDME solver interface, analogous to the Matlab URDME function interface. """
+    """ URDME solver interface, analogous to the Matlab URDME interface. """
 
     # Set URDME_ROOT
     URDME_ROOT = subprocess.check_output(['urdme_init','-r'])
@@ -512,7 +515,6 @@ def urdme(model=None,solver='nsm',solver_path="",seed=None,report_level=1):
     outfile.close()
     
     # Execute the solver
-    
     if seed is not None:
      try: 
       handle = subprocess.Popen(['.urdme/'+propfilename+'.'+solver,infile.name,outfile.name,str(seed)], stdout = subprocess.PIPE, stderr=subprocess.PIPE)
@@ -520,31 +522,50 @@ def urdme(model=None,solver='nsm',solver_path="",seed=None,report_level=1):
         print handle.stdout.read()
         print handle.stderr.read()
      except:
-      return 'Call to URDME failed miserably'
+      return 'Call to URDME failed.'
     else:
       handle = subprocess.Popen(['.urdme/'+propfilename+'.'+solver,infile.name,outfile.name], stdout = subprocess.PIPE, stderr=subprocess.PIPE)
       if report_level >= 1:
         print handle.stdout.read()
         print handle.stderr.read()
 
-    #Load the result.
+    #Load the result from the hdf5 output file.
     try:
+        
         resultfile = h5py.File(outfile.name,'r')
         U = resultfile['U'].value
         tspan = resultfile['tspan'].value
         resultfile.close()
+        
         # Clean up
         os.remove(infile.name)
         os.remove(outfile.name)
         
-        return {'U':U,'tspan':tspan}
+        # Create Dolfin Functions for all the species
+        model.sol = {}
+        for i,spec in enumerate(model.listOfSpecies):
+    
+            species = model.listOfSpecies[spec]
+            spec_name = species.name
+            func = dolfin.Function(dolfin.FunctionSpace(model.mesh.mesh,"Lagrange",1))
+            func_vector = func.vector()
+            dims = np.shape(U)
+            
+            print i,spec
+            numvox = model.mesh.getNumVoxels()
+            for dof in range(numvox):
+                func_vector[dof] = float(U[dof*len(model.listOfSpecies)+i,10])
+        
+            model.sol[spec_name] = func
+            
+        
+        return {'U':U,'tspan':tspan,'sol':model.sol}
 
     except Exception,e:
        # Clean up
        subprocess.call(['rm','-rf',infile.name])
        subprocess.call(['rm','-rf',outfile.name])
-       raise
-       return 'Matfile load failed.'
+       raise 
 
 
 class URDMEError(Exception):

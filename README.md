@@ -12,4 +12,5 @@ pyurdme depends on the following external packages
 - NumPy
 - Scipy
 - Gmsh
+- h5py
 

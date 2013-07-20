@@ -16,7 +16,7 @@ def mincde(model_name=""):
     MinD_m     = Species(name="MinD_m",initial_value=0,diffusion_constant=1e-14,dimension=2);
     MinD_c_atp = Species(name="MinD_c_atp",initial_value=0,diffusion_constant=2.5e-12);
     MinD_c_adp = Species(name="MinD_c_adp",initial_value=4500,diffusion_constant=2.5e-12);
-    MinD_e     = Species(name="MinD_e",initial_value=1575,diffusion_constant=2.5);
+    MinD_e     = Species(name="MinD_e",initial_value=1575,diffusion_constant=2.5e-12);
     MinDE      = Species(name="MinDE",initial_value=0,diffusion_constant=1e-14,dimension=2);
         
     model.addSpecies([MinD_m,MinD_c_atp,MinD_c_adp,MinD_e,MinDE])
@@ -45,7 +45,7 @@ def mincde(model_name=""):
     # Load mesh
     model.mesh = read_dolfin_mesh('coli.xml')
    
-    # Distribute moelcules randomly over the mesh according to their initial values
+    # Distribute molecules randomly over the mesh according to their initial values
     model.scatter(MinD_c_adp)
     model.scatter(MinD_e)
 

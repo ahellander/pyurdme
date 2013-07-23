@@ -1,7 +1,7 @@
 pyurdme
 =======
 
-Python API for URDME solvers. 
+Python API for URDME solvers. pyurmde provides an alternative to the Matlab modeling layer of URDME. 
 
 
 Dependencies

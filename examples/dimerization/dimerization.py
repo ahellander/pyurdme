@@ -2,6 +2,9 @@
 import os
 from pyurdme.urdme import *
 import dolfin
+import numpy
+import scipy.io as spio
+
 #from pyurdme.gmsh import *
 
 def dimerization(model_name=""):
@@ -12,9 +15,9 @@ def dimerization(model_name=""):
     model = URDMEModel(name=model_name);
 
     # Species
-    A = Species(name="A",initial_value=50,reaction_radius=1e-9,diffusion_constant=0.01,dimension=2);
-    B = Species(name="B",initial_value=100,reaction_radius=1e-9,diffusion_constant=0.01,dimension=2);
-    C = Species(name="C",initial_value=0,reaction_radius=1e-9,diffusion_constant=0.01,dimension=2);
+    A = Species(name="A",initial_value=0,reaction_radius=1e-9,diffusion_constant=0.01,dimension=2);
+    B = Species(name="B",initial_value=0,reaction_radius=1e-9,diffusion_constant=0.01,dimension=2);
+    C = Species(name="C",initial_value=100,reaction_radius=1e-9,diffusion_constant=0.01,dimension=2);
 
     model.addSpecies([A,B,C])
 
@@ -62,12 +65,16 @@ if __name__ == '__main__':
     model = dimerization()
     #result = urdme(model,solver='nem',solver_path="/Users/andreash/bitbucket/nllattice/",seed=10)
     result = urdme(model,solver='nsm',seed=10)
-    
+    U = result["U"]
+    print numpy.shape(U)
+    print numpy.sum(U[:,3])
+    #model.serialize(filename="debug.mat")
     # Plot using VIPER
     #dolfin.plot(model.sol['C'],wireframe=True)
     #dolfin.plot(model.mesh.mesh,wireframe=True,axes=True)
     #dolfin.interactive()
     
+    spio.savemat("debugoutput.mat",result)
     # Dump solution to file in VTK format for ParaView
     file = dolfin.File("testsolution.pvd")
     file << model.sol['C']

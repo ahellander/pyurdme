@@ -131,21 +131,28 @@ class URDMEModel(Model):
     def scatter(self,species,subdomain=None):
         """ Scatter an initial number of molecules over the voxels in a subdomain. """
     
-        #Sname = species.name
-        #numS = species.initial_value
-            #if not hasattr(self,'species_map'):
-        #   createSpeciesMap(self)
-        #specindx= self.species_map[Sname]
+        Sname = species.name
+        numS = species.initial_value
+        if not hasattr(self,'species_map'):
+            createSpeciesMap(self)
+        specindx= self.species_map[Sname]
         
         if not hasattr(self,"u0"):
             self.initializeInitialValue()
         
+        # SCATTER OCCURS ONCE FOR EVERY CALL FOR EVERY SPECIES!! NEEDS FIXING.  
+                
         # TODO: USE THE SUBDOMAIN INFO
-        for i,spec_name in enumerate(self.listOfSpecies):
-            spec_obj=self.listOfSpecies[spec_name]
-            for mol in range(spec_obj.initial_value):
-                vtx=np.random.randint(0,self.mesh.getNumVoxels())
-                self.u0[i,vtx]+=1
+                #for i,spec_name in enumerate(self.listOfSpecies):
+        #specieslist = species
+        #if not isinstance(specieslist, list):
+        #    specieslist = list(species)
+        #print specieslist
+        #for spec_obj in specieslist:
+            
+        for mol in range(species.initial_value):
+            vtx=np.random.randint(0,self.mesh.getNumVoxels())
+            self.u0[specindx,vtx]+=1
     
         # Is the initial condition matrix constructed?
         # Check for exisitence of u0 here.
@@ -154,7 +161,7 @@ class URDMEModel(Model):
     def createSystemMatrix(self):
         """ Create one merged system matrix in CCS format for input to the URDME solvers """
         
-        # Check if the individual matrices has been assembled, otherwise assemble them
+        # Check if the individual matrices (per species) have been assembled, otherwise assemble
         try:
             stiffness_matrices = self.stiffness_matrices
             mass_matrices = self.mass_matrices
@@ -165,14 +172,13 @@ class URDMEModel(Model):
             stiffness_matrices = self.stiffness_matrices
             mass_matrices = self.mass_matrices
         
-        # Make a dok matrix
-        #Ddok = scipy.sparse.dok_matrix((Ndofs,Ndofs))
+        # Make a dok matrix for easy manipulation
         i=1;
         Mspecies = len(self.listOfSpecies)
         Ndofs = self.mesh.getNumVoxels()*Mspecies
         S = scipy.sparse.dok_matrix((Ndofs,Ndofs))
 
-        # Create the volume vector from the mass matrices
+        # Create the volume vector by lumpng the mass matrices
         vol = numpy.zeros((Ndofs,1))
         spec = 0
         for species,M in mass_matrices.iteritems():
@@ -185,7 +191,12 @@ class URDMEModel(Model):
 
         vol = vol.flatten()
         
+        # Assemble one big matrix from the indiviudal stiffness matrices. Multiply by the inverse of
+        # the lumped mass matrix, filter out any entries with the wrong sign and renormalize the columns.
         spec = 0
+        positive_mass = 0.0
+        total_mass = 0.0
+                
         for species,K in stiffness_matrices.iteritems():
 
             rows,cols,vals = K.data()
@@ -196,27 +207,59 @@ class URDMEModel(Model):
             for entries in Kdok.items():
                 ind = entries[0]
                 val = entries[1]
-                if ind[0] != ind[1] and val > 0.0:
-                    val = 0.0
+                
+                if ind[0] != ind[1]:
+                    if val > 0.0:
+                        positive_mass += val
+                        val = 0.0
+                    else:
+                        total_mass += val
+                        
+                # The volume can be zero, if the species is not active at the vertex (such as a 2D species at a 3D node)
                 if vol[Mspecies*ind[1]+spec]==0:
                     vi = 1
                 else:
                     vi = vol[Mspecies*ind[1]+spec]
+            
                 S[Mspecies*ind[0]+spec,Mspecies*ind[1]+spec]=-val/vi
-        
+            
             spec = spec+1
 
+        # Convert to compressed column for compatibility with the URDME solvers.
         D = S.tocsc()
-        return {'vol':vol,'D':D}
+                
+        #col = D.getcol(0)
+        #print col.data
+        # Renormalize the columns (may not sum to zero since elements may have been filtered out
+        sumcol = numpy.zeros((Ndofs,1))
+        for i in range(Ndofs):
+           col = D.getcol(i)
+           for val in col.data:
+               if val > 0.0:
+                   sumcol[i] += val
+                
+        D.setdiag(-sumcol.flatten())
+
+    
+        print "Fraction of positive off-diagonal entries: " + str(numpy.abs(positive_mass/total_mass))
+        return {'vol':vol,'D':D,'relative_positive_mass':positive_mass/total_mass}
 
                 
     def validate(self):
-        """ Validate the model data structures. """
+        """ Validate the model data structures. This function should be called 
+            prior to writing the model to the input file for the URDME solvers
+            since the solvers themselves only do limited error checking. """
+    
+        # Check that all the columns of the system matrix sums to zero (or close to zero). If not, it does
+        # not define a Markov process. 
+        maxcolsum = numpy.max(numpy.abs(self.D.sum(axis=0)))
+        if maxcolsum > 1e-10:
+            raise InvalidSystemMatrixException("Invalid diffusion matrix. The sum of the columns does not sum to zero. " + str(maxcolsum))
     
     def serialize(self,filename=[]):
         """ 
-            Serialize the model object to binary file compatible
-            with core URDME solvers. 
+            Serialize the model object to a binary file containing all the datastructures 
+            needed by the the core URDME solvers.
         """
     
         createSpeciesMap(self)
@@ -234,6 +277,7 @@ class URDMEModel(Model):
         vol = result['vol']
         vol = vol[::len(self.listOfSpecies)]
         D = result['D']
+        self.D = D
         
         # Subdomain vector
         if not hasattr(self,"sd"):
@@ -242,6 +286,9 @@ class URDMEModel(Model):
         # Data vector. If not present in model, it defaults to a vector with all elements zero.
         if not hasattr(self,"data"):
             data = np.zeros((1,self.mesh.getNumVoxels()))
+        
+        # Validate the data structures before writing them to file. 
+        self.validate()
         
         # data = []
         filename = filename
@@ -538,6 +585,8 @@ def urdme(model=None,solver='nsm',solver_path="",seed=None,report_level=1):
         resultfile.close()
         
         # Clean up
+        subprocess.call(['cp',outfile.name,'.'])
+
         os.remove(infile.name)
         os.remove(outfile.name)
         
@@ -551,21 +600,20 @@ def urdme(model=None,solver='nsm',solver_path="",seed=None,report_level=1):
             func_vector = func.vector()
             dims = np.shape(U)
             
-            print i,spec
             numvox = model.mesh.getNumVoxels()
             for dof in range(numvox):
                 func_vector[dof] = float(U[dof*len(model.listOfSpecies)+i,10])
         
             model.sol[spec_name] = func
-            
+
         
-        return {'U':U,'tspan':tspan,'sol':model.sol}
+        return {'U':U,'tspan':tspan}
 
     except Exception,e:
        # Clean up
        subprocess.call(['rm','-rf',infile.name])
        subprocess.call(['rm','-rf',outfile.name])
-       raise 
+       raise
 
 
 class URDMEError(Exception):
@@ -575,6 +623,8 @@ if __name__ == '__main__':
     """ Command line interface to URDME. Execute URDME given a model file. """ 
 
 
+class InvalidSystemMatrixException(Exception):
+    pass
 
 
 

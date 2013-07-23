@@ -53,7 +53,6 @@ class Model():
     def getNumSpecies(self):
         return len(self.listOfSpecies)
     
-    
     def getAllSpecies(self):
         return self.listOfSpecies
 

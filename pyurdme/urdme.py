@@ -14,7 +14,6 @@ import gmsh
 import numpy
 import scipy.sparse
 
-
 # Need a way to read hdf5 files
 try:
     import h5py
@@ -294,6 +293,7 @@ class URDMEModel(Model):
         filename = filename
         spio.savemat(filename,{'N':self.N,'u0':self.u0,'G':self.G,'sd':self.sd,'D':D,'vol':vol,'tspan':np.asarray(self.tspan,dtype=np.float),'data':data},oned_as='column')
 
+        
 
 
 class Mesh():
@@ -439,6 +439,16 @@ def assemble(model):
         # TODO: If the mesh is not a Dolfin mesh object, we need to convert to that here...
         
         # Create Function spaces, trial functions and test functions for all the species
+        
+        #try:
+        #    xmesh = model.xmesh
+        #except:
+        #    model.xmesh = meshextend(model)
+       
+        #function_space = xmesh.function_space
+        #trial_functions = xmesh.trial_functions
+        #test_functions = xmesh.test_functions
+            
         function_space = {}
         trial_functions = {}
         test_functions = {}
@@ -467,11 +477,13 @@ def assemble(model):
 
 
 class Xmesh():
-    """ Extended mesh object. """
+    """ Extended mesh object. Contanins dof-mappings, and function spaces etc. """
 
     def __init__(self):
         self.dofs = {}
         self.nodes = {}
+        self.function_space = {}
+
         #dofs.coords = []
         #dofs.names = []
         #nodes.dofs = []
@@ -530,6 +542,7 @@ def urdme(model=None,solver='nsm',solver_path="",seed=None,report_level=1):
 
     # Set URDME_ROOT
     URDME_ROOT = subprocess.check_output(['urdme_init','-r'])
+    
     # Trim newline
     URDME_ROOT = URDME_ROOT[:-1]
     if solver_path == "":
@@ -580,16 +593,20 @@ def urdme(model=None,solver='nsm',solver_path="",seed=None,report_level=1):
     try:
         
         resultfile = h5py.File(outfile.name,'r')
-        U = resultfile['U'].value
-        tspan = resultfile['tspan'].value
-        resultfile.close()
+        # print resultfile['U']
+        U = resultfile['U']
+        U = numpy.array(U)
+        # This little hack makes U have the same structure as in the Matlab interface...
+        dims = numpy.shape(U)
+        U = U.reshape((dims[1],dims[0]))
+        U = U.transpose()
+
+        tspan = resultfile['tspan']
+        tspan = numpy.array(tspan)
         
         # Clean up
-        subprocess.call(['cp',outfile.name,'.'])
-
-        os.remove(infile.name)
-        os.remove(outfile.name)
-        
+        subprocess.call(['cp',outfile.name,'outputhdf5'])
+     
         # Create Dolfin Functions for all the species
         model.sol = {}
         for i,spec in enumerate(model.listOfSpecies):
@@ -598,7 +615,7 @@ def urdme(model=None,solver='nsm',solver_path="",seed=None,report_level=1):
             spec_name = species.name
             func = dolfin.Function(dolfin.FunctionSpace(model.mesh.mesh,"Lagrange",1))
             func_vector = func.vector()
-            dims = np.shape(U)
+            dims = U.shape
             
             numvox = model.mesh.getNumVoxels()
             for dof in range(numvox):
@@ -606,7 +623,11 @@ def urdme(model=None,solver='nsm',solver_path="",seed=None,report_level=1):
         
             model.sol[spec_name] = func
 
-        
+        resultfile.close()
+
+        os.remove(infile.name)
+        os.remove(outfile.name)
+
         return {'U':U,'tspan':tspan}
 
     except Exception,e:

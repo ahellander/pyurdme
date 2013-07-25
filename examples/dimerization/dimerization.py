@@ -22,21 +22,15 @@ def dimerization(model_name=""):
     model.addSpecies([A,B,C])
 
     # Parameters
-    NA  = Parameter(name="NA",expression=6.022e23)
-    #k1  = Parameter(name="k1",expression="1.0e6/(1000*NA)")
-    #k2  = Parameter(name="k2",expression=1.0)
     k1  = Parameter(name="k1",expression=0.0)
     k2  = Parameter(name="k2",expression=0.0)
 
-    model.addParameter([NA,k1,k2])
+    model.addParameter([k1,k2])
 
     # Reactions
     R1 = Reaction(name="R1",reactants={A:1,B:1},products={C:1},massaction=True,rate=k1)
     R2 = Reaction(name="R2",reactants={C:1},products={A:1,B:1},massaction=True,rate=k2)
     model.addReaction([R1,R2])
-
-    # A square domain with Cartesian discretization
-    #model.mesh  = CartesianMesh(geometry="line",side_length=1e-6,hmax=1e-7)
 
     # We could wrap around Gmsh like this, if we wanted to:
     #model.geometry = gmshGeometry(file='meshes/surface.geo')
@@ -65,10 +59,9 @@ if __name__ == '__main__':
     model = dimerization()
     #result = urdme(model,solver='nem',solver_path="/Users/andreash/bitbucket/nllattice/",seed=10)
     result = urdme(model,solver='nsm',seed=10)
+    
     U = result["U"]
-    print numpy.shape(U)
-    print numpy.sum(U[:,3])
-    #model.serialize(filename="debug.mat")
+    
     # Plot using VIPER
     #dolfin.plot(model.sol['C'],wireframe=True)
     #dolfin.plot(model.mesh.mesh,wireframe=True,axes=True)
@@ -78,5 +71,5 @@ if __name__ == '__main__':
     # Dump solution to file in VTK format for ParaView
     file = dolfin.File("testsolution.pvd")
     file << model.sol['C']
-    
+    model.toXYZ("testolution.xyz")
     #print result

@@ -286,7 +286,7 @@ class URDMEModel(Model):
             self.urdme_solver_data['initialized'] = True
     
             
-    def serialize(self,filename=[]):
+    def serialize(self,filename=None):
         """ 
             Write the datastructures needed by the the core URDME solvers to a .mat input file.
             initialize msu be called prior to callinf this function. 
@@ -294,11 +294,8 @@ class URDMEModel(Model):
                 
         # Validate the data structures before writing them to file. 
         self.validate()
-        
-        filename = filename
-
         spio.savemat(filename,self.urdme_solver_data,oned_as='column')
-        #spio.savemat(filename,{'N':self.N,'u0':self.u0,'G':self.G,'sd':self.sd,'D':D,'vol':vol,'tspan':np.asarray(self.tspan,dtype=np.float),'data':data},oned_as='column')
+
 
         
 

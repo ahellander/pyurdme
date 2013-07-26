@@ -5,8 +5,6 @@ import dolfin
 import numpy
 import scipy.io as spio
 
-#from pyurdme.gmsh import *
-
 def dimerization(model_name=""):
     """ Dimerization. The reversible reaction A+B<->C on a surface. """
     
@@ -57,8 +55,12 @@ def dimerization(model_name=""):
 if __name__ == '__main__':
 
     """ Create a model and assemble the URDME input file. """
+    
     model = dimerization()
-    #result = urdme(model,solver='nem',solver_path="/Users/andreash/bitbucket/nllattice/",seed=10)
+    model.initialize()
+    
+    model.urdme_solver_data['p'] = model.mesh.getVoxels()
+    #result = urdme(model,solver='nem',solver_path="/Users/andreash/bitbucket/nllattice/",model_file="/Users/andreash/bitbucket/nllattice/src/nem/association.c", seed=10)
     result = urdme(model,solver='nsm',seed=10)
     
     U = result["U"]
@@ -69,8 +71,8 @@ if __name__ == '__main__':
     #dolfin.interactive()
     
     spio.savemat("debugoutput.mat",result)
+    
     # Dump solution to file in VTK format for ParaView
     file = dolfin.File("testsolution.pvd")
     file << model.sol['C']
     toXYZ(model,"testsolution.xyz")
-    #print result

@@ -1,4 +1,5 @@
 from model import *
+
 import numpy as np
 import scipy.sparse as scisp
 import scipy.io as spio
@@ -31,17 +32,20 @@ except:
 class MeshImportError(Exception):
     pass
 
+
 class URDMEModel(Model):
     """ 
         An URDME Model extends Model with spatial information and methods 
         to create URDME solver input.
     """
+    
     def __init__(self,name=""):
-	Model.__init__(self,name)
-
-	self.tspan = None
-	self.mesh = None
-	self.D = None
+        Model.__init__(self,name)
+        
+        self.urdme_solver_data = {'initialized':False}
+        
+        self.tspan = None
+        self.mesh = None
 
     def createStoichiometricMatrix(self):
         """ Create a sparse stoichiometric matrix. """
@@ -58,13 +62,15 @@ class URDMEModel(Model):
                 ND[self.species_map[s],i]=products[s]
             i = i+1
     
-        self.N = scisp.csc_matrix(ND)
+        N = scisp.csc_matrix(ND)
+        return N
 
     def createDependencyGraph(self):
         """ Construct the sparse dependecy graph. """
         #TODO: Create a better dependency graph
         GF = np.ones((self.getNumReactions(),self.getNumReactions()+self.getNumSpecies()))
-        self.G=scisp.csc_matrix(GF)
+        G=scisp.csc_matrix(GF)
+        return G
     
     def createPropensityFile(self,file_name=None):
         """ Generate a C propensity file for used to compile the URDME solvers. """
@@ -72,7 +78,6 @@ class URDMEModel(Model):
         template = open(os.path.abspath(os.path.dirname(__file__))+'/data/propensity_file_template.c','r')
         propfile = open(file_name,"w")
         propfilestr = template.read()
-        #propfile.write(templatestr)
         
         speciesdef = ""
         i=0
@@ -118,7 +123,7 @@ class URDMEModel(Model):
     def initializeSubdomainVector(self):
         """ Create URDME 'sd' vector. """
         # TODO: Support arbitrary sd-numbers and more than one subdomain
-        self.sd = np.ones((1,self.mesh.getNumVoxels()))
+        return np.ones((1,self.mesh.getNumVoxels()))
     
     def initializeInitialValue(self):
         """ Create all-zeros inital condition matrix. """
@@ -138,23 +143,10 @@ class URDMEModel(Model):
         
         if not hasattr(self,"u0"):
             self.initializeInitialValue()
-        
-        # SCATTER OCCURS ONCE FOR EVERY CALL FOR EVERY SPECIES!! NEEDS FIXING.  
-                
-        # TODO: USE THE SUBDOMAIN INFO
-                #for i,spec_name in enumerate(self.listOfSpecies):
-        #specieslist = species
-        #if not isinstance(specieslist, list):
-        #    specieslist = list(species)
-        #print specieslist
-        #for spec_obj in specieslist:
             
         for mol in range(species.initial_value):
             vtx=np.random.randint(0,self.mesh.getNumVoxels())
             self.u0[specindx,vtx]+=1
-    
-        # Is the initial condition matrix constructed?
-        # Check for exisitence of u0 here.
         
 
     def createSystemMatrix(self):
@@ -227,8 +219,6 @@ class URDMEModel(Model):
         # Convert to compressed column for compatibility with the URDME solvers.
         D = S.tocsc()
                 
-        #col = D.getcol(0)
-        #print col.data
         # Renormalize the columns (may not sum to zero since elements may have been filtered out
         sumcol = numpy.zeros((Ndofs,1))
         for i in range(Ndofs):
@@ -251,47 +241,64 @@ class URDMEModel(Model):
     
         # Check that all the columns of the system matrix sums to zero (or close to zero). If not, it does
         # not define a Markov process. 
-        maxcolsum = numpy.max(numpy.abs(self.D.sum(axis=0)))
+        maxcolsum = numpy.max(numpy.abs(self.urdme_solver_data['D'].sum(axis=0)))
         if maxcolsum > 1e-10:
             raise InvalidSystemMatrixException("Invalid diffusion matrix. The sum of the columns does not sum to zero. " + str(maxcolsum))
+
+
+    def initialize(self):
+        """ Create the datastructures needed by the URDME solvers and put them
+            in the urdme_solver_data dict.  """
+        
+        if not self.urdme_solver_data['initialized']:
+        
+            createSpeciesMap(self)
+            
+            # Stoichimetric matrix
+            N = self.createStoichiometricMatrix()
+            self.urdme_solver_data['N'] = N
+            # Dependency Graph
+            G = self.createDependencyGraph()
+            self.urdme_solver_data['G']  = G
+            
+            # Volume vector
+            result =  self.createSystemMatrix()
+            vol = result['vol']
+            vol = vol[::len(self.listOfSpecies)]
+            self.urdme_solver_data['vol'] = vol
+            D = result['D']
+            self.urdme_solver_data['D'] = D
+            
+            # Subdomain vector
+            sd = self.initializeSubdomainVector()
+            self.urdme_solver_data['sd'] = sd
+            
+            # Data vector. If not present in model, it defaults to a vector with all elements zero.
+            if not "data" in self.urdme_solver_data:
+                data = np.zeros((1,self.mesh.getNumVoxels()))
+                self.urdme_solver_data['data'] = data
     
+            self.urdme_solver_data['u0'] = self.u0
+
+            tspan= np.asarray(self.tspan,dtype=np.float)
+            self.urdme_solver_data['tspan'] = tspan
+
+            self.urdme_solver_data['initialized'] = True
+    
+            
     def serialize(self,filename=[]):
         """ 
-            Serialize the model object to a binary file containing all the datastructures 
-            needed by the the core URDME solvers.
+            Write the datastructures needed by the the core URDME solvers to a .mat input file.
+            initialize msu be called prior to callinf this function. 
         """
-    
-        createSpeciesMap(self)
-        # Stoichimetric matrix
-        N = self.createStoichiometricMatrix()
-
-        # Dependency Graph
-        G = self.createDependencyGraph()
-
-        # Initial condition
-        #u0 =
-        
-        # Volume vector
-        result =  self.createSystemMatrix()
-        vol = result['vol']
-        vol = vol[::len(self.listOfSpecies)]
-        D = result['D']
-        self.D = D
-        
-        # Subdomain vector
-        if not hasattr(self,"sd"):
-            self.initializeSubdomainVector()
-        
-        # Data vector. If not present in model, it defaults to a vector with all elements zero.
-        if not hasattr(self,"data"):
-            data = np.zeros((1,self.mesh.getNumVoxels()))
-        
+                
         # Validate the data structures before writing them to file. 
         self.validate()
         
-        # data = []
         filename = filename
-        spio.savemat(filename,{'N':self.N,'u0':self.u0,'G':self.G,'sd':self.sd,'D':D,'vol':vol,'tspan':np.asarray(self.tspan,dtype=np.float),'data':data},oned_as='column')
+
+        spio.savemat(filename,self.urdme_solver_data,oned_as='column')
+        #spio.savemat(filename,{'N':self.N,'u0':self.u0,'G':self.G,'sd':self.sd,'D':D,'vol':vol,'tspan':np.asarray(self.tspan,dtype=np.float),'data':data},oned_as='column')
 
         
 
@@ -324,7 +331,6 @@ def read_gmsh_mesh(meshfile):
     except:
         raise MeshImportError("Failed to import mesh: "+filename)
 
-    print mesh
     return mesh
 
 def read_dolfin_mesh(filename=None):
@@ -502,8 +508,11 @@ def createSpeciesMap(model):
 def toXYZ(model,filename):
     """ Dump the solution attached to a model as a xyz file. This format can be
         read by e.g. VMD, Jmol and Paraview. """
+    
+    
     if 'U' not in model.__dict__:
-        print "No solution is model."
+        print "No solution found in the model."
+        raise
 
     outfile = open(filename,"w")
     dims = numpy.shape(model.U)
@@ -567,7 +576,7 @@ def meshextend(model):
     model.xmesh = xmesh
 
 
-def urdme(model=None,solver='nsm',solver_path="",seed=None,report_level=1):
+def urdme(model=None,solver='nsm',solver_path="", model_file=None, seed=None,report_level=1):
     """ URDME solver interface, analogous to the Matlab URDME interface. """
 
     # Set URDME_ROOT
@@ -588,11 +597,16 @@ def urdme(model=None,solver='nsm',solver_path="",seed=None,report_level=1):
       pass
     
     propfilename= model.name+'_pyurdme_generated_model'
-    model.createPropensityFile(file_name='.urdme/'+propfilename+'.c')
+    if model_file == None:
+        propfilename= model.name+'_pyurdme_generated_model'
+        model.createPropensityFile(file_name='.urdme/'+propfilename+'.c')
+    else:
+        subprocess.call(['cp',model_file,'.urdme/'+propfilename+'.c'])
 
     # Build the solver
     makefile = 'Makefile.' + solver
     handle = subprocess.Popen(['make','-f',URDME_BUILD+makefile,'URDME_ROOT='+URDME_ROOT,'URDME_MODEL='+propfilename], stdout = subprocess.PIPE, stderr=subprocess.PIPE)
+
     if report_level >=1:
       print handle.stdout.read()
       print handle.stderr.read()
@@ -619,6 +633,8 @@ def urdme(model=None,solver='nsm',solver_path="",seed=None,report_level=1):
         print handle.stdout.read()
         print handle.stderr.read()
 
+    subprocess.call(['cp',infile.name,'./debug.mat'])
+
     #Load the result from the hdf5 output file.
     try:
         
@@ -635,9 +651,6 @@ def urdme(model=None,solver='nsm',solver_path="",seed=None,report_level=1):
         tspan = resultfile['tspan']
         tspan = numpy.array(tspan)
         
-        # Clean up
-        subprocess.call(['cp',outfile.name,'outputhdf5'])
-     
         # Create Dolfin Functions for all the species
         model.sol = {}
         for i,spec in enumerate(model.listOfSpecies):
@@ -654,8 +667,8 @@ def urdme(model=None,solver='nsm',solver_path="",seed=None,report_level=1):
         
             model.sol[spec_name] = func
 
+        # Clean up
         resultfile.close()
-
         os.remove(infile.name)
         os.remove(outfile.name)
 

@@ -15,9 +15,9 @@ def dimerization(model_name=""):
     model = URDMEModel(name=model_name);
 
     # Species
-    A = Species(name="A",initial_value=0,reaction_radius=1e-9,diffusion_constant=0.01,dimension=2);
-    B = Species(name="B",initial_value=0,reaction_radius=1e-9,diffusion_constant=0.01,dimension=2);
-    C = Species(name="C",initial_value=100,reaction_radius=1e-9,diffusion_constant=0.01,dimension=2);
+    A = Species(name="A",initial_value=50,reaction_radius=1e-9,diffusion_constant=0.1,dimension=2);
+    B = Species(name="B",initial_value=50,reaction_radius=1e-9,diffusion_constant=0.1,dimension=2);
+    C = Species(name="C",initial_value=100,reaction_radius=1e-9,diffusion_constant=0.1,dimension=2);
 
     model.addSpecies([A,B,C])
 
@@ -36,6 +36,7 @@ def dimerization(model_name=""):
     #model.geometry = gmshGeometry(file='meshes/surface.geo')
     #meshinit(model.geometry)
     model.mesh = read_dolfin_mesh('meshes/surface.xml')
+            
 
     #mesh,physical_ids=meshInit(geom) -> Shells out and calls Gmsh
     # Or simply load a Gmsh mesh
@@ -71,5 +72,5 @@ if __name__ == '__main__':
     # Dump solution to file in VTK format for ParaView
     file = dolfin.File("testsolution.pvd")
     file << model.sol['C']
-    model.toXYZ("testolution.xyz")
+    toXYZ(model,"testsolution.xyz")
     #print result

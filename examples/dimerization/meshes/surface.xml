@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <dolfin xmlns:dolfin="http://www.fenicsproject.org">
-  <mesh celltype="triangle" dim="2">
+  <mesh celltype="triangle" dim="3">
     <vertices size="9112">
       <vertex index="0" x="3.0755329132080078e+00" y="3.1415927410125728e+00" z="3.3317056298255920e-01"/>
       <vertex index="1" x="3.0134699344635010e+00" y="3.1415927410125728e+00" z="3.5435372591018682e-01"/>

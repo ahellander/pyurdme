@@ -312,6 +312,9 @@ class Mesh():
         return self.mesh.num_vertices()
         #dims = np.shape(self.p)
         #return dims[1]
+    
+    def getVoxels(self):
+        return self.mesh.coordinates()
 
 def read_gmsh_mesh(meshfile):
     """ Read a Gmsh mesh from file. """
@@ -496,6 +499,33 @@ def createSpeciesMap(model):
         model.species_map[S]=i
         i = i+1;
 
+def toXYZ(model,filename):
+    """ Dump the solution attached to a model as a xyz file. This format can be
+        read by e.g. VMD, Jmol and Paraview. """
+    if 'U' not in model.__dict__:
+        print "No solution is model."
+
+    outfile = open(filename,"w")
+    dims = numpy.shape(model.U)
+    Ndofs = dims[0]
+    Mspecies = len(model.listOfSpecies)
+    Ncells = Ndofs/Mspecies
+
+    coordinates = model.mesh.getVoxels()
+    coordinatestr = coordinates.astype(str)
+
+    filestr = ""
+    for i,time in enumerate(model.tspan):
+        number_of_atoms = numpy.sum(model.U[:,i])
+        filestr += (str(number_of_atoms)+"\n"+"timestep "+str(i) + " time "+str(time)+"\n")
+        for j,spec in enumerate(model.listOfSpecies):
+            for k in range(Ncells):
+                for mol in range(model.U[k*Mspecies+j,i]):
+                    linestr = spec + "\t" + '\t'.join(coordinatestr[k,:]) +"\n"
+                    filestr += linestr
+
+    outfile.write(filestr)
+    outfile.close()
 
 def meshextend(model):
     """
@@ -600,7 +630,8 @@ def urdme(model=None,solver='nsm',solver_path="",seed=None,report_level=1):
         dims = numpy.shape(U)
         U = U.reshape((dims[1],dims[0]))
         U = U.transpose()
-
+        model.U = U
+        
         tspan = resultfile['tspan']
         tspan = numpy.array(tspan)
         

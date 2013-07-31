@@ -13,14 +13,14 @@ def dimerization(model_name=""):
     model = URDMEModel(name=model_name);
 
     # Species
-    A = Species(name="A",initial_value=50,reaction_radius=1e-9,diffusion_constant=0.1,dimension=2);
-    B = Species(name="B",initial_value=50,reaction_radius=1e-9,diffusion_constant=0.1,dimension=2);
-    C = Species(name="C",initial_value=100,reaction_radius=1e-9,diffusion_constant=0.1,dimension=2);
+    A = Species(name="A",initial_value=50,reaction_radius=1e-9,diffusion_constant=1,dimension=2);
+    B = Species(name="B",initial_value=50,reaction_radius=1e-9,diffusion_constant=1,dimension=2);
+    C = Species(name="C",initial_value=100,reaction_radius=1e-9,diffusion_constant=1,dimension=2);
 
     model.addSpecies([A,B,C])
 
     # Parameters
-    k1  = Parameter(name="k1",expression=0.0)
+    k1  = Parameter(name="k1",expression=10.0)
     k2  = Parameter(name="k2",expression=0.0)
 
     model.addParameter([k1,k2])
@@ -30,17 +30,8 @@ def dimerization(model_name=""):
     R2 = Reaction(name="R2",reactants={C:1},products={A:1,B:1},massaction=True,rate=k2)
     model.addReaction([R1,R2])
 
-    # We could wrap around Gmsh like this, if we wanted to:
-    #model.geometry = gmshGeometry(file='meshes/surface.geo')
-    #meshinit(model.geometry)
     model.mesh = read_dolfin_mesh('meshes/surface.xml')
             
-
-    #mesh,physical_ids=meshInit(geom) -> Shells out and calls Gmsh
-    # Or simply load a Gmsh mesh
-    #model.mesh = read_gmsh('meshes/surface.msh')
-    #meshextend(model)
-
     # Distribute the molecues over the mesh
     model.scatter(A,subdomain=1)
     model.scatter(B,subdomain=1)
@@ -53,15 +44,13 @@ def dimerization(model_name=""):
 
 
 if __name__ == '__main__':
-
     """ Create a model and assemble the URDME input file. """
     
     model = dimerization()
     model.initialize()
     
-    model.urdme_solver_data['p'] = model.mesh.getVoxels()
-    #result = urdme(model,solver='nem',solver_path="/Users/andreash/bitbucket/nllattice/",model_file="/Users/andreash/bitbucket/nllattice/src/nem/association.c", seed=10)
-    result = urdme(model,solver='nsm',seed=10)
+    result = urdme(model,solver='nem',solver_path="/Users/andreash/bitbucket/nllattice/", seed=10)
+    #result = urdme(model,solver='nsm',seed=10)
     
     U = result["U"]
     

@@ -72,9 +72,77 @@ class URDMEModel(Model):
         G=scisp.csc_matrix(GF)
         return G
     
+    def createNewPropensityFile(self,file_name=None):
+        """ Generate a C propensity file on the new experimental format. """
+        
+        template = open(os.path.abspath(os.path.dirname(__file__))+'/data/propensity_file_new_template.c','r')
+        propfile = open(file_name,"w")
+        propfilestr = template.read()
+
+        propfilestr = propfilestr.replace("__NUMBER_OF_REACTIONS__",str(self.getNumReactions()))
+        propfilestr = propfilestr.replace("__NUMBER_OF_SPECIES__",str(len(self.listOfSpecies)))
+
+        
+        speciesdef = ""
+        for i,sname in enumerate(self.listOfSpecies):
+            S = self.listOfSpecies[sname]
+            speciesdef += "species *"+sname+";\n\t"
+            speciesdef += sname+"= (species *)malloc(sizeof(species));\n\t"
+            speciesdef += sname+"->gamma = "+str(S.diffusion_constant)+";\n\t"
+            speciesdef += sname+"->sigma = "+str(S.reaction_radius)+";\n\t"
+            speciesdef += "ptr["+str(i)+"] = "+sname +";\n\n\t"
+            
+                                
+        propfilestr = propfilestr.replace("__DEFINE_SPECIES__",speciesdef)
+        
+        
+        # Make sure all paramters are evaluated to scalars before we write them to the file.
+        self.resolveParameters()
+                
+        reacstr = ""
+                
+        for j,sname in enumerate(self.listOfSpecies):
+            reacstr += "int "+sname+"="+str(j)+";\n\t"
+        
+        reacstr += "\n\t"
+                
+        for i,rname in enumerate(self.listOfReactions):
+            R=self.listOfReactions[rname]
+            
+            reacstr += "reaction *"+rname+";\n\t"
+            reacstr += rname+"=(reaction *)malloc(sizeof(reaction));\n\t"
+            reacstr += rname+"->order="+str(len(R.reactants))+";\n\t"
+            reacstr += rname+"->nr_reactants="+str(len(R.reactants))+";\n\t"
+            reacstr += rname+"->nr_products="+str(len(R.products))+";\n\t"
+            
+            reacstr += rname+"->reactants=(int *)malloc("+rname+"->nr_reactants*sizeof(int));\n\t"
+            for j,reactant in enumerate(R.reactants):
+                reacstr += rname+"->reactants["+str(j)+"]="+str(reactant)+";\n\t"
+            
+            reacstr += "\n\t"+rname+"->products=(int *)malloc("+rname+"->nr_products*sizeof(int));\n\t"
+            for j,product in enumerate(R.products):
+                reacstr += rname+"->products["+str(j)+"]="+str(product)+";\n\t"
+    
+            reacstr += "\n\t"+rname+"->nr=(int *)calloc("+str(len(self.listOfSpecies))+",sizeof(int));\n\t"
+            for j,reactant in enumerate(R.reactants):
+                 reacstr += rname+"->nr["+reactant+"]="+str(R.reactants[reactant])+";\n\t"
+            for j,product in enumerate(R.products):
+                reacstr += rname+"->nr["+product+"]=-"+str(R.reactants[reactant])+";\n\t"
+
+            reacstr += rname+"->k="+str(R.marate.value)+";\n\t"
+
+            reacstr += "\n\tptr["+str(i)+"] = "+rname +";\n\n\t"
+                
+                
+        propfilestr = propfilestr.replace("__DEFINE_REACTIONS__",reacstr)
+        
+        propfile.write(propfilestr)
+        propfile.close()
+
+    
     def createPropensityFile(self,file_name=None):
         """ Generate a C propensity file for used to compile the URDME solvers. """
-        
+
         template = open(os.path.abspath(os.path.dirname(__file__))+'/data/propensity_file_template.c','r')
         propfile = open(file_name,"w")
         propfilestr = template.read()
@@ -152,7 +220,7 @@ class URDMEModel(Model):
     def createSystemMatrix(self):
         """ Create one merged system matrix in CCS format for input to the URDME solvers """
         
-        # Check if the individual matrices (per species) have been assembled, otherwise assemble
+        # Check if the individual stiffness and mass matrices (per species) have been assembled, otherwise assemble
         try:
             stiffness_matrices = self.stiffness_matrices
             mass_matrices = self.mass_matrices
@@ -169,16 +237,17 @@ class URDMEModel(Model):
         Ndofs = self.mesh.getNumVoxels()*Mspecies
         S = scipy.sparse.dok_matrix((Ndofs,Ndofs))
 
-        # Create the volume vector by lumpng the mass matrices
+        # Create the volume vector by lumping the mass matrices
         vol = numpy.zeros((Ndofs,1))
         spec = 0
+        
         for species,M in mass_matrices.iteritems():
             rows,cols,vals = M.data()
             SM = scipy.sparse.csr_matrix((vals,cols,rows))
             vols = SM.sum(axis=1)
-            for j in range(0,len(vols)):
+            spec = self.species_map[species]
+            for j in range(len(vols)):
                 vol[Mspecies*j+spec,0]=vols[j]
-            spec = 0
 
         vol = vol.flatten()
         
@@ -244,11 +313,12 @@ class URDMEModel(Model):
         maxcolsum = numpy.max(numpy.abs(self.urdme_solver_data['D'].sum(axis=0)))
         if maxcolsum > 1e-10:
             raise InvalidSystemMatrixException("Invalid diffusion matrix. The sum of the columns does not sum to zero. " + str(maxcolsum))
-
+                
 
     def initialize(self):
         """ Create the datastructures needed by the URDME solvers and put them
-            in the urdme_solver_data dict.  """
+            in the urdme_solver_data dict. The content of this dict is what will be dumped
+            to the urdme input file.  """
         
         if not self.urdme_solver_data['initialized']:
         
@@ -282,6 +352,12 @@ class URDMEModel(Model):
 
             tspan= np.asarray(self.tspan,dtype=np.float)
             self.urdme_solver_data['tspan'] = tspan
+        
+            # Vertex coordinates
+            self.urdme_solver_data['p'] = self.mesh.getVoxels()
+        
+            # Connectivity matrix
+            self.urdme_solver_data['K'] = connectivityMatrix(self)
 
             self.urdme_solver_data['initialized'] = True
     
@@ -390,6 +466,21 @@ def createCartesianMesh(geometry=None,side_length=None,hmax=None):
     #mesh.e =
     return mesh
 
+def connectivityMatrix(model):
+    """ Assemble a sparse CCS connectivity matrix for a mesh attached to a model. """
+
+
+    fs = dolfin.FunctionSpace(model.mesh.mesh,"Lagrange",1)
+    trial_function = dolfin.TrialFunction(fs)
+    test_function = dolfin.TestFunction(fs)
+    a_M = trial_function*test_function*dolfin.dx
+    C = dolfin.assemble(a_M)
+    rows,cols,vals = C.data()
+    C = scipy.sparse.csr_matrix((vals,cols,rows))
+    C = C.tocsc()
+
+    return C
+
 def assemble(model):
     """
         Assemble the diffusion matrix and volume vector.
@@ -409,7 +500,6 @@ def assemble(model):
             
             nodes = model.mesh.t[:,t]
             
-            # Stupid numpy indexing
             coords = model.mesh.p[:,nodes]
             coords = coords[0]
             h = abs(coords[0]-coords[1])
@@ -596,7 +686,10 @@ def urdme(model=None,solver='nsm',solver_path="", model_file=None, seed=None,rep
     propfilename= model.name+'_pyurdme_generated_model'
     if model_file == None:
         propfilename= model.name+'_pyurdme_generated_model'
-        model.createPropensityFile(file_name='.urdme/'+propfilename+'.c')
+        if solver != "nem":
+            model.createPropensityFile(file_name='.urdme/'+propfilename+'.c')
+        else:
+            model.createNewPropensityFile(file_name='.urdme/'+propfilename+'.c')
     else:
         subprocess.call(['cp',model_file,'.urdme/'+propfilename+'.c'])
 
@@ -614,7 +707,9 @@ def urdme(model=None,solver='nsm',solver_path="", model_file=None, seed=None,rep
     infile.close
     outfile = tempfile.NamedTemporaryFile(delete=False)
     outfile.close()
-    
+
+    subprocess.call(['cp',infile.name,'.urdme/'])
+
     # Execute the solver
     if seed is not None:
      try: 

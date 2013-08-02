@@ -14,8 +14,8 @@ def dimerization(model_name=""):
 
     # Species
     A = Species(name="A",initial_value=50,reaction_radius=1e-9,diffusion_constant=1,dimension=2);
-    B = Species(name="B",initial_value=50,reaction_radius=1e-9,diffusion_constant=1,dimension=2);
-    C = Species(name="C",initial_value=100,reaction_radius=1e-9,diffusion_constant=1,dimension=2);
+    B = Species(name="B",initial_value=50,reaction_radius=1e-9,diffusion_constant=0.1,dimension=2);
+    C = Species(name="C",initial_value=100,reaction_radius=1e-9,diffusion_constant=2,dimension=2);
 
     model.addSpecies([A,B,C])
 
@@ -58,8 +58,7 @@ if __name__ == '__main__':
     #dolfin.plot(model.sol['C'],wireframe=True)
     #dolfin.plot(model.mesh.mesh,wireframe=True,axes=True)
     #dolfin.interactive()
-    
-    spio.savemat("debugoutput.mat",result)
+    #spio.savemat("debugoutput.mat",result)
     
     # Dump solution to file in VTK format for ParaView
     file = dolfin.File("testsolution.pvd")

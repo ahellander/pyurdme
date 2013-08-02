@@ -19,7 +19,7 @@ import scipy.sparse
 try:
     import h5py
 except:
-    print "Fatal Error: You are missing the h5py library."
+    print "Fatal Error: pyurdme requires h5py."
     raise
 
 try:
@@ -365,15 +365,12 @@ class URDMEModel(Model):
     def serialize(self,filename=None):
         """ 
             Write the datastructures needed by the the core URDME solvers to a .mat input file.
-            initialize msu be called prior to callinf this function. 
+            initialize() must be called prior to calling this function. 
         """
                 
         # Validate the data structures before writing them to file. 
         self.validate()
         spio.savemat(filename,self.urdme_solver_data,oned_as='column')
-
-
-        
 
 
 class Mesh():
@@ -397,6 +394,7 @@ class Mesh():
         return self.mesh.coordinates()
 
 def read_gmsh_mesh(meshfile):
+    
     """ Read a Gmsh mesh from file. """
     mr = GmshMeshReceiverBase()
     try:
@@ -545,11 +543,11 @@ def assemble(model):
         #trial_functions = xmesh.trial_functions
         #test_functions = xmesh.test_functions
             
-        function_space = {}
-        trial_functions = {}
-        test_functions = {}
-        stiffness_matrices = {}
-        mass_matrices = {}
+        function_space = OrderedDict()
+        trial_functions = OrderedDict()
+        test_functions = OrderedDict()
+        stiffness_matrices = OrderedDict()
+        mass_matrices = OrderedDict()
         
         for spec in model.listOfSpecies:
             

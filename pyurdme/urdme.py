@@ -590,7 +590,7 @@ def createSpeciesMap(model):
         model.species_map[S]=i
         i = i+1;
 
-def toXYZ(model,filename):
+def toXYZ(model,filename,format="VMD"):
     """ Dump the solution attached to a model as a xyz file. This format can be
         read by e.g. VMD, Jmol and Paraview. """
     
@@ -599,7 +599,7 @@ def toXYZ(model,filename):
         print "No solution found in the model."
         raise
 
-    outfile = open(filename,"w")
+    #outfile = open(filename,"w")
     dims = numpy.shape(model.U)
     Ndofs = dims[0]
     Mspecies = len(model.listOfSpecies)
@@ -608,18 +608,37 @@ def toXYZ(model,filename):
     coordinates = model.mesh.getVoxels()
     coordinatestr = coordinates.astype(str)
 
-    filestr = ""
-    for i,time in enumerate(model.tspan):
-        number_of_atoms = numpy.sum(model.U[:,i])
-        filestr += (str(number_of_atoms)+"\n"+"timestep "+str(i) + " time "+str(time)+"\n")
-        for j,spec in enumerate(model.listOfSpecies):
-            for k in range(Ncells):
-                for mol in range(model.U[k*Mspecies+j,i]):
-                    linestr = spec + "\t" + '\t'.join(coordinatestr[k,:]) +"\n"
-                    filestr += linestr
+    if format == "VMD":
+        outfile = open(filename,"w")
+        filestr = ""
+        for i,time in enumerate(model.tspan):
+            number_of_atoms = numpy.sum(model.U[:,i])
+            filestr += (str(number_of_atoms)+"\n"+"timestep "+str(i) + " time "+str(time)+"\n")
+            for j,spec in enumerate(model.listOfSpecies):
+                for k in range(Ncells):
+                    for mol in range(model.U[k*Mspecies+j,i]):
+                        linestr = spec + "\t" + '\t'.join(coordinatestr[k,:]) +"\n"
+                        filestr += linestr
 
-    outfile.write(filestr)
-    outfile.close()
+        outfile.write(filestr)
+        outfile.close()
+
+    elif format == "ParaView":
+        foldername = filename
+        subprocess.call(["mkdir",foldername])
+        for i,time in enumerate(model.tspan):
+            outfile = open(foldername+"/"+filename+"."+str(i),"w")
+            number_of_atoms = numpy.sum(model.U[:,i])
+            filestr = ""
+            filestr += (str(number_of_atoms)+"\n"+"timestep "+str(i) + " time "+str(time)+"\n")
+            for j,spec in enumerate(model.listOfSpecies):
+                for k in range(Ncells):
+                    for mol in range(model.U[k*Mspecies+j,i]):
+                        linestr = spec + "\t" + '\t'.join(coordinatestr[k,:]) +"\n"
+                        filestr += linestr
+            outfile.write(filestr)
+            outfile.close()
+
 
 def meshextend(model):
     """
@@ -723,7 +742,8 @@ def urdme(model=None,solver='nsm',solver_path="", model_file=None, seed=None,rep
         print handle.stdout.read()
         print handle.stderr.read()
 
-    subprocess.call(['cp',infile.name,'./debug.mat'])
+    subprocess.call(['cp',infile.name,'./debug_input.mat'])
+    subprocess.call(['cp',outfile.name,'./debug_output.mat'])
 
     #Load the result from the hdf5 output file.
     try:

@@ -20,7 +20,7 @@ def dimerization(model_name=""):
     model.addSpecies([A,B,C])
 
     # Parameters
-    k1  = Parameter(name="k1",expression=10.0)
+    k1  = Parameter(name="k1",expression=0.0)
     k2  = Parameter(name="k2",expression=0.0)
 
     model.addParameter([k1,k2])
@@ -49,11 +49,11 @@ if __name__ == '__main__':
     model = dimerization()
     model.initialize()
     
-    result = urdme(model,solver='nem',solver_path="/Users/andreash/bitbucket/nllattice/", seed=10)
-    #result = urdme(model,solver='nsm',seed=10)
+    #result = urdme(model,solver='nem',solver_path="/Users/andreash/bitbucket/nllattice/", seed=10)
+    result = urdme(model,solver='nsm',seed=10)
     
     U = result["U"]
-    
+    print numpy.sum(U,axis=0)
     # Plot using VIPER
     #dolfin.plot(model.sol['C'],wireframe=True)
     #dolfin.plot(model.mesh.mesh,wireframe=True,axes=True)
@@ -63,4 +63,4 @@ if __name__ == '__main__':
     # Dump solution to file in VTK format for ParaView
     file = dolfin.File("testsolution.pvd")
     file << model.sol['C']
-    toXYZ(model,"testsolution.xyz")
+    toXYZ(model,"testsolution.xyz",format="ParaView")

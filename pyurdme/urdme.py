@@ -624,17 +624,31 @@ def toXYZ(model,filename,format="VMD"):
         outfile.close()
 
     elif format == "ParaView":
-        foldername = filename
+        #foldername = filename
+        #subprocess.call(["mkdir",foldername])
+        #for i,time in enumerate(model.tspan):
+        #    outfile = open(foldername+"/"+filename+"."+str(i),"w")
+        #    number_of_atoms = numpy.sum(model.U[:,i])
+        #    filestr = ""
+        #    filestr += (str(number_of_atoms)+"\n"+"timestep "+str(i) + " time "+str(time)+"\n")
+        #    for j,spec in enumerate(model.listOfSpecies):
+        #        for k in range(Ncells):
+        #            for mol in range(model.U[k*Mspecies+j,i]):
+        #                linestr = spec + "\t" + '\t'.join(coordinatestr[k,:]) +"\n"
+        #                filestr += linestr
+        #    outfile.write(filestr)
+        #    outfile.close()
+        foldername = 'testsolution.particles'
         subprocess.call(["mkdir",foldername])
         for i,time in enumerate(model.tspan):
-            outfile = open(foldername+"/"+filename+"."+str(i),"w")
+            outfile = open('testsolution.particles/testsolution'+str(i)+".particles","w")
             number_of_atoms = numpy.sum(model.U[:,i])
             filestr = ""
-            filestr += (str(number_of_atoms)+"\n"+"timestep "+str(i) + " time "+str(time)+"\n")
+            filestr += "#vtk DataFile Version 4.0\n timestep "+str(i)+"\n ASCII\n DATASET POLYDATA\n POINTS 8 float\n"
             for j,spec in enumerate(model.listOfSpecies):
                 for k in range(Ncells):
                     for mol in range(model.U[k*Mspecies+j,i]):
-                        linestr = spec + "\t" + '\t'.join(coordinatestr[k,:]) +"\n"
+                        linestr = '\t'.join(coordinatestr[k,:]) +"\n"
                         filestr += linestr
             outfile.write(filestr)
             outfile.close()

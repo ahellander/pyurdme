@@ -22,3 +22,4 @@ Ruled Surface(14) = {14};
 Line Loop(16) = {3, 4, 5, 6};
 Ruled Surface(16) = {16};
 Physical Surface(19) = {10, 12, 14, 16};
+Coherence;

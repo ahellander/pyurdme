@@ -250,7 +250,6 @@ class URDMEModel(Model):
                 vol[Mspecies*j+spec,0]=vols[j]
 
         vol = vol.flatten()
-        
         # Assemble one big matrix from the indiviudal stiffness matrices. Multiply by the inverse of
         # the lumped mass matrix, filter out any entries with the wrong sign and renormalize the columns.
         spec = 0
@@ -334,7 +333,10 @@ class URDMEModel(Model):
             # Volume vector
             result =  self.createSystemMatrix()
             vol = result['vol']
+            #for v in vol:
+            #    print v
             vol = vol[::len(self.listOfSpecies)]
+            
             self.urdme_solver_data['vol'] = vol
             D = result['D']
             self.urdme_solver_data['D'] = D
@@ -555,7 +557,9 @@ def assemble(model):
             spec_name = species.name
             
             if species.dimension == 2:
-                differential = dolfin.ds
+                # TODO: If the dimension of the mesh is 2 (triangles) and one uses ds,
+                # The the mass matrices become strange...
+                differential = dolfin.dx
             else:
                 differential = dolfin.dx
         

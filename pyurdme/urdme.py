@@ -15,6 +15,7 @@ import gmsh
 import numpy
 import scipy.sparse
 
+
 # Need a way to read hdf5 files
 try:
     import h5py
@@ -575,7 +576,7 @@ def assemble(model):
 
 
 class Xmesh():
-    """ Extended mesh object. Contanins dof-mappings, and function spaces etc. """
+    """ Extended mesh object. Contains dof-mappings, and function spaces etc. """
 
     def __init__(self):
         self.dofs = {}
@@ -594,7 +595,7 @@ def createSpeciesMap(model):
         model.species_map[S]=i
         i = i+1;
 
-def toXYZ(model,filename,format="VMD"):
+def toXYZ(model,filename,format="ParaView"):
     """ Dump the solution attached to a model as a xyz file. This format can be
         read by e.g. VMD, Jmol and Paraview. """
     
@@ -628,35 +629,50 @@ def toXYZ(model,filename,format="VMD"):
         outfile.close()
 
     elif format == "ParaView":
-        #foldername = filename
-        #subprocess.call(["mkdir",foldername])
-        #for i,time in enumerate(model.tspan):
-        #    outfile = open(foldername+"/"+filename+"."+str(i),"w")
-        #    number_of_atoms = numpy.sum(model.U[:,i])
-        #    filestr = ""
-        #    filestr += (str(number_of_atoms)+"\n"+"timestep "+str(i) + " time "+str(time)+"\n")
-        #    for j,spec in enumerate(model.listOfSpecies):
-        #        for k in range(Ncells):
-        #            for mol in range(model.U[k*Mspecies+j,i]):
-        #                linestr = spec + "\t" + '\t'.join(coordinatestr[k,:]) +"\n"
-        #                filestr += linestr
-        #    outfile.write(filestr)
-        #    outfile.close()
-        foldername = 'testsolution.particles'
+        foldername = filename
         subprocess.call(["mkdir",foldername])
         for i,time in enumerate(model.tspan):
-            outfile = open('testsolution.particles/testsolution'+str(i)+".particles","w")
+            outfile = open(foldername+"/"+filename+"."+str(i),"w")
             number_of_atoms = numpy.sum(model.U[:,i])
             filestr = ""
-            filestr += "#vtk DataFile Version 4.0\n timestep "+str(i)+"\n ASCII\n DATASET POLYDATA\n POINTS 8 float\n"
+            filestr += (str(number_of_atoms)+"\n"+"timestep "+str(i) + " time "+str(time)+"\n")
             for j,spec in enumerate(model.listOfSpecies):
                 for k in range(Ncells):
                     for mol in range(model.U[k*Mspecies+j,i]):
-                        linestr = '\t'.join(coordinatestr[k,:]) +"\n"
+                        linestr = spec + "\t" + '\t'.join(coordinatestr[k,:]) +"\n"
                         filestr += linestr
             outfile.write(filestr)
             outfile.close()
 
+def toCSV(model,filename):
+    """ Dump the solution attached to a model as a .csv file. """
+    
+    
+    if 'U' not in model.__dict__:
+        print "No solution found in the model."
+        raise
+    
+    dims = numpy.shape(model.U)
+    Ndofs = dims[0]
+    Mspecies = len(model.listOfSpecies)
+    Ncells = Ndofs/Mspecies
+    
+    coordinates = model.mesh.getVoxels()
+    coordinatestr = coordinates.astype(str)
+    subprocess.call(["mkdir",filename])
+    for i,time in enumerate(model.tspan):
+        outfile = open(filename+'/'+filename+str(i)+".csv","w")
+        number_of_atoms = numpy.sum(model.U[:,i])
+        filestr = "xcoord,ycoord,zcoord,radius,type\n"
+        for j,spec in enumerate(model.listOfSpecies):
+            for k in range(Ncells):
+                for mol in range(model.U[k*Mspecies+j,i]):
+                    obj = model.listOfSpecies[spec]
+                    reaction_radius = obj.reaction_radius
+                    linestr = coordinatestr[k,0]+","+coordinatestr[k,1]+","+coordinatestr[k,2]+","+str(reaction_radius)+","+str(j)+"\n";
+                    filestr += linestr
+        outfile.write(filestr)
+        outfile.close()
 
 def meshextend(model):
     """

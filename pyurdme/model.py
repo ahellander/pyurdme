@@ -63,12 +63,12 @@ class Model():
         """
         if isinstance(obj, Species):
             if obj.name in self.listOfSpecies:
-                raise ModelError("Can't add species. A species with that name alredy exists.")
+                raise ModelError("Can't add species. A species with that name already exists.")
             self.listOfSpecies[obj.name] = obj;
         else: # obj is a list of species
             for S in obj:
                 if S.name in self.listOfSpecies:
-                    raise ModelError("Can't add species. A species with that name alredy exisits.")
+                    raise ModelError("Can't add species. A species with that name already exists.")
                 self.listOfSpecies[S.name] = S;
     
     def deleteSpecies(self, obj):

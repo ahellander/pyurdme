@@ -22,13 +22,16 @@ def mincde(model_name=""):
     model.addSpecies([MinD_m,MinD_c_atp,MinD_c_adp,MinD_e,MinDE])
         
     # Parameters
-    sigma_d  = Parameter(name="sigma_d",expression=2.5e-8)
+    NA = Parameter(name="NA",expression="6.022e23")
+    #sigma_d  = Parameter(name="sigma_d",expression=2.5e-8)
+    sigma_d  = Parameter(name="sigma_d",expression=0.25)
+
     sigma_dD = Parameter(name="sigma_dD",expression=0.0016e-18)
     sigma_e  = Parameter(name="sigma_e",expression=0.093e-18)
     sigma_de = Parameter(name="sigma_de",expression=0.7)
     sigma_dt = Parameter(name="sigma_dt",expression=1.0)
         
-    model.addParameter([sigma_d,sigma_dD,sigma_e,sigma_de,sigma_dt])
+    model.addParameter([NA,sigma_d,sigma_dD,sigma_e,sigma_de,sigma_dt])
 
     # Reactions
     # TODO: These reactions will serialize without volume dependency. This needs to be adressed in the model.py module.
@@ -55,7 +58,13 @@ def mincde(model_name=""):
 if __name__=="__main__":
     """ Dump model to a file. """
     model = mincde(model_name="mincde")
-    #model.serialize("testmincde.mat")
-    # TODO: This does not work yet. 
+    model.initialize()
+    #print model.mesh.mesh.hmin()
+    #exit(-1)
     result = urdme(model)
+    
+    file = dolfin.File("testsolution.pvd")
+    file << model.sol['MinD_m']
+    toXYZ(model,"testsolution.xyz")
+
     print result

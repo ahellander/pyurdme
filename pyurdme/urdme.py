@@ -141,8 +141,10 @@ class URDMEModel(Model):
 
     
     def createPropensityFile(self,file_name=None):
-        """ Generate a C propensity file for used to compile the URDME solvers. """
-
+        """ Generate a C propensity file for used to compile the URDME solvers.
+            In this version, we only support mass action propensities. """
+        
+        
         template = open(os.path.abspath(os.path.dirname(__file__))+'/data/propensity_file_template.c','r')
         propfile = open(file_name,"w")
         propfilestr = template.read()
@@ -174,7 +176,14 @@ class URDMEModel(Model):
             func = ""
             rname=self.listOfReactions[R].name
             func += funheader.replace("__NAME__",rname) + "\n{\n"
-            func += "    return " + self.listOfReactions[R].propensity_function + ";"
+            func += "    return " + self.listOfReactions[R].propensity_function
+            order = len(self.listOfReactions[R].reactants)
+            if order == 2:
+                func += "/vol;"
+            elif order == 0:
+                func += "*vol;"
+            else:
+                func += ";"
             func +="\n}"
             funcs += func + "\n\n"
             funcinits += "    ptr["+str(i)+"] = " + rname +";\n"
@@ -467,8 +476,7 @@ def createCartesianMesh(geometry=None,side_length=None,hmax=None):
     return mesh
 
 def connectivityMatrix(model):
-    """ Assemble a sparse CCS connectivity matrix for a mesh attached to a model. """
-
+    """ Assemble a sparse CCS connectivity matrix. """
 
     fs = dolfin.FunctionSpace(model.mesh.mesh,"Lagrange",1)
     trial_function = dolfin.TrialFunction(fs)
@@ -777,7 +785,7 @@ def urdme(model=None,solver='nsm',solver_path="", model_file=None, seed=None,rep
             
             numvox = model.mesh.getNumVoxels()
             for dof in range(numvox):
-                func_vector[dof] = float(U[dof*len(model.listOfSpecies)+i,10])
+                func_vector[dof] = float(U[dof*len(model.listOfSpecies)+i,-1])
         
             model.sol[spec_name] = func
 

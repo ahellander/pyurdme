@@ -13,11 +13,11 @@ def mincde(model_name=""):
 
     # Species
     # TODO: We need a way to localize species to subdomains/boundaries
-    MinD_m     = Species(name="MinD_m",initial_value=0,diffusion_constant=1e-14,dimension=2);
-    MinD_c_atp = Species(name="MinD_c_atp",initial_value=0,diffusion_constant=2.5e-12);
-    MinD_c_adp = Species(name="MinD_c_adp",initial_value=4500,diffusion_constant=2.5e-12);
-    MinD_e     = Species(name="MinD_e",initial_value=1575,diffusion_constant=2.5e-12);
-    MinDE      = Species(name="MinDE",initial_value=0,diffusion_constant=1e-14,dimension=2);
+    MinD_m     = Species(name="MinD_m",initial_value=0,diffusion_constant=1e-14,dimension=2,reaction_radius=1e-9);
+    MinD_c_atp = Species(name="MinD_c_atp",initial_value=0,diffusion_constant=2.5e-12,reaction_radius=0.5e-9);
+    MinD_c_adp = Species(name="MinD_c_adp",initial_value=4500,diffusion_constant=2.5e-12,reaction_radius=1.2e-9);
+    MinD_e     = Species(name="MinD_e",initial_value=1575,diffusion_constant=2.5e-12,reaction_radius=0.8e-9);
+    MinDE      = Species(name="MinDE",initial_value=0,diffusion_constant=1e-14,dimension=2,reaction_radius=1.5e-9);
         
     model.addSpecies([MinD_m,MinD_c_atp,MinD_c_adp,MinD_e,MinDE])
         
@@ -65,6 +65,6 @@ if __name__=="__main__":
     
     file = dolfin.File("testsolution.pvd")
     file << model.sol['MinD_m']
-    toXYZ(model,"testsolution.xyz")
+    toCSV(model,"testsolution")
 
     print result

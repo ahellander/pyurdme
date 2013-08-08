@@ -653,7 +653,7 @@ def toXYZ(model,filename,format="ParaView"):
             outfile.close()
 
 def toCSV(model,filename):
-    """ Dump the solution attached to a model as a .csv file. """
+    """ Dump the solution attached to a m-odel as a .csv file. """
     
     
     if 'U' not in model.__dict__:

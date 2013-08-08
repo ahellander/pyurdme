@@ -417,6 +417,7 @@ def read_gmsh_mesh(meshfile):
 
 def read_dolfin_mesh(filename=None):
     """ Import a mesh in Dolfins native .xml format """
+    
     try:
         dolfin_mesh = dolfin.Mesh(filename)
         mesh = Mesh(mesh=dolfin_mesh,mesh_type="Dolfin")
@@ -495,6 +496,7 @@ def assemble(model):
         Here, we will need to use Dolfin to build function spaces
         and assemble.
     """
+    old_assembly = True
     if model.mesh.mesh_type == "Cartesian":
 
         Ndofs = model.xmesh.Ndofs
@@ -532,7 +534,7 @@ def assemble(model):
 
         D = scisp.csc_matrix(DF)
         return (vol,D)
-    else:
+    elif old_assembly:
         # Assemble using Dolfin.
         #
         #
@@ -572,6 +574,7 @@ def assemble(model):
                 differential = dolfin.dx
         
             function_space[spec_name] = dolfin.FunctionSpace(model.mesh.mesh,"Lagrange",1)
+            print function_space[spec_name].dofmap()
             trial_functions[spec_name] = dolfin.TrialFunction(function_space[spec_name])
             test_functions[spec_name] = dolfin.TestFunction(function_space[spec_name])
             a_K = species.diffusion_constant*dolfin.inner(dolfin.nabla_grad(trial_functions[spec_name]), dolfin.nabla_grad(test_functions[spec_name]))*differential
@@ -593,6 +596,47 @@ class Xmesh():
         #dofs.coords = []
         #dofs.names = []
         #nodes.dofs = []
+
+def meshextend(model):
+    """
+        Extend the primary mesh with information about degrees of freedom.
+        Initialize URDME datastructures that depend on the size of the mesh.
+        """
+    
+    xmesh = Xmesh()
+    
+    # Construct a species map (dict mapping model species name to an integer index)
+    i=0
+    model.species_map = {}
+    for S in model.listOfSpecies:
+        model.species_map[S]=i
+        i = i+1;
+    
+    dims = np.shape(model.mesh.p)
+    Nvoxels = dims[1]
+    xmesh.Ndofs = Nvoxels*len(model.species_map)
+    
+    #dof_names = np.zeros(len(model.species_map),dtype=np.int)
+    dof_names = [""]*len(model.species_map)
+    for S in model.species_map:
+        dof_names[model.species_map[S]] = S
+    
+    dofs = np.zeros((len(model.species_map),Nvoxels))
+    nodes = np.zeros(xmesh.Ndofs)
+    dof = 0
+    for i in range(Nvoxels):
+        for S in model.species_map:
+            dofs[model.species_map[S],i]=dof
+            nodes[dof]=i
+            dof+=1
+    
+    xmesh.nodes["dofs"]=dofs
+    xmesh.dofs["nodes"]=nodes
+    xmesh.dofs["names"]=dof_names
+    
+    model.xmesh = xmesh
+
+
 
 
 def createSpeciesMap(model):
@@ -652,45 +696,6 @@ def toXYZ(model,filename,format="VMD"):
             outfile.close()
 
 
-def meshextend(model):
-    """
-        Extend the primary mesh with information about degrees of freedom.
-        Initialize URDME datastructures that depend on the size of the mesh.
-        """
-    
-    xmesh = Xmesh()
-    
-    # Construct a species map (dict mapping model species name to an integer index)
-    i=0
-    model.species_map = {}
-    for S in model.listOfSpecies:
-        model.species_map[S]=i
-        i = i+1;
-    
-    dims = np.shape(model.mesh.p)
-    Nvoxels = dims[1]
-    xmesh.Ndofs = Nvoxels*len(model.species_map)
-    
-    #dof_names = np.zeros(len(model.species_map),dtype=np.int)
-    dof_names = [""]*len(model.species_map)
-    for S in model.species_map:
-        dof_names[model.species_map[S]] = S
-
-    dofs = np.zeros((len(model.species_map),Nvoxels))
-    nodes = np.zeros(xmesh.Ndofs)
-    dof = 0
-    for i in range(Nvoxels):
-        for S in model.species_map:
-             dofs[model.species_map[S],i]=dof
-             nodes[dof]=i
-             dof+=1
-                 
-    xmesh.nodes["dofs"]=dofs
-    xmesh.dofs["nodes"]=nodes
-    xmesh.dofs["names"]=dof_names
-   
-    model.xmesh = xmesh
-
 
 def urdme(model=None,solver='nsm',solver_path="", model_file=None, seed=None,report_level=1):
     """ URDME solver interface, analogous to the Matlab URDME interface. """
@@ -725,6 +730,7 @@ def urdme(model=None,solver='nsm',solver_path="", model_file=None, seed=None,rep
     # Build the solver
     makefile = 'Makefile.' + solver
     handle = subprocess.Popen(['make','-f',URDME_BUILD+makefile,'URDME_ROOT='+URDME_ROOT,'URDME_MODEL='+propfilename], stdout = subprocess.PIPE, stderr=subprocess.PIPE)
+    handle.wait()
 
     if report_level >=1:
       print handle.stdout.read()
@@ -737,12 +743,11 @@ def urdme(model=None,solver='nsm',solver_path="", model_file=None, seed=None,rep
     outfile = tempfile.NamedTemporaryFile(delete=False)
     outfile.close()
 
-    subprocess.call(['cp',infile.name,'.urdme/'])
-
     # Execute the solver
     if seed is not None:
      try: 
       handle = subprocess.Popen(['.urdme/'+propfilename+'.'+solver,infile.name,outfile.name,str(seed)], stdout = subprocess.PIPE, stderr=subprocess.PIPE)
+      handle.wait()
       if report_level >= 1:
         print handle.stdout.read()
         print handle.stderr.read()
@@ -771,7 +776,7 @@ def urdme(model=None,solver='nsm',solver_path="", model_file=None, seed=None,rep
         model.U = U
         
         tspan = resultfile['tspan']
-        tspan = numpy.array(tspan)
+        tspan = numpy.array(tspan).flatten()
         
         # Create Dolfin Functions for all the species
         model.sol = {}

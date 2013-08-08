@@ -31,8 +31,31 @@ def dimerization(model_name=""):
     R2 = Reaction(name="R2",reactants={C:1},products={A:1,B:1},massaction=True,rate=k2)
     model.addReaction([R1,R2])
 
-    model.mesh = read_dolfin_mesh('meshes/surface.xml')
-            
+    model.mesh = read_dolfin_mesh('meshes/plane.xml')
+      
+    # Assemble the subdomain vector.
+
+    # Read the facet and interior cell physical domain markers into a Dolfin MeshFunction
+    file_in = dolfin.File("meshes/plane_facet_region.xml")
+    facet_function = dolfin.MeshFunction("size_t",model.mesh.mesh)
+    file_in >> facet_function
+
+    file_in = dolfin.File("meshes/plane_physical_region.xml")
+    physical_region = dolfin.MeshFunction("size_t",model.mesh.mesh)
+    file_in >> physical_region
+
+    print model.mesh.mesh.num_facets()
+    topology = model.mesh.mesh.topology()
+    print topology.dim
+    print topology.global_indices(0)
+    exit(-1)
+
+    # These are the physical id lables from the Gmsh file.
+    interior = 7
+    boundary = 8
+
+    
+
     # Distribute the molecues over the mesh
     model.scatter(A,subdomain=1)
     model.scatter(B,subdomain=1)
@@ -54,7 +77,6 @@ if __name__ == '__main__':
     result = urdme(model,solver='nsm',seed=10)
     
     U = result["U"]
-    #print numpy.sum(U,axis=0)
     
     # Plot using VIPER
     #dolfin.plot(model.sol['C'],wireframe=True)

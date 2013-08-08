@@ -162,7 +162,7 @@ class Model():
 class Species():
     """ Chemical species. """
     
-    def __init__(self,name="",initial_value=0,diffusion_constant=None,reaction_radius=None,dimension=3):
+    def __init__(self,name="",initial_value=0,diffusion_constant=None,reaction_radius=None,dimension=3,active_on=None):
         # A species has a name (string) and an initial value (positive integer)
         self.name = name
         self.initial_value = initial_value
@@ -227,7 +227,7 @@ class Reaction():
         in the namespace defined by the union of those dicts.
     """
 
-    def __init__(self, name = "", reactants = {}, products = {}, propensity_function = None, massaction = False, rate=None, annotation=None):
+    def __init__(self, name = "", reactants = {}, products = {}, propensity_function = None, massaction = False, rate=None, annotation=None,restrict_to=None):
         """ 
             Initializes the reaction using short-hand notation. 
             

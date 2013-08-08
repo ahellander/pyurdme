@@ -15,8 +15,8 @@ def dimerization(model_name=""):
 
     # Species
     A = Species(name="A",initial_value=50,reaction_radius=1e-3,diffusion_constant=1e-2,dimension=2);
-    B = Species(name="B",initial_value=50,reaction_radius=1e-3,diffusion_constant=1e-2,dimension=2);
-    C = Species(name="C",initial_value=100,reaction_radius=1e-3,diffusion_constant=1e-2,dimension=2);
+    B = Species(name="B",initial_value=50,reaction_radius=0.5e-3,diffusion_constant=1e-2,dimension=2);
+    C = Species(name="C",initial_value=100,reaction_radius=0.2e-3,diffusion_constant=1e-2,dimension=2);
 
     model.addSpecies([A,B,C])
 
@@ -62,7 +62,7 @@ def dimerization(model_name=""):
     model.scatter(C,subdomain=1)
 
     # Time span of the simulation
-    model.tspan = range(100)
+    model.tspan = numpy.arange(0,25,0.1)
 
     return model
 
@@ -73,6 +73,7 @@ if __name__ == '__main__':
     model = dimerization()
     model.initialize()
     
+
     #result = urdme(model,solver='nem',solver_path="/Users/andreash/bitbucket/nllattice/", seed=10)
     result = urdme(model,solver='nsm',seed=10)
     
@@ -91,4 +92,4 @@ if __name__ == '__main__':
     # Dump solution to file in VTK format for ParaView
     file = dolfin.File("testsolution.pvd")
     file << model.sol['C']
-    toXYZ(model,"testsolution.xyz")
+    toCSV(model,"solution1")

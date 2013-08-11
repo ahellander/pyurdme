@@ -170,6 +170,7 @@ class Species():
         self.dimension=dimension
         self.diffusion_constant=diffusion_constant
         self.reaction_radius=reaction_radius
+        self.active_on = active_on
 
 class Parameter():
     """ 
@@ -283,6 +284,8 @@ class Reaction():
             self.createMassAction()
         else:
             self.type = "customized"
+
+        self.restrict_to = restrict_to
                 
     def createMassAction(self):
         """ 

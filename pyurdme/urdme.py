@@ -52,16 +52,18 @@ class URDMEModel(Model):
         """ Create a sparse stoichiometric matrix. """
         ND = np.zeros((self.getNumSpecies(),self.getNumReactions()))
         i=0
-        for r in self.listOfReactions:
+        for i,r in enumerate(self.listOfReactions):
+            
             R = self.listOfReactions[r]
             reactants = R.reactants
             products  = R.products
+            print reactants
+            print products
             
             for s in reactants:
-                ND[self.species_map[s],i]=-reactants[s]
+                ND[self.species_map[s],i]-=reactants[s]
             for s in products:
-                ND[self.species_map[s],i]=products[s]
-            i = i+1
+                ND[self.species_map[s],i]+=products[s]
     
         N = scisp.csc_matrix(ND)
         return N
@@ -177,7 +179,18 @@ class URDMEModel(Model):
             func = ""
             rname=self.listOfReactions[R].name
             func += funheader.replace("__NAME__",rname) + "\n{\n"
-            func += "    return " + self.listOfReactions[R].propensity_function
+            if self.listOfReactions[R].restrict_to == None:
+                func += "    return " + self.listOfReactions[R].propensity_function
+            else:
+                func += "if("
+                for sd in self.listOfReactions[R].restrict_to:
+                    func += "sd == "+str(sd)+"||"
+                func = func[:-2]
+                func += ")\n"
+                func += "\treturn " + self.listOfReactions[R].propensity_function+";"
+                func += "\nelse"
+                func += "\n\treturn 0.0;"
+        
             order = len(self.listOfReactions[R].reactants)
             if order == 2:
                 func += "/vol;"
@@ -221,11 +234,100 @@ class URDMEModel(Model):
         
         if not hasattr(self,"u0"):
             self.initializeInitialValue()
-            
-        for mol in range(species.initial_value):
-            vtx=np.random.randint(0,self.mesh.getNumVoxels())
-            self.u0[specindx,vtx]+=1
         
+        for item in self.sd:
+            if item in [73,74,75]:
+                print int(item)
+                
+        active_on = species.active_on
+        if active_on is not None:
+            sd = self.sd
+            table = []
+            for i,ind in enumerate(sd):
+                if ind in active_on:
+                   table.append(i)
+        else:
+            table = range(self.mesh.getNumVoxels())
+            
+        ltab = len(table)
+                   
+        for mol in range(species.initial_value):
+            vtx=np.random.randint(0,ltab)
+            ind = table[vtx]
+            self.u0[specindx,ind]+=1
+        
+
+    def createSystemMatrix2(self):
+        
+        
+        matrices = assemble(self)
+        
+        # Make a dok matrix for easy manipulation
+        i=1;
+        Mspecies = len(self.listOfSpecies)
+        Nvoxels = self.mesh.getNumVoxels()
+        Ndofs = Nvoxels*Mspecies
+        print Nvoxels,Mspecies,Ndofs
+        S = scipy.sparse.dok_matrix((Ndofs,Ndofs))
+        
+        # Create the volume vector by lumping the mass matrices
+        vol = numpy.zeros((Ndofs,1))
+        spec = 0
+        
+        M = matrices['M']
+        rows,cols,vals = M.data()
+        SM = scipy.sparse.csr_matrix((vals,cols,rows))
+        vol = SM.sum(axis=1)
+        vol = vol.flatten()
+        print numpy.shape(vol)
+        
+        # Assemble one big matrix from the indiviudal stiffness matrices. Multiply by the inverse of
+        # the lumped mass matrix, filter out any entries with the wrong sign and renormalize the columns.
+        spec = 0
+        positive_mass = 0.0
+        total_mass = 0.0
+        
+        K = matrices['K']
+        rows,cols,vals = K.data()
+        Kcrs = scipy.sparse.csr_matrix((vals,cols,rows))
+        Kdok = Kcrs.todok()
+        
+        for entries in Kdok.items():
+            
+            ind = entries[0]
+            val = entries[1]
+            
+            if ind[0] != ind[1]:
+                if val > 0.0:
+                    positive_mass += val
+                    val = 0.0
+                else:
+                    total_mass += val
+            
+            # The volume can be zero, if the species is not active at the vertex (such as a 2D species at a 3D node)
+            if vol[0,ind[1]]==0:
+                vi = 1
+            else:
+                vi = vol[0,ind[1]]
+            
+            S[ind[0],ind[1]]=-val/vi
+            
+        # Convert to compressed column for compatibility with the URDME solvers.
+        D = S.tocsc()
+        
+        # Renormalize the columns (may not sum to zero since elements may have been filtered out
+        sumcol = numpy.zeros((Ndofs,1))
+        for i in range(Ndofs):
+            col = D.getcol(i)
+            for val in col.data:
+                if val > 0.0:
+                    sumcol[i] += val
+        
+        D.setdiag(-sumcol.flatten())
+        
+        
+        print "Fraction of positive off-diagonal entries: " + str(numpy.abs(positive_mass/total_mass))
+        return {'vol':vol,'D':D,'relative_positive_mass':positive_mass/total_mass}
 
     def createSystemMatrix(self):
         """ Create one merged system matrix in CCS format for input to the URDME solvers """
@@ -345,15 +447,17 @@ class URDMEModel(Model):
             vol = result['vol']
             #for v in vol:
             #    print v
-            vol = vol[::len(self.listOfSpecies)]
+            vol = vol[1::len(self.listOfSpecies)]
             
             self.urdme_solver_data['vol'] = vol
             D = result['D']
             self.urdme_solver_data['D'] = D
             
             # Subdomain vector
-            sd = self.initializeSubdomainVector()
-            self.urdme_solver_data['sd'] = sd
+            #sd = self.initializeSubdomainVector()
+            #self.urdme_solver_data['sd'] = sd
+            self.urdme_solver_data['sd'] = self.sd
+            
             
             # Data vector. If not present in model, it defaults to a vector with all elements zero.
             if not "data" in self.urdme_solver_data:
@@ -547,15 +651,6 @@ def assemble(model):
         
         # Create Function spaces, trial functions and test functions for all the species
         
-        #try:
-        #    xmesh = model.xmesh
-        #except:
-        #    model.xmesh = meshextend(model)
-       
-        #function_space = xmesh.function_space
-        #trial_functions = xmesh.trial_functions
-        #test_functions = xmesh.test_functions
-            
         function_space = OrderedDict()
         trial_functions = OrderedDict()
         test_functions = OrderedDict()
@@ -570,12 +665,11 @@ def assemble(model):
             if species.dimension == 2:
                 # TODO: If the dimension of the mesh is 2 (triangles) and one uses ds,
                 # The the mass matrices become strange...
-                differential = dolfin.dx
+                differential = dolfin.ds
             else:
                 differential = dolfin.dx
         
             function_space[spec_name] = dolfin.FunctionSpace(model.mesh.mesh,"Lagrange",1)
-            print function_space[spec_name].dofmap()
             trial_functions[spec_name] = dolfin.TrialFunction(function_space[spec_name])
             test_functions[spec_name] = dolfin.TestFunction(function_space[spec_name])
             a_K = species.diffusion_constant*dolfin.inner(dolfin.nabla_grad(trial_functions[spec_name]), dolfin.nabla_grad(test_functions[spec_name]))*differential
@@ -584,6 +678,58 @@ def assemble(model):
             mass_matrices[spec_name] = dolfin.assemble(a_M)
         
         return {'K':stiffness_matrices,'M':mass_matrices}
+
+    else:
+        # Assemble using Dolfin.
+        #
+        #
+        # Returns: A dict of two dicts (stiffness and mass matrices)
+        #          Those dicts in turn has species names as keys and contain
+        #          matrices in CSR format (as returned ny Dolfin)
+        #
+        # TODO: If the mesh is not a Dolfin mesh object, we need to convert to that here...
+        
+        # Create Function spaces, trial functions and test functions for all the species
+        
+       
+        V = dolfin.FunctionSpace(model.mesh.mesh,"Lagrange",1)
+        function_space = V
+        
+        for i in range(len(model.listOfSpecies)-1):
+            function_space = function_space * V
+        
+        trial_functions = dolfin.TrialFunction(function_space)
+        test_functions = dolfin.TestFunction(function_space)
+
+
+        for i, spec in enumerate(model.listOfSpecies):
+            
+            species = model.listOfSpecies[spec]
+            spec_name = species.name
+                
+            if species.dimension == 2:
+                # TODO: If the dimension of the mesh is 2 (triangles) and one uses ds,
+                # The the mass matrices become strange...
+                differential = dolfin.ds
+            else:
+                differential = dolfin.dx
+            if i == 0:
+                a_K = species.diffusion_constant*dolfin.inner(dolfin.nabla_grad(trial_functions[i]), dolfin.nabla_grad(test_functions[i]))*differential
+                a_M = trial_functions[i]*test_functions[i]*differential
+
+            else:
+                a_K = a_K + species.diffusion_constant*dolfin.inner(dolfin.nabla_grad(trial_functions[i]), dolfin.nabla_grad(test_functions[i]))*differential
+                a_M = a_M + trial_functions[i]*test_functions[i]*differential
+
+            #stiffness_matrices[spec_name] = dolfin.assemble(a_K)
+            
+            #a_M = trial_functions[i]*test_functions[i]*differential
+            #mass_matrices[spec_name] = dolfin.assemble(a_M)
+
+        stiffness_matrix = dolfin.assemble(a_K)
+        mass_matrix = dolfin.assemble(a_M)
+
+        return {'K':stiffness_matrix,'M':mass_matrix}
 
 
 class Xmesh():
@@ -697,7 +843,7 @@ def toXYZ(model,filename,format="ParaView"):
             outfile.close()
 
 def toCSV(model,filename):
-    """ Dump the solution attached to a m-odel as a .csv file. """
+    """ Dump the solution attached to a model as a .csv file. """
     
     
     if 'U' not in model.__dict__:
@@ -820,7 +966,7 @@ def urdme(model=None,solver='nsm',solver_path="", model_file=None, seed=None,rep
             
             numvox = model.mesh.getNumVoxels()
             for dof in range(numvox):
-                func_vector[dof] = float(U[dof*len(model.listOfSpecies)+i,-1])
+                func_vector[dof] = float(U[dof*len(model.listOfSpecies)+i,0])
         
             model.sol[spec_name] = func
 

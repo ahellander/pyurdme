@@ -49,16 +49,15 @@ class URDMEModel(Model):
         self.mesh = None
 
     def createStoichiometricMatrix(self):
-        """ Create a sparse stoichiometric matrix. """
+        """ Generate a stoichiometric matrix in sparse CSC format. """
+        
         ND = np.zeros((self.getNumSpecies(),self.getNumReactions()))
-        i=0
+
         for i,r in enumerate(self.listOfReactions):
             
             R = self.listOfReactions[r]
             reactants = R.reactants
             products  = R.products
-            print reactants
-            print products
             
             for s in reactants:
                 ND[self.species_map[s],i]-=reactants[s]
@@ -128,9 +127,9 @@ class URDMEModel(Model):
     
             reacstr += "\n\t"+rname+"->nr=(int *)calloc("+str(len(self.listOfSpecies))+",sizeof(int));\n\t"
             for j,reactant in enumerate(R.reactants):
-                 reacstr += rname+"->nr["+reactant+"]="+str(R.reactants[reactant])+";\n\t"
+                 reacstr += rname+"->nr["+reactant+"]=-"+str(R.reactants[reactant])+";\n\t"
             for j,product in enumerate(R.products):
-                reacstr += rname+"->nr["+product+"]=-"+str(R.reactants[reactant])+";\n\t"
+                reacstr += rname+"->nr["+product+"]="+str(R.reactants[reactant])+";\n\t"
 
             reacstr += rname+"->k="+str(R.marate.value)+";\n\t"
 
@@ -181,23 +180,33 @@ class URDMEModel(Model):
             func += funheader.replace("__NAME__",rname) + "\n{\n"
             if self.listOfReactions[R].restrict_to == None:
                 func += "    return " + self.listOfReactions[R].propensity_function
+                order = len(self.listOfReactions[R].reactants)
+                if order == 2:
+                    func += "/vol;"
+                elif order == 0:
+                    func += "*vol;"
+                else:
+                    func += ";"
+
             else:
                 func += "if("
                 for sd in self.listOfReactions[R].restrict_to:
                     func += "sd == "+str(sd)+"||"
                 func = func[:-2]
                 func += ")\n"
-                func += "\treturn " + self.listOfReactions[R].propensity_function+";"
+                func += "\treturn " + self.listOfReactions[R].propensity_function
+                order = len(self.listOfReactions[R].reactants)
+                if order == 2:
+                    func += "/vol;"
+                elif order == 0:
+                    func += "*vol;"
+                else:
+                    func += ";"
+
                 func += "\nelse"
                 func += "\n\treturn 0.0;"
         
-            order = len(self.listOfReactions[R].reactants)
-            if order == 2:
-                func += "/vol;"
-            elif order == 0:
-                func += "*vol;"
-            else:
-                func += ";"
+            
             func +="\n}"
             funcs += func + "\n\n"
             funcinits += "    ptr["+str(i)+"] = " + rname +";\n"
@@ -210,6 +219,9 @@ class URDMEModel(Model):
         propfile.write(propfilestr)
         propfile.close()
     
+    def timespan(self, tspan):
+        """ Set the time span of simulation. """
+        self.tspan = tspan
     
     def initializeSubdomainVector(self):
         """ Create URDME 'sd' vector. """
@@ -234,10 +246,6 @@ class URDMEModel(Model):
         
         if not hasattr(self,"u0"):
             self.initializeInitialValue()
-        
-        for item in self.sd:
-            if item in [73,74,75]:
-                print int(item)
                 
         active_on = species.active_on
         if active_on is not None:
@@ -250,7 +258,7 @@ class URDMEModel(Model):
             table = range(self.mesh.getNumVoxels())
             
         ltab = len(table)
-                   
+
         for mol in range(species.initial_value):
             vtx=np.random.randint(0,ltab)
             ind = table[vtx]
@@ -456,7 +464,8 @@ class URDMEModel(Model):
             # Subdomain vector
             #sd = self.initializeSubdomainVector()
             #self.urdme_solver_data['sd'] = sd
-            self.urdme_solver_data['sd'] = self.sd
+            if not "sd" in self.urdme_solver_data:
+                self.urdme_solver_data['sd'] = self.initializeSubdomainVector()
             
             
             # Data vector. If not present in model, it defaults to a vector with all elements zero.
@@ -531,6 +540,9 @@ def read_dolfin_mesh(filename=None):
         raise MeshImportError("Failed to import mesh: "+filename+"\n"+e)
 
 
+    # Try to read information about physical IDs
+            #try:
+#   fac_reg
 def createCartesianMesh(geometry=None,side_length=None,hmax=None):
     """
     Create a simple Cartesian mesh for a line, square or cube.
@@ -665,7 +677,7 @@ def assemble(model):
             if species.dimension == 2:
                 # TODO: If the dimension of the mesh is 2 (triangles) and one uses ds,
                 # The the mass matrices become strange...
-                differential = dolfin.ds
+                differential = dolfin.dx
             else:
                 differential = dolfin.dx
         
@@ -844,7 +856,7 @@ def toXYZ(model,filename,format="ParaView"):
 
 def toCSV(model,filename):
     """ Dump the solution attached to a model as a .csv file. """
-    
+    #TODO: Make this work for 2D meshes with only two coordinates.
     
     if 'U' not in model.__dict__:
         print "No solution found in the model."

@@ -48,23 +48,7 @@ def mincde(model_name=""):
             if facet_function[i] != 0:
                 sd[0,vtx] = facet_function[i]
     
-    
-
     model.sd = sd.flatten()
-
-
-#print edge2vertex(101)
-#   print facet2vertex(101)
-#    print cell2vertex(101)
-
-#model.mesh.mesh.init(0,1)
-#    model.mesh.mesh.init(0,2)
-#    topology = model.mesh.mesh.topology()
-#   print topology(0,1)
-#   exit(-1)
-
-        #for val in model.mesh.mesh.coordinates():
-#    print model.mesh.mesh.intersected_facets(dolfin.Point(val[0],val[1],val[2]))
 
     #dx = dolfin.Measure("dx")[physical_region]
     #ds = dolfin.Measure("ds")[facet_function]
@@ -99,7 +83,7 @@ def mincde(model_name=""):
     R3 = Reaction(name="R3",reactants={MinD_m:1,MinD_e:1},products={MinDE:1},massaction=True,rate=sigma_e)
     R4 = Reaction(name="R4",reactants={MinDE:1,MinD_e:1},products={MinD_c_adp:1,MinD_e:1},massaction=True,rate=sigma_de)
     R5 = Reaction(name="R5",reactants={MinD_c_adp:1},products={MinD_c_atp:1},massaction=True,rate=sigma_dt)
-    R6 = Reaction(name="R6",reactants={MinDE:1,MinD_c_atp:1},products={MinD_m:1,MinDE:1},massaction=True,rate=sigma_dD)
+    R6 = Reaction(name="R6",reactants={MinDE:1,MinD_c_atp:1},products={MinD_m:1,MinDE:1},massaction=True,rate=sigma_dD,restrict_to=boundary)
     
     model.addReaction([R1,R2,R3,R4,R5,R6])
     
@@ -108,7 +92,7 @@ def mincde(model_name=""):
     model.scatter(MinD_c_adp)
     model.scatter(MinD_e)
 
-    model.tspan = range(2)
+    model.timespan(range(2))
     return model
 
 if __name__=="__main__":
@@ -119,12 +103,12 @@ if __name__=="__main__":
     #model.serialize("testinput.mat")
     #exit(-1)
 
-    result = urdme(model)
+    result = urdme(model,seed=10)
     
     file = dolfin.File("mindm.pvd")
     file << model.sol['MinD_m']
     toCSV(model,"mindmcsv")
-    toXYZ(model,"mindmxyz",format="VMD")
+    toXYZ(model,"mindmxyz.xyz",format="VMD")
     
 
     print result

@@ -27,7 +27,4 @@ Extrude {{0, 1, 0}, {0, 0, 0}, Pi/2} {
   Surface{57};
 }
 
-Physical Surface(73) = {31, 48, 65, 14};
-Physical Surface(74) = {35, 18, 69, 52};
-Physical Surface(75) = {38, 55, 72, 21};
-Physical Volume(76)  = {2, 1, 4, 3};
+Physical Volume(73) = {1, 2, 3, 4};

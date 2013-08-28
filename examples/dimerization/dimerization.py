@@ -21,7 +21,7 @@ def dimerization(model_name=""):
     model.addSpecies([A,B,C])
 
     # Parameters
-    k1  = Parameter(name="k1",expression=0.0)
+    k1  = Parameter(name="k1",expression=100.0)
     k2  = Parameter(name="k2",expression=0.0)
 
     model.addParameter([k1,k2])
@@ -44,25 +44,24 @@ def dimerization(model_name=""):
     physical_region = dolfin.MeshFunction("size_t",model.mesh.mesh)
     file_in >> physical_region
 
-    print model.mesh.mesh.num_facets()
-    topology = model.mesh.mesh.topology()
-    print topology.dim
-    print topology.global_indices(0)
-    exit(-1)
+    #print model.mesh.mesh.num_facets()
+    #topology = model.mesh.mesh.topology()
+    #print topology.dim
+    #print topology.global_indices(0)
+    #exit(-1)
 
     # These are the physical id lables from the Gmsh file.
     interior = 7
     boundary = 8
 
     
-
     # Distribute the molecues over the mesh
     model.scatter(A,subdomain=1)
     model.scatter(B,subdomain=1)
     model.scatter(C,subdomain=1)
 
     # Time span of the simulation
-    model.tspan = numpy.arange(0,25,0.1)
+    model.timespan(numpy.arange(0,25,0.1))
 
     return model
 
@@ -74,10 +73,15 @@ if __name__ == '__main__':
     model.initialize()
     
 
-    #result = urdme(model,solver='nem',solver_path="/Users/andreash/bitbucket/nllattice/", seed=10)
-    result = urdme(model,solver='nsm',seed=10)
+    result = urdme(model,solver='nem',solver_path="/Users/andreash/bitbucket/nllattice/", seed=10)
+    #result = urdme(model,solver='nsm',seed=10)
     
     U = result["U"]
+    
+    print "A" + str(numpy.sum(U[::3,:],axis=0))
+    
+    print "B" + str(numpy.sum(U[1::3,:],axis=0))
+    print "C" + str(numpy.sum(U[2::3,:],axis=0))
     
     # Plot using VIPER
     #dolfin.plot(model.sol['C'],wireframe=True)
@@ -92,4 +96,4 @@ if __name__ == '__main__':
     # Dump solution to file in VTK format for ParaView
     file = dolfin.File("testsolution.pvd")
     file << model.sol['C']
-    toCSV(model,"solution1")
+    #toCSV(model,"solution1")

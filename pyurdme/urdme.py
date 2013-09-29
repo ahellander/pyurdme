@@ -11,7 +11,6 @@ import sys
 import shutil
 
 import gmsh
-
 import numpy
 import scipy.sparse
 
@@ -599,8 +598,9 @@ def connectivityMatrix(model):
     fs = dolfin.FunctionSpace(model.mesh.mesh,"Lagrange",1)
     trial_function = dolfin.TrialFunction(fs)
     test_function = dolfin.TestFunction(fs)
-    a_M = trial_function*test_function*dolfin.dx
-    C = dolfin.assemble(a_M)
+    #a_M = trial_function*test_function*dolfin.dx
+    a_K = -1*dolfin.inner(dolfin.nabla_grad(trial_function), dolfin.nabla_grad(test_function))*dolfin.dx
+    C = dolfin.assemble(a_K)
     rows,cols,vals = C.data()
     C = scipy.sparse.csr_matrix((vals,cols,rows))
     C = C.tocsc()
@@ -900,6 +900,9 @@ def urdme(model=None,solver='nsm',solver_path="", model_file=None, seed=None,rep
         os.environ['SOLVER_ROOT'] = solver_path
 
     # Write the propensity file
+    if os.path.isdir('.urdme'):
+        shutil.rmtree('.urdme')
+
     try:
       os.mkdir('.urdme')
     except:

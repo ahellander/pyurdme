@@ -259,80 +259,7 @@ class URDMEModel(Model):
             vtx=np.random.randint(0,ltab)
             ind = table[vtx]
             self.u0[specindx,ind]+=1
-        
-
-    def createSystemMatrix2(self):
-        
-        
-        matrices = assemble(self)
-        
-        # Make a dok matrix for easy manipulation
-        i=1;
-        Mspecies = len(self.listOfSpecies)
-        Nvoxels = self.mesh.getNumVoxels()
-        Ndofs = Nvoxels*Mspecies
-        print Nvoxels,Mspecies,Ndofs
-        S = scipy.sparse.dok_matrix((Ndofs,Ndofs))
-        
-        # Create the volume vector by lumping the mass matrices
-        vol = numpy.zeros((Ndofs,1))
-        spec = 0
-        
-        M = matrices['M']
-        rows,cols,vals = M.data()
-        SM = scipy.sparse.csr_matrix((vals,cols,rows))
-        vol = SM.sum(axis=1)
-        vol = vol.flatten()
-        print numpy.shape(vol)
-        
-        # Assemble one big matrix from the indiviudal stiffness matrices. Multiply by the inverse of
-        # the lumped mass matrix, filter out any entries with the wrong sign and renormalize the columns.
-        spec = 0
-        positive_mass = 0.0
-        total_mass = 0.0
-        
-        K = matrices['K']
-        rows,cols,vals = K.data()
-        Kcrs = scipy.sparse.csr_matrix((vals,cols,rows))
-        Kdok = Kcrs.todok()
-        
-        
-        for entries in Kdok.items():
-            
-            ind = entries[0]
-            val = entries[1]
-            
-            if ind[0] != ind[1]:
-                if val > 0.0:
-                    positive_mass += val
-                    val = 0.0
-                else:
-                    total_mass += val
-            
-            # The volume can be zero, if the species is not active at the vertex (such as a 2D species at a 3D node)
-            if vol[0,ind[1]]==0:
-                vi = 1
-            else:
-                vi = vol[0,ind[1]]
-            
-            S[ind[0],ind[1]]=-val/vi
-            
-        # Convert to compressed column for compatibility with the URDME solvers.
-        D = S.tocsc()
-        
-        # Renormalize the columns (may not sum to zero since elements may have been filtered out
-        sumcol = numpy.zeros((Ndofs,1))
-        for i in range(Ndofs):
-            col = D.getcol(i)
-            for val in col.data:
-                if val > 0.0:
-                    sumcol[i] += val
-        
-        D.setdiag(-sumcol.flatten())
-        
-        
-        print "Fraction of positive off-diagonal entries: " + str(numpy.abs(positive_mass/total_mass))
-        return {'vol':vol,'D':D,'relative_positive_mass':positive_mass/total_mass}
+    
 
     def createSystemMatrix(self):
         """ 
@@ -430,21 +357,28 @@ class URDMEModel(Model):
 
                 
     def validate(self):
-        """ Validate the model data structures. This function should be called 
-            prior to writing the model to the input file for the URDME solvers
-            since the solvers themselves only do limited error checking. """
+        """ Validate the model data structures. 
+            
+            validate should be called prior to writing the model to the solver input file,
+            since the solvers themselves do very limited error checking of the input.
+        
+        """
     
         # Check that all the columns of the system matrix sums to zero (or close to zero). If not, it does
-        # not define a Markov process. 
+        # not define a Markov process and the solvers might segfault or produce erraneous results.
         maxcolsum = numpy.max(numpy.abs(self.urdme_solver_data['D'].sum(axis=0)))
         if maxcolsum > 1e-10:
             raise InvalidSystemMatrixException("Invalid diffusion matrix. The sum of the columns does not sum to zero. " + str(maxcolsum))
                 
 
     def initialize(self):
-        """ Create the datastructures needed by the URDME solvers and put them
-            in the urdme_solver_data dict. The content of this dict is what will be dumped
-            to the urdme input file.  """
+        """ Create the datastructures needed by the URDME solvers. 
+            
+            'initialize' creates and populates a dictionary, urdme_solver_data.
+            All items of this dictionary will be dumped
+            to the urdme input file upon invoking 'serialize'.  
+            
+        """
         
         if not self.urdme_solver_data['initialized']:
         
@@ -492,8 +426,16 @@ class URDMEModel(Model):
             self.urdme_solver_data['K'] = connectivityMatrix(self)
 
             self.urdme_solver_data['initialized'] = True
-    
-            
+
+    def isInitialized(self):
+        """ Determine if the model has been initialized with all the datastrucures. """
+        try:
+           # This will fail if the 'urdme_solver_data' dictionary has not been defined.
+           isinit = self.urdme_solver_data['initialized']
+           return isinit
+        except:
+            return False
+
     def serialize(self,filename=None):
         """ 
             Write the datastructures needed by the the core URDME solvers to a .mat input file.
@@ -519,11 +461,13 @@ class Mesh():
 
     def getNumVoxels(self):
         return self.mesh.num_vertices()
-        #dims = np.shape(self.p)
-        #return dims[1]
     
     def getVoxels(self):
         return self.mesh.coordinates()
+
+def unitSquare(nx,ny):
+    mesh = dolfin.UnitSquareMesh(nx,ny)
+    return Mesh(mesh=mesh)
 
 def read_gmsh_mesh(meshfile):
     
@@ -939,6 +883,11 @@ def urdme(model=None,solver='nsm',solver_path="", model_file=None, seed=None,rep
 
     # Get temporary input and output files
     infile = tempfile.NamedTemporaryFile(delete=False)
+
+    # Check that the model is initialized
+    if not model.isInitialized():
+       model.initialize()
+
     model.serialize(filename=infile)
     infile.close
     outfile = tempfile.NamedTemporaryFile(delete=False)

@@ -14,12 +14,10 @@ import gmsh
 import numpy
 import scipy.sparse
 
-
-# Need a way to read hdf5 files
 try:
     import h5py
 except:
-    print "Fatal Error: pyurdme requires h5py."
+    print "pyurdme requires h5py."
     raise
 
 try:
@@ -35,8 +33,7 @@ class MeshImportError(Exception):
 
 class URDMEModel(Model):
     """ 
-        An URDME Model extends Model with spatial information and methods 
-        to create URDME solver input.
+        An URDME Model extends Model with spatial information and methods to create URDME solver input.
     """
     
     def __init__(self,name=""):
@@ -142,8 +139,8 @@ class URDMEModel(Model):
 
     
     def createPropensityFile(self,file_name=None):
-        """ Generate a C propensity file for used to compile the URDME solvers.
-            In this version, we only support mass action propensities. """
+        """ Automatically generate the C propensity file that is used to compile the URDME solvers.
+            Only mass action propensities are supported. """
         
         
         template = open(os.path.abspath(os.path.dirname(__file__))+'/data/propensity_file_template.c','r')
@@ -299,6 +296,7 @@ class URDMEModel(Model):
         Kcrs = scipy.sparse.csr_matrix((vals,cols,rows))
         Kdok = Kcrs.todok()
         
+        
         for entries in Kdok.items():
             
             ind = entries[0]
@@ -337,9 +335,19 @@ class URDMEModel(Model):
         return {'vol':vol,'D':D,'relative_positive_mass':positive_mass/total_mass}
 
     def createSystemMatrix(self):
-        """ Create one merged system matrix in CCS format for input to the URDME solvers """
+        """ 
+            Create the system (diffusion) matrix for input to the URDME solvers. The matrix
+            is built by concatenating the individually assembled matrices for each of the species,
+            and multiplying with the lumped mass matrix (which define the volume of the voxels).
+            Negative off-diagonal elements in the matrix are set to zero, and the diagonal is renormalized
+            in order to assure that the returned matrix is a Markov transition matrix. 
+            
+            Returns a dictionary containing the volumes of the subvolumes, the system diffusion matrix
+            and the fraction of the mass of the negative off-diagonal elements that has been filtered out.
+            
+        """
         
-        # Check if the individual stiffness and mass matrices (per species) have been assembled, otherwise assemble
+        # Check if the individual stiffness and mass matrices (per species) have been assembled, otherwise assemble them.
         try:
             stiffness_matrices = self.stiffness_matrices
             mass_matrices = self.mass_matrices
@@ -350,7 +358,7 @@ class URDMEModel(Model):
             stiffness_matrices = self.stiffness_matrices
             mass_matrices = self.mass_matrices
         
-        # Make a dok matrix for easy manipulation
+        # Make a dok matrix for easier manipulation
         i=1;
         Mspecies = len(self.listOfSpecies)
         Ndofs = self.mesh.getNumVoxels()*Mspecies
@@ -368,7 +376,9 @@ class URDMEModel(Model):
             for j in range(len(vols)):
                 vol[Mspecies*j+spec,0]=vols[j]
 
+        # This is necessary in order for the array to have the right dimension (Ndofs,1) 
         vol = vol.flatten()
+    
         # Assemble one big matrix from the indiviudal stiffness matrices. Multiply by the inverse of
         # the lumped mass matrix, filter out any entries with the wrong sign and renormalize the columns.
         spec = 0
@@ -378,10 +388,9 @@ class URDMEModel(Model):
         for species,K in stiffness_matrices.iteritems():
 
             rows,cols,vals = K.data()
-           
             Kcrs = scipy.sparse.csr_matrix((vals,cols,rows))
             Kdok = Kcrs.todok()
-
+            
             for entries in Kdok.items():
                 ind = entries[0]
                 val = entries[1]
@@ -416,8 +425,7 @@ class URDMEModel(Model):
                 
         D.setdiag(-sumcol.flatten())
 
-    
-        print "Fraction of positive off-diagonal entries: " + str(numpy.abs(positive_mass/total_mass))
+        #print "Fraction of positive off-diagonal entries: " + str(numpy.abs(positive_mass/total_mass))
         return {'vol':vol,'D':D,'relative_positive_mass':positive_mass/total_mass}
 
                 
@@ -544,8 +552,7 @@ def read_dolfin_mesh(filename=None):
 #   fac_reg
 def createCartesianMesh(geometry=None,side_length=None,hmax=None):
     """
-    Create a simple Cartesian mesh for a line, square or cube.
-    This is more or less only useful for debugging and development.
+        Create a Cartesian mesh for a line, square or cube.
     """
     
     valid_geometries = ["line","square","cube"]
@@ -593,7 +600,7 @@ def createCartesianMesh(geometry=None,side_length=None,hmax=None):
     return mesh
 
 def connectivityMatrix(model):
-    """ Assemble a sparse CCS connectivity matrix. """
+    """ Assemble a connectivity matrix in CCS format. """
 
     fs = dolfin.FunctionSpace(model.mesh.mesh,"Lagrange",1)
     trial_function = dolfin.TrialFunction(fs)
@@ -608,10 +615,10 @@ def connectivityMatrix(model):
     return C
 
 def assemble(model):
-    """
-        Assemble the diffusion matrix and volume vector.
-        Here, we will need to use Dolfin to build function spaces
-        and assemble.
+    """ Assemble the diffusion matrix and volume vector. 
+    
+        TODO: docs. 
+    
     """
     old_assembly = True
     if model.mesh.mesh_type == "Cartesian":
@@ -684,8 +691,11 @@ def assemble(model):
             function_space[spec_name] = dolfin.FunctionSpace(model.mesh.mesh,"Lagrange",1)
             trial_functions[spec_name] = dolfin.TrialFunction(function_space[spec_name])
             test_functions[spec_name] = dolfin.TestFunction(function_space[spec_name])
-            a_K = species.diffusion_constant*dolfin.inner(dolfin.nabla_grad(trial_functions[spec_name]), dolfin.nabla_grad(test_functions[spec_name]))*differential
+            # Can't include the diffusion constant in the assembly, dolfin does not seem to deal well with "small" diffusion consants (drops small elements)
+            a_K = dolfin.inner(dolfin.nabla_grad(trial_functions[spec_name]), dolfin.nabla_grad(test_functions[spec_name]))*differential
             stiffness_matrices[spec_name] = dolfin.assemble(a_K)
+            # Scale with the diffusion constant here.
+            stiffness_matrices[spec_name] = species.diffusion_constant*stiffness_matrices[spec_name]
             a_M = trial_functions[spec_name]*test_functions[spec_name]*differential
             mass_matrices[spec_name] = dolfin.assemble(a_M)
         

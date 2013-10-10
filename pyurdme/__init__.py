@@ -1,1 +1,1 @@
-__all__=['model','urdme']
+__all__=['model','pyurdme']

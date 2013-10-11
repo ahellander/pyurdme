@@ -47,27 +47,35 @@ class URDMEModel(Model):
     def createStoichiometricMatrix(self):
         """ Generate a stoichiometric matrix in sparse CSC format. """
         
-        ND = np.zeros((self.getNumSpecies(),self.getNumReactions()))
-
-        for i,r in enumerate(self.listOfReactions):
-            
-            R = self.listOfReactions[r]
-            reactants = R.reactants
-            products  = R.products
-            
-            for s in reactants:
-                ND[self.species_map[s],i]-=reactants[s]
-            for s in products:
-                ND[self.species_map[s],i]+=products[s]
+        if self.getNumReactions() > 0:
+            ND = np.zeros((self.getNumSpecies(),self.getNumReactions()))
+            for i,r in enumerate(self.listOfReactions):
+                
+                R = self.listOfReactions[r]
+                reactants = R.reactants
+                products  = R.products
+                
+                for s in reactants:
+                    ND[self.species_map[s],i]-=reactants[s]
+                for s in products:
+                    ND[self.species_map[s],i]+=products[s]
     
-        N = scisp.csc_matrix(ND)
+            N = scisp.csc_matrix(ND)
+        else:
+            N = numpy.zeros((self.getNumSpecies(),self.getNumReactions()))
+
         return N
 
     def createDependencyGraph(self):
         """ Construct the sparse dependecy graph. """
+        
         #TODO: Create a better dependency graph
         GF = np.ones((self.getNumReactions(),self.getNumReactions()+self.getNumSpecies()))
-        G=scisp.csc_matrix(GF)
+        try:
+            G=scisp.csc_matrix(GF)
+        except:
+            G=GF
+
         return G
     
     def createNewPropensityFile(self,file_name=None):
@@ -229,7 +237,8 @@ class URDMEModel(Model):
         ns = self.getNumSpecies()
         nv = self.mesh.getNumVoxels()
         self.u0 = np.zeros((ns,nv))
-      
+    
+    # Some utility routines to set initial conditions follow
     
     def scatter(self,species,subdomain=None):
         """ Scatter an initial number of molecules over the voxels in a subdomain. """
@@ -259,8 +268,30 @@ class URDMEModel(Model):
             vtx=np.random.randint(0,ltab)
             ind = table[vtx]
             self.u0[specindx,ind]+=1
-    
 
+    def placeNear(self,species=None, point=None):
+        """ Place all molecules of kind species in the voxel nearest a given point. """
+    
+        Sname = species.name
+        numS = species.initial_value
+    
+        if not hasattr(self,"u0"):
+            self.initializeInitialValue()
+
+        # Find the voxel with center (vertex) nearest to the point
+        coords = self.mesh.getVoxels()
+        shape = coords.shape
+        reppoint = numpy.tile(point,(shape[0],1))
+        dist = numpy.sqrt(numpy.sum((coords-reppoint)**2,axis=1))
+        ix = numpy.argmin(dist)
+
+        if not hasattr(self,'species_map'):
+            createSpeciesMap(self)
+        specindx= self.species_map[Sname]
+       
+        self.u0[specindx,ix]=numS
+
+    
     def createSystemMatrix(self):
         """ 
             Create the system (diffusion) matrix for input to the URDME solvers. The matrix

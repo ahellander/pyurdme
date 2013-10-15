@@ -43,6 +43,19 @@ class URDMEModel(Model):
         
         self.tspan = None
         self.mesh = None
+    
+    def initializeSpeciesMap(self):
+        i=0
+        self.species_map = {}
+        for S in self.listOfSpecies:
+            self.species_map[S]=i
+            i = i+1;
+
+    def speciesMap(self):
+        if not hasattr(self,'species_map'):
+            self.initializeSpeciesMap()
+        
+        return self.species_map
 
     def createStoichiometricMatrix(self):
         """ Generate a stoichiometric matrix in sparse CSC format. """
@@ -245,9 +258,8 @@ class URDMEModel(Model):
     
         Sname = species.name
         numS = species.initial_value
-        if not hasattr(self,'species_map'):
-            createSpeciesMap(self)
-        specindx= self.species_map[Sname]
+        species_map = self.speciesMap()
+        specindx= species_map[Sname]
         
         if not hasattr(self,"u0"):
             self.initializeInitialValue()
@@ -272,8 +284,8 @@ class URDMEModel(Model):
     def placeNear(self,species=None, point=None):
         """ Place all molecules of kind species in the voxel nearest a given point. """
     
-        Sname = species.name
-        numS = species.initial_value
+        spec_name = species.name
+        num_spec = species.initial_value
     
         if not hasattr(self,"u0"):
             self.initializeInitialValue()
@@ -281,15 +293,18 @@ class URDMEModel(Model):
         # Find the voxel with center (vertex) nearest to the point
         coords = self.mesh.getVoxels()
         shape = coords.shape
+                
+        p = dolfin.Point(point[0],point[1])
+                
         reppoint = numpy.tile(point,(shape[0],1))
         dist = numpy.sqrt(numpy.sum((coords-reppoint)**2,axis=1))
         ix = numpy.argmin(dist)
-
-        if not hasattr(self,'species_map'):
-            createSpeciesMap(self)
-        specindx= self.species_map[Sname]
        
-        self.u0[specindx,ix]=numS
+        species_map = self.speciesMap()
+        specindx = species_map[spec_name]
+        dofind = self.xmesh.vertex_to_dof_map[spec_name][ix]
+        ix = (dofind-specindx)/len(species_map)
+        self.u0[specindx,ix]=num_spec
 
     
     def createSystemMatrix(self):
@@ -413,7 +428,6 @@ class URDMEModel(Model):
         
         if not self.urdme_solver_data['initialized']:
         
-            createSpeciesMap(self)
             
             # Stoichimetric matrix
             N = self.createStoichiometricMatrix()
@@ -479,7 +493,12 @@ class URDMEModel(Model):
 
 
 class Mesh():
-    """ A thin wrapper around the Dolfin mesh object. """
+    """ A thin wrapper around the Dolfin mesh object.
+            
+        We wrap around dolfin mesh in order to present one
+        unified API (pyurdme) to the user.
+        
+    """
 
     def __init__(self,mesh=None,mesh_type="Dolfin"):
         
@@ -496,9 +515,48 @@ class Mesh():
     def getVoxels(self):
         return self.mesh.coordinates()
 
-def unitSquare(nx,ny):
-    mesh = dolfin.UnitSquareMesh(nx,ny)
+"""  Wrappers around dolfins built-in simple geometries/meshes.
+    
+    These following methods will all give regular meshes that will produce discretizations that are
+    equivalent to Cartesian grids.
+
+"""
+
+def unitIntervalMesh(nx):
+    mesh = dolfin.IntervalMesh(nx,0,1)
     return Mesh(mesh=mesh)
+
+def IntervalMesh(nx,a,b):
+    mesh = dolfin.IntervalMesh(nx,a,b)
+    return Mesh(mesh=mesh)
+
+def unitSquareMesh(nx,ny):
+    """ Unit Square of with nx,ny points in the respective axes. """
+    mesh = dolfin.UnitSquareMesh(nx,ny)
+    print mesh.coordinates
+    return Mesh(mesh=mesh)
+
+def SquareMesh(L,nx,ny):
+    """ Regular mesh of a square with side length L. """
+    mesh = dolfin.RectangleMesh(0,0,L,L,nx,ny)
+    return Mesh(mesh=mesh)
+    
+def unitCubeMesh(nx,ny,nz):
+    """ Unit Square of with nx,ny points in the respective axes. """
+    mesh = dolfin.UnitCubeMesh(nx,ny,nz)
+    return Mesh(mesh=mesh)
+
+#def unitCircle(nx,ny):
+#    """ Unit Square of with nx,ny points in the respective axes. """
+#    mesh = dolfin.UnitCircleMesh(nx,ny)
+#    return Mesh(mesh=mesh)
+
+#def unitSphere(nx,ny):
+#    """ Unit Square of with nx,ny points in the respective axes. """
+#    mesh = dolfin.UnitSquareMesh(nx,ny)
+#    return Mesh(mesh=mesh)
+
+
 
 def read_gmsh_mesh(meshfile):
     
@@ -522,9 +580,6 @@ def read_dolfin_mesh(filename=None):
         raise MeshImportError("Failed to import mesh: "+filename+"\n"+e)
 
 
-    # Try to read information about physical IDs
-            #try:
-#   fac_reg
 def createCartesianMesh(geometry=None,side_length=None,hmax=None):
     """
         Create a Cartesian mesh for a line, square or cube.
@@ -558,20 +613,6 @@ def createCartesianMesh(geometry=None,side_length=None,hmax=None):
         mesh.e[0]=0
         mesh.e[1]=N-1
 
-
-    elif geometry == "square":
-        dim = 2
-        Nvoxels = pow(N,dim)
-        mesh.p = np.zeros((dim,Nvoxels))
-        for i in range(N):
-            x = i*hmax
-            for j in range(N):
-                y = j*hmax
-                mesh.p[0,i*N+j]=x
-                mesh.p[1,i*N+j]=y
-
-    # Boundary segments
-    #mesh.e =
     return mesh
 
 def connectivityMatrix(model):
@@ -580,7 +621,6 @@ def connectivityMatrix(model):
     fs = dolfin.FunctionSpace(model.mesh.mesh,"Lagrange",1)
     trial_function = dolfin.TrialFunction(fs)
     test_function = dolfin.TestFunction(fs)
-    #a_M = trial_function*test_function*dolfin.dx
     a_K = -1*dolfin.inner(dolfin.nabla_grad(trial_function), dolfin.nabla_grad(test_function))*dolfin.dx
     C = dolfin.assemble(a_K)
     rows,cols,vals = C.data()
@@ -645,7 +685,10 @@ def assemble(model):
         
         # Create Function spaces, trial functions and test functions for all the species
         
-        function_space = OrderedDict()
+        meshextend(model)
+        
+        function_space = model.xmesh.function_space
+        #function_space = OrderedDict()
         trial_functions = OrderedDict()
         test_functions = OrderedDict()
         stiffness_matrices = OrderedDict()
@@ -663,7 +706,7 @@ def assemble(model):
             else:
                 differential = dolfin.dx
         
-            function_space[spec_name] = dolfin.FunctionSpace(model.mesh.mesh,"Lagrange",1)
+            #function_space[spec_name] = dolfin.FunctionSpace(model.mesh.mesh,"Lagrange",1)
             trial_functions[spec_name] = dolfin.TrialFunction(function_space[spec_name])
             test_functions[spec_name] = dolfin.TestFunction(function_space[spec_name])
             # Can't include the diffusion constant in the assembly, dolfin does not seem to deal well with "small" diffusion consants (drops small elements)
@@ -673,6 +716,7 @@ def assemble(model):
             stiffness_matrices[spec_name] = species.diffusion_constant*stiffness_matrices[spec_name]
             a_M = trial_functions[spec_name]*test_functions[spec_name]*differential
             mass_matrices[spec_name] = dolfin.assemble(a_M)
+        
         
         return {'K':stiffness_matrices,'M':mass_matrices}
 
@@ -730,65 +774,48 @@ def assemble(model):
 
 
 class Xmesh():
-    """ Extended mesh object. Contains dof-mappings, and function spaces etc. """
+    """ Extended mesh object.
+        
+        Contains function spaces and dof mappings.
+    """
 
     def __init__(self):
-        self.dofs = {}
-        self.nodes = {}
+        self.coordinates = None
         self.function_space = {}
-
-        #dofs.coords = []
-        #dofs.names = []
-        #nodes.dofs = []
+        self.vertex_to_dof_map = {}
+       
 
 def meshextend(model):
+    """ Extend the primary mesh with information about the degrees of freedom.
+    
+        TODO: Docs...
+        
     """
-        Extend the primary mesh with information about degrees of freedom.
-        Initialize URDME datastructures that depend on the size of the mesh.
-        """
     
     xmesh = Xmesh()
     
     # Construct a species map (dict mapping model species name to an integer index)
-    i=0
-    model.species_map = {}
-    for S in model.listOfSpecies:
-        model.species_map[S]=i
-        i = i+1;
+    species_map=model.speciesMap()
     
-    dims = np.shape(model.mesh.p)
-    Nvoxels = dims[1]
-    xmesh.Ndofs = Nvoxels*len(model.species_map)
+    # Initialize the function spaces and dof maps.
+    for spec in model.listOfSpecies:
+        
+        species = model.listOfSpecies[spec]
+        spec_name = species.name
+        spec_index = species_map[spec_name]
     
-    #dof_names = np.zeros(len(model.species_map),dtype=np.int)
-    dof_names = [""]*len(model.species_map)
-    for S in model.species_map:
-        dof_names[model.species_map[S]] = S
-    
-    dofs = np.zeros((len(model.species_map),Nvoxels))
-    nodes = np.zeros(xmesh.Ndofs)
-    dof = 0
-    for i in range(Nvoxels):
-        for S in model.species_map:
-            dofs[model.species_map[S],i]=dof
-            nodes[dof]=i
-            dof+=1
-    
-    xmesh.nodes["dofs"]=dofs
-    xmesh.dofs["nodes"]=nodes
-    xmesh.dofs["names"]=dof_names
-    
+        xmesh.function_space[spec_name] = dolfin.FunctionSpace(model.mesh.mesh,"Lagrange",1)
+        # vertex_to_dof_map provides a map between the vertex index and the dof.
+        xmesh.vertex_to_dof_map[spec_name]=xmesh.function_space[spec_name].dofmap().dof_to_vertex_map(model.mesh.mesh)
+        xmesh.vertex_to_dof_map[spec_name]=len(model.listOfSpecies)*xmesh.vertex_to_dof_map[spec_name]+spec_index
+        xmesh.vertex_to_dof_map[spec_name]=xmesh.vertex_to_dof_map[spec_name]
+
+
+    xmesh.vertex = model.mesh.mesh.coordinates()
+
     model.xmesh = xmesh
 
 
-
-
-def createSpeciesMap(model):
-    i=0
-    model.species_map = {}
-    for S in model.listOfSpecies:
-        model.species_map[S]=i
-        i = i+1;
 
 def toXYZ(model,filename,format="ParaView"):
     """ Dump the solution attached to a model as a xyz file. This format can be
@@ -961,6 +988,7 @@ def urdme(model=None,solver='nsm',solver_path="", model_file=None, seed=None,rep
         
         # Create Dolfin Functions for all the species
         model.sol = {}
+        # TODO: Create a dict of dolfin Functions, one for each species, indexed by tspan
         for i,spec in enumerate(model.listOfSpecies):
     
             species = model.listOfSpecies[spec]
@@ -971,7 +999,7 @@ def urdme(model=None,solver='nsm',solver_path="", model_file=None, seed=None,rep
             
             numvox = model.mesh.getNumVoxels()
             for dof in range(numvox):
-                func_vector[dof] = float(U[dof*len(model.listOfSpecies)+i,0])
+                func_vector[dof] = float(U[dof*len(model.listOfSpecies)+i,-1])
         
             model.sol[spec_name] = func
 

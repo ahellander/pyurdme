@@ -73,8 +73,8 @@ if __name__ == '__main__':
     model.initialize()
     
 
-    result = urdme(model,solver='nem',solver_path="/Users/andreash/bitbucket/nllattice/", seed=10)
-    #result = urdme(model,solver='nsm',seed=10)
+    #result = urdme(model,solver='nem',solver_path="/Users/andreash/bitbucket/nllattice/", seed=10)
+    result = urdme(model,solver='nsm',seed=10)
     
     U = result["U"]
     

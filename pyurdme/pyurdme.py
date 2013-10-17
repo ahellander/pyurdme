@@ -897,7 +897,22 @@ def toCSV(model,filename):
         outfile.close()
 
 
-def urdme(model=None,solver='nsm',solver_path="", model_file=None, seed=None,report_level=1):
+def read_solution(filename):
+    resultfile = h5py.File(filename,'r')
+    U = resultfile['U']
+    U = numpy.array(U)
+    # This little hack makes U have the same structure as in the Matlab interface...
+    dims = numpy.shape(U)
+    U = U.reshape((dims[1],dims[0]))
+    U = U.transpose()
+    
+    tspan = resultfile['tspan']
+    tspan = numpy.array(tspan).flatten()
+    resultfile.close()
+
+    return {'U':U, 'tspan':tspan}
+
+def urdme(model=None,solver='nsm',solver_path="", model_file=None, input_file=None, seed=None,report_level=1):
     """ URDME solver interface, analogous to the Matlab URDME interface. """
 
     # Set URDME_ROOT
@@ -939,30 +954,36 @@ def urdme(model=None,solver='nsm',solver_path="", model_file=None, seed=None,rep
       print handle.stdout.read()
       print handle.stderr.read()
 
-    # Get temporary input and output files
-    infile = tempfile.NamedTemporaryFile(delete=False)
+    if input_file is None:
+        # Get temporary input and output files
+        infile = tempfile.NamedTemporaryFile(delete=False)
 
-    # Check that the model is initialized
-    if not model.isInitialized():
-       model.initialize()
+        # Check that the model is initialized
+        if not model.isInitialized():
+           model.initialize()
 
-    model.serialize(filename=infile)
-    infile.close
+        model.serialize(filename=infile)
+        infile.close
+        infile_name = infile.name
+    else:
+        infile_name = input_file
+
+
     outfile = tempfile.NamedTemporaryFile(delete=False)
     outfile.close()
 
     # Execute the solver
     if seed is not None:
      try: 
-      handle = subprocess.Popen(['.urdme/'+propfilename+'.'+solver,infile.name,outfile.name,str(seed)], stdout = subprocess.PIPE, stderr=subprocess.PIPE)
+      handle = subprocess.Popen(['.urdme/'+propfilename+'.'+solver,infile_name,outfile.name,str(seed)], stdout = subprocess.PIPE, stderr=subprocess.PIPE)
       handle.wait()
       if report_level >= 1:
         print handle.stdout.read()
         print handle.stderr.read()
      except:
-      return 'Call to URDME failed.'
+        return {"status":"Failed","stderr":handle.stderr.read(),"stdout":handle.stdout.read()}
     else:
-      handle = subprocess.Popen(['.urdme/'+propfilename+'.'+solver,infile.name,outfile.name], stdout = subprocess.PIPE, stderr=subprocess.PIPE)
+      handle = subprocess.Popen(['.urdme/'+propfilename+'.'+solver,infile_name,outfile.name], stdout = subprocess.PIPE, stderr=subprocess.PIPE)
       if report_level >= 1:
         print handle.stdout.read()
         print handle.stderr.read()
@@ -973,18 +994,10 @@ def urdme(model=None,solver='nsm',solver_path="", model_file=None, seed=None,rep
     #Load the result from the hdf5 output file.
     try:
         
-        resultfile = h5py.File(outfile.name,'r')
-        # print resultfile['U']
-        U = resultfile['U']
-        U = numpy.array(U)
-        # This little hack makes U have the same structure as in the Matlab interface...
-        dims = numpy.shape(U)
-        U = U.reshape((dims[1],dims[0]))
-        U = U.transpose()
+        result = read_solution(outfile.name)
+        U = result['U']
+        tspan = result['tspan']
         model.U = U
-        
-        tspan = resultfile['tspan']
-        tspan = numpy.array(tspan).flatten()
         
         # Create Dolfin Functions for all the species
         model.sol = {}
@@ -1004,15 +1017,16 @@ def urdme(model=None,solver='nsm',solver_path="", model_file=None, seed=None,rep
             model.sol[spec_name] = func
 
         # Clean up
-        resultfile.close()
-        os.remove(infile.name)
+        if input_file is None:
+            os.remove(infile.name)
         os.remove(outfile.name)
 
-        return {'U':U,'tspan':tspan}
+        return dict({"Status":"Sucess","stdout":handle.stdout.read(),"stderr":handle.stderr.read()},**result)
 
     except Exception,e:
        # Clean up
-       subprocess.call(['rm','-rf',infile.name])
+       if input_file is None:
+           subprocess.call(['rm','-rf',infile.name])
        subprocess.call(['rm','-rf',outfile.name])
        raise
 

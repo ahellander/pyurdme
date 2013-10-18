@@ -902,7 +902,9 @@ def toCSV(model,filename):
 
 
 def read_solution(filename):
+
     resultfile = h5py.File(filename,'r')
+
     U = resultfile['U']
     U = numpy.array(U)
     # This little hack makes U have the same structure as in the Matlab interface...
@@ -918,10 +920,18 @@ def read_solution(filename):
 
 
 def urdme(model=None,solver='nsm',solver_path="", model_file=None, input_file=None, seed=None,report_level=1):
-    """ URDME solver interface, analogous to the Matlab URDME interface. """
+    """ URDME solver interface, analogous to the Matlab URDME interface. 
+            
+        TODO: Docs...
+    
+    """
 
-    # Set URDME_ROOT
-    URDME_ROOT = subprocess.check_output(['urdme_init','-r'])
+    # Set URDME_ROOT. This requires that URDME is properly installed on the system.
+    try:
+        URDME_ROOT = subprocess.check_output(['urdme_init','-r'])
+    except Exception,e:
+        print "Could not determine the location of URDME."
+        raise
     
     # Trim newline
     URDME_ROOT = URDME_ROOT[:-1]
@@ -968,7 +978,7 @@ def urdme(model=None,solver='nsm',solver_path="", model_file=None, input_file=No
            model.initialize()
 
         model.serialize(filename=infile)
-        infile.close
+        infile.close()
         infile_name = infile.name
     else:
         infile_name = input_file
@@ -990,13 +1000,15 @@ def urdme(model=None,solver='nsm',solver_path="", model_file=None, input_file=No
     else:
       try:
         handle = subprocess.Popen(['.urdme/'+propfilename+'.'+solver,infile_name,outfile.name], stdout = subprocess.PIPE, stderr=subprocess.PIPE)
+        handle.wait()
         if report_level >= 1:
           print handle.stdout.read()
           print handle.stderr.read()
       except:
         return {"status":"Failed","stderr":handle.stderr.read(),"stdout":handle.stdout.read()}
 
-    #subprocess.call(['cp',infile.name,'./debug_input.mat'])
+    if input_file is None:
+        subprocess.call(['cp',infile.name,'./debug_input.mat'])
     subprocess.call(['cp',outfile.name,'./debug_output.mat'])
 
     #Load the result from the hdf5 output file.

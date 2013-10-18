@@ -9,7 +9,7 @@ Dependencies
 =============
 You will need to install (at least) all the following external packages
 
-- Fenics (fenicsproject.org/download)
+- Fenics (http://fenicsproject.org/download)
 - NumPy (For OSX, http://fonnesbeck.github.io/ScipySuperpack/, provides installers for SciPy,NumPy, Matplotlib)
 - Scipy 
 - Gmsh (http://geuz.org/gmsh/)

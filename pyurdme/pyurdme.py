@@ -134,6 +134,8 @@ class URDMEModel(Model):
             reacstr += rname+"->nr_reactants="+str(len(R.reactants))+";\n\t"
             reacstr += rname+"->nr_products="+str(len(R.products))+";\n\t"
             
+            #print reacstr
+            
             reacstr += rname+"->reactants=(int *)malloc("+rname+"->nr_reactants*sizeof(int));\n\t"
             for j,reactant in enumerate(R.reactants):
                 reacstr += rname+"->reactants["+str(j)+"]="+str(reactant)+";\n\t"
@@ -143,11 +145,13 @@ class URDMEModel(Model):
                 reacstr += rname+"->products["+str(j)+"]="+str(product)+";\n\t"
     
             reacstr += "\n\t"+rname+"->nr=(int *)calloc("+str(len(self.listOfSpecies))+",sizeof(int));\n\t"
+                
             for j,reactant in enumerate(R.reactants):
                  reacstr += rname+"->nr["+reactant+"]=-"+str(R.reactants[reactant])+";\n\t"
-            for j,product in enumerate(R.products):
-                reacstr += rname+"->nr["+product+"]="+str(R.reactants[reactant])+";\n\t"
 
+            for j,product in enumerate(R.products):
+                reacstr += rname+"->nr["+product+"]="+str(R.products[product])+";\n\t"
+                
             reacstr += rname+"->k="+str(R.marate.value)+";\n\t"
 
             reacstr += "\n\tptr["+str(i)+"] = "+rname +";\n\n\t"
@@ -912,6 +916,7 @@ def read_solution(filename):
 
     return {'U':U, 'tspan':tspan}
 
+
 def urdme(model=None,solver='nsm',solver_path="", model_file=None, input_file=None, seed=None,report_level=1):
     """ URDME solver interface, analogous to the Matlab URDME interface. """
 
@@ -983,12 +988,15 @@ def urdme(model=None,solver='nsm',solver_path="", model_file=None, input_file=No
      except:
         return {"status":"Failed","stderr":handle.stderr.read(),"stdout":handle.stdout.read()}
     else:
-      handle = subprocess.Popen(['.urdme/'+propfilename+'.'+solver,infile_name,outfile.name], stdout = subprocess.PIPE, stderr=subprocess.PIPE)
-      if report_level >= 1:
-        print handle.stdout.read()
-        print handle.stderr.read()
+      try:
+        handle = subprocess.Popen(['.urdme/'+propfilename+'.'+solver,infile_name,outfile.name], stdout = subprocess.PIPE, stderr=subprocess.PIPE)
+        if report_level >= 1:
+          print handle.stdout.read()
+          print handle.stderr.read()
+      except:
+        return {"status":"Failed","stderr":handle.stderr.read(),"stdout":handle.stdout.read()}
 
-    subprocess.call(['cp',infile.name,'./debug_input.mat'])
+    #subprocess.call(['cp',infile.name,'./debug_input.mat'])
     subprocess.call(['cp',outfile.name,'./debug_output.mat'])
 
     #Load the result from the hdf5 output file.

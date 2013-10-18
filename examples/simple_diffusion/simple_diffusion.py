@@ -25,7 +25,10 @@ def simple_diffusion():
     #mesh = dolfin.Mesh(c1-c2,20)
     #dolfin.plot(mesh)
     #dolfin.interactive()
+
     model.mesh = unitSquareMesh(nx,ny)
+    meshextend(model)
+
 
     model.timespan(numpy.linspace(0,1,50))
     

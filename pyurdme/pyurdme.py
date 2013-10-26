@@ -463,6 +463,9 @@ class URDMEModel(Model):
                 data = np.zeros((1,self.mesh.getNumVoxels()))
                 self.urdme_solver_data['data'] = data
     
+            if not hasattr(self,'u0'):
+                self.initializeInitialValue()
+                    
             self.urdme_solver_data['u0'] = self.u0
 
             tspan= np.asarray(self.tspan,dtype=np.float)

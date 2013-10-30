@@ -40,7 +40,6 @@ class URDMEModel(Model):
         Model.__init__(self,name)
         
         self.urdme_solver_data = {'initialized':False}
-        
         self.tspan = None
         self.mesh = None
     
@@ -52,6 +51,7 @@ class URDMEModel(Model):
             i = i+1;
 
     def speciesMap(self):
+        """ Get the species map, name to index. """
         if not hasattr(self,'species_map'):
             self.initializeSpeciesMap()
         
@@ -82,7 +82,7 @@ class URDMEModel(Model):
     def createDependencyGraph(self):
         """ Construct the sparse dependecy graph. """
         
-        #TODO: Create a better dependency graph
+        #TODO: Automatically create a dependency graph (cannot be optimal, but good enough.)
         GF = np.ones((self.getNumReactions(),self.getNumReactions()+self.getNumSpecies()))
         try:
             G=scisp.csc_matrix(GF)
@@ -164,7 +164,7 @@ class URDMEModel(Model):
 
     
     def createPropensityFile(self,file_name=None):
-        """ Automatically generate the C propensity file that is used to compile the URDME solvers.
+        """ Generate the C propensity file that is used to compile the URDME solvers.
             Only mass action propensities are supported. """
         
         
@@ -235,7 +235,6 @@ class URDMEModel(Model):
               
         propfilestr = propfilestr.replace("__DEFINE_REACTIONS__",funcs)
         propfilestr = propfilestr.replace("__DEFINE_PROPFUNS__",funcinits)
-                
                 
         propfile.write(propfilestr)
         propfile.close()

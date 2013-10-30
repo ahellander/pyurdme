@@ -29,9 +29,6 @@ def mincde(model_name=""):
     physical_region = dolfin.MeshFunction("size_t",model.mesh.mesh)
     file_in >> physical_region
 
-    
-#print physical_region.size()
-
     model.mesh.mesh.init()
 
     edge2vertex = model.mesh.mesh.topology()(1,0)
@@ -101,14 +98,13 @@ if __name__=="__main__":
     model = mincde(model_name="mincde")
     model.initialize()
     #model.serialize("testinput.mat")
-    #exit(-1)
-
-    result = urdme(model,seed=10)
+   
+    result = urdme(model)
     
     file = dolfin.File("mindm.pvd")
     file << model.sol['MinD_m']
-    toCSV(model,"mindmcsv")
-    toXYZ(model,"mindmxyz.xyz",format="VMD")
+    #toCSV(model,"mindmcsv")
+    #toXYZ(model,"mindmxyz.xyz",format="VMD")
     
 
     print result

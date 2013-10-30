@@ -1,6 +1,6 @@
 """ pyurdme model file for reversible dimerization on a surface. """
 import os
-from pyurdme.urdme import *
+from pyurdme.pyurdme import *
 import dolfin
 import numpy
 import scipy.io as spio
@@ -69,19 +69,13 @@ def dimerization(model_name=""):
 if __name__ == '__main__':
     """ Create a model and assemble the URDME input file. """
     
+    # Initialize the Model
     model = dimerization()
     model.initialize()
     
-
-    result = urdme(model,solver='nem',solver_path="/Users/andreash/bitbucket/nllattice/", seed=10)
-    #result = urdme(model,solver='nsm',seed=10)
+    result = urdme(model,solver='nsm',seed=10)
     
     U = result["U"]
-    
-    print "A" + str(numpy.sum(U[::3,:],axis=0))
-    
-    print "B" + str(numpy.sum(U[1::3,:],axis=0))
-    print "C" + str(numpy.sum(U[2::3,:],axis=0))
     
     # Plot using VIPER
     #dolfin.plot(model.sol['C'],wireframe=True)
@@ -96,4 +90,3 @@ if __name__ == '__main__':
     # Dump solution to file in VTK format for ParaView
     file = dolfin.File("testsolution.pvd")
     file << model.sol['C']
-    #toCSV(model,"solution1")

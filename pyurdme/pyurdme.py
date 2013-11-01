@@ -40,7 +40,6 @@ class URDMEModel(Model):
         Model.__init__(self,name)
         
         self.urdme_solver_data = {'initialized':False}
-        
         self.tspan = None
         self.mesh = None
     
@@ -52,6 +51,7 @@ class URDMEModel(Model):
             i = i+1;
 
     def speciesMap(self):
+        """ Get the species map, name to index. """
         if not hasattr(self,'species_map'):
             self.initializeSpeciesMap()
         
@@ -82,7 +82,7 @@ class URDMEModel(Model):
     def createDependencyGraph(self):
         """ Construct the sparse dependecy graph. """
         
-        #TODO: Create a better dependency graph
+        #TODO: Automatically create a dependency graph (cannot be optimal, but good enough.)
         GF = np.ones((self.getNumReactions(),self.getNumReactions()+self.getNumSpecies()))
         try:
             G=scisp.csc_matrix(GF)
@@ -134,6 +134,8 @@ class URDMEModel(Model):
             reacstr += rname+"->nr_reactants="+str(len(R.reactants))+";\n\t"
             reacstr += rname+"->nr_products="+str(len(R.products))+";\n\t"
             
+            #print reacstr
+            
             reacstr += rname+"->reactants=(int *)malloc("+rname+"->nr_reactants*sizeof(int));\n\t"
             for j,reactant in enumerate(R.reactants):
                 reacstr += rname+"->reactants["+str(j)+"]="+str(reactant)+";\n\t"
@@ -143,11 +145,13 @@ class URDMEModel(Model):
                 reacstr += rname+"->products["+str(j)+"]="+str(product)+";\n\t"
     
             reacstr += "\n\t"+rname+"->nr=(int *)calloc("+str(len(self.listOfSpecies))+",sizeof(int));\n\t"
+                
             for j,reactant in enumerate(R.reactants):
                  reacstr += rname+"->nr["+reactant+"]=-"+str(R.reactants[reactant])+";\n\t"
-            for j,product in enumerate(R.products):
-                reacstr += rname+"->nr["+product+"]="+str(R.reactants[reactant])+";\n\t"
 
+            for j,product in enumerate(R.products):
+                reacstr += rname+"->nr["+product+"]="+str(R.products[product])+";\n\t"
+                
             reacstr += rname+"->k="+str(R.marate.value)+";\n\t"
 
             reacstr += "\n\tptr["+str(i)+"] = "+rname +";\n\n\t"
@@ -160,7 +164,7 @@ class URDMEModel(Model):
 
     
     def createPropensityFile(self,file_name=None):
-        """ Automatically generate the C propensity file that is used to compile the URDME solvers.
+        """ Generate the C propensity file that is used to compile the URDME solvers.
             Only mass action propensities are supported. """
         
         
@@ -231,7 +235,6 @@ class URDMEModel(Model):
               
         propfilestr = propfilestr.replace("__DEFINE_REACTIONS__",funcs)
         propfilestr = propfilestr.replace("__DEFINE_PROPFUNS__",funcinits)
-                
                 
         propfile.write(propfilestr)
         propfile.close()
@@ -459,6 +462,9 @@ class URDMEModel(Model):
                 data = np.zeros((1,self.mesh.getNumVoxels()))
                 self.urdme_solver_data['data'] = data
     
+            if not hasattr(self,'u0'):
+                self.initializeInitialValue()
+                    
             self.urdme_solver_data['u0'] = self.u0
 
             tspan= np.asarray(self.tspan,dtype=np.float)
@@ -898,7 +904,9 @@ def toCSV(model,filename):
 
 
 def read_solution(filename):
+
     resultfile = h5py.File(filename,'r')
+
     U = resultfile['U']
     U = numpy.array(U)
     # This little hack makes U have the same structure as in the Matlab interface...
@@ -912,11 +920,20 @@ def read_solution(filename):
 
     return {'U':U, 'tspan':tspan}
 
-def urdme(model=None,solver='nsm',solver_path="", model_file=None, input_file=None, seed=None,report_level=1):
-    """ URDME solver interface, analogous to the Matlab URDME interface. """
 
-    # Set URDME_ROOT
-    URDME_ROOT = subprocess.check_output(['urdme_init','-r'])
+def urdme(model=None,solver='nsm',solver_path="", model_file=None, input_file=None, seed=None,report_level=1):
+    """ URDME solver interface, analogous to the Matlab URDME interface. 
+            
+        TODO: Docs...
+    
+    """
+
+    # Set URDME_ROOT. This requires that URDME is properly installed on the system.
+    try:
+        URDME_ROOT = subprocess.check_output(['urdme_init','-r'])
+    except Exception,e:
+        print "Could not determine the location of URDME."
+        raise
     
     # Trim newline
     URDME_ROOT = URDME_ROOT[:-1]
@@ -963,7 +980,7 @@ def urdme(model=None,solver='nsm',solver_path="", model_file=None, input_file=No
            model.initialize()
 
         model.serialize(filename=infile)
-        infile.close
+        infile.close()
         infile_name = infile.name
     else:
         infile_name = input_file
@@ -983,12 +1000,17 @@ def urdme(model=None,solver='nsm',solver_path="", model_file=None, input_file=No
      except:
         return {"status":"Failed","stderr":handle.stderr.read(),"stdout":handle.stdout.read()}
     else:
-      handle = subprocess.Popen(['.urdme/'+propfilename+'.'+solver,infile_name,outfile.name], stdout = subprocess.PIPE, stderr=subprocess.PIPE)
-      if report_level >= 1:
-        print handle.stdout.read()
-        print handle.stderr.read()
+      try:
+        handle = subprocess.Popen(['.urdme/'+propfilename+'.'+solver,infile_name,outfile.name], stdout = subprocess.PIPE, stderr=subprocess.PIPE)
+        handle.wait()
+        if report_level >= 1:
+          print handle.stdout.read()
+          print handle.stderr.read()
+      except:
+        return {"status":"Failed","stderr":handle.stderr.read(),"stdout":handle.stdout.read()}
 
-    subprocess.call(['cp',infile.name,'./debug_input.mat'])
+    if input_file is None:
+        subprocess.call(['cp',infile.name,'./debug_input.mat'])
     subprocess.call(['cp',outfile.name,'./debug_output.mat'])
 
     #Load the result from the hdf5 output file.

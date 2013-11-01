@@ -28,6 +28,7 @@ def simple_diffusion():
     model.mesh = unitSquareMesh(nx,ny)
 
     model.timespan(numpy.linspace(0,1,50))
+    meshextend(model)
     
     # Place the A molecules in the voxel nearest to the center of the square
     model.placeNear(species=A,point=[0.5,0.5])

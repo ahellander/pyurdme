@@ -259,14 +259,20 @@ class URDMEModel(Model):
     def scatter(self,species,subdomain=None):
         """ Scatter an initial number of molecules over the voxels in a subdomain. """
     
-        Sname = species.name
-        numS = species.initial_value
+        spec_name = species.name
+        num_spec = species.initial_value
         species_map = self.speciesMap()
-        specindx= species_map[Sname]
+        specindx= species_map[spec_name]
         
         if not hasattr(self,"u0"):
             self.initializeInitialValue()
-                
+        
+        if not hasattr(self,'xmesh'):
+            meshextend(self)
+        
+        # Map vertex index to dofs
+        dofind = self.xmesh.vertex_to_dof_map[spec_name]
+
         active_on = species.active_on
         if active_on is not None:
             sd = self.sd
@@ -282,7 +288,9 @@ class URDMEModel(Model):
         for mol in range(species.initial_value):
             vtx=np.random.randint(0,ltab)
             ind = table[vtx]
-            self.u0[specindx,ind]+=1
+            dof = dofind[ind]
+            ix = (dof-specindx)/len(species_map)
+            self.u0[specindx,ix]+=1
 
     def placeNear(self,species=None, point=None):
         """ Place all molecules of kind species in the voxel nearest a given point. """
@@ -1034,7 +1042,7 @@ def urdme(model=None,solver='nsm',solver_path="", model_file=None, input_file=No
             
             numvox = model.mesh.getNumVoxels()
             for dof in range(numvox):
-                func_vector[dof] = float(U[dof*len(model.listOfSpecies)+i,-1])
+                func_vector[dof] = float(U[dof*len(model.listOfSpecies)+i,0])
         
             model.sol[spec_name] = func
 

@@ -1,7 +1,7 @@
 """ pyURDME model file for the MinCDE example. """
 
 import os
-from pyurdme.urdme import *
+from pyurdme.pyurdme import *
 
 def mincde(model_name=""):
 
@@ -18,7 +18,7 @@ def mincde(model_name=""):
     hmax = model.mesh.mesh.hmax()
     hmin = model.mesh.mesh.hmin()
     h = (hmax+hmin)/2
-#print hmin,hmax
+    #print hmin,hmax
 
     # Read the facet and interior cell physical domain markers into a Dolfin MeshFunction 
     file_in = dolfin.File("mesh/coli_facet_region.xml")
@@ -56,11 +56,11 @@ def mincde(model_name=""):
 
     # Species
     # TODO: We need a way to localize species to subdomains/boundaries
-    MinD_m     = Species(name="MinD_m",initial_value=1000,diffusion_constant=1e-13,dimension=2,active_on=boundary)
+    MinD_m     = Species(name="MinD_m",initial_value=1000,diffusion_constant=1e-14,dimension=2,active_on=boundary)
     MinD_c_atp = Species(name="MinD_c_atp",initial_value=0,diffusion_constant=2.5e-12)
     MinD_c_adp = Species(name="MinD_c_adp",initial_value=4500,diffusion_constant=2.5e-12)
     MinD_e     = Species(name="MinD_e",initial_value=1575,diffusion_constant=2.5e-12)
-    MinDE      = Species(name="MinDE",initial_value=0,diffusion_constant=1e-13,dimension=2,active_on=boundary)
+    MinDE      = Species(name="MinDE",initial_value=0,diffusion_constant=1e-14,dimension=2,active_on=boundary)
     
     model.addSpecies([MinD_m,MinD_c_atp,MinD_c_adp,MinD_e,MinDE])
 
@@ -97,14 +97,18 @@ if __name__=="__main__":
                      
     model = mincde(model_name="mincde")
     model.initialize()
-    #model.serialize("testinput.mat")
    
     result = urdme(model)
     
     file = dolfin.File("mindm.pvd")
     file << model.sol['MinD_m']
-    #toCSV(model,"mindmcsv")
-    #toXYZ(model,"mindmxyz.xyz",format="VMD")
     
+    #file = dolfin.File("minde.pvd")
+    #file << model.sol['MinD_e']
 
+    
+    #file = dolfin.File("mincatp.pvd")
+    #file << model.sol['MinD_c_atp']
+
+    
     print result

@@ -42,7 +42,6 @@ class URDMEModel(Model):
         
         # urdme_solver_data will hold all the datastructures needed by the URDME
         # core solvers after the model is initialized.
-        self.urdme_solver_data = {'initialized':False}
         self.tspan = None
         self.mesh = None
     
@@ -448,7 +447,7 @@ class URDMEModel(Model):
         return {'vol':vol,'D':D,'relative_positive_mass':positive_mass/total_mass}
 
                 
-    def validate(self):
+    def validate(self, urdme_solver_data):
         """ Validate the model data structures. 
             
             validate should be called prior to writing the model to the solver input file,
@@ -458,83 +457,81 @@ class URDMEModel(Model):
     
         # Check that all the columns of the system matrix sums to zero (or close to zero). If not, it does
         # not define a Markov process and the solvers might segfault or produce erraneous results.
-        maxcolsum = numpy.max(numpy.abs(self.urdme_solver_data['D'].sum(axis=0)))
+        maxcolsum = numpy.max(numpy.abs(urdme_solver_data['D'].sum(axis=0)))
         if maxcolsum > 1e-10:
             raise InvalidSystemMatrixException("Invalid diffusion matrix. The sum of the columns does not sum to zero. " + str(maxcolsum))
-                
-
-    def initialize(self):
-        """ Create the datastructures needed by the URDME solvers. 
-            
-            'initialize' creates and populates a dictionary, urdme_solver_data.
-            All items of this dictionary will be dumped
-            to the urdme input file upon invoking 'serialize'.  
-            
-        """
-        
-        if not self.urdme_solver_data['initialized']:
-        
-            
-            # Stoichimetric matrix
-            N = self.createStoichiometricMatrix()
-            self.urdme_solver_data['N'] = N
-            # Dependency Graph
-            G = self.createDependencyGraph()
-            self.urdme_solver_data['G']  = G
-            
-            # Volume vector
-            result =  self.createSystemMatrix()
-            vol = result['vol']
-            #TODO: Make use of all dofs values, requires modification of CORE URDME...
-            vol = vol[1::len(self.listOfSpecies)]
-            
-            self.urdme_solver_data['vol'] = vol
-            D = result['D']
-            self.urdme_solver_data['D'] = D
-            
-            # Subdomain vector
-            if not "sd" in self.urdme_solver_data:
-                self.urdme_solver_data['sd'] = self.initializeSubdomainVector()
-                        
-            # Data vector. If not present in model, it defaults to a vector with all elements zero.
-            if not "data" in self.urdme_solver_data:
-                data = np.zeros((1,self.mesh.getNumVoxels()))
-                self.urdme_solver_data['data'] = data
     
-            if not hasattr(self,'u0'):
-                self.initializeInitialValue()
-                    
-            self.urdme_solver_data['u0'] = self.u0
 
-            tspan= np.asarray(self.tspan,dtype=np.float)
-            self.urdme_solver_data['tspan'] = tspan
-        
-            # Vertex coordinates
-            self.urdme_solver_data['p'] = self.mesh.getVoxels()
-        
-            # Connectivity matrix
-            self.urdme_solver_data['K'] = connectivityMatrix(self)
-
-            self.urdme_solver_data['initialized'] = True
-
-    def isInitialized(self):
-        """ Determine if the model has been initialized with all the datastrucures. """
-        try:
-           # This will fail if the 'urdme_solver_data' dictionary has not been defined.
-           isinit = self.urdme_solver_data['initialized']
-           return isinit
-        except:
-            return False
-
-    def serialize(self,filename=None):
-        """ 
-            Write the datastructures needed by the the core URDME solvers to a .mat input file.
-            initialize() must be called prior to calling this function. 
+    def solverData(self):
+        """ Return the datastructures needed by the URDME solvers.
+            
+           solverData creates and populates a dictionary, urdme_solver_data, 
+           containing the mandatory input data structures of the core NSM solver in URDME
+           that is derived from the model. The data strucyures are
+            
+           N    - the stochiometry matrix
+           G    - the dependency graph
+           vol  - the volume vector
+           sd   - the subdomain vector
+           data - the data vector
+           u0   - the intial condition
+           
+           This data is also returned, unlike in the Matlab URDME interface
+            
+           p - the vertex coordinates
+           K - a (Nvoxel x Nvoxel) connectivity matrix
+            
         """
-                
-        # Validate the data structures before writing them to file. 
-        self.validate()
-        spio.savemat(filename,self.urdme_solver_data,oned_as='column')
+        
+        
+        urdme_solver_data = {}
+        
+        # Stoichimetric matrix
+        N = self.createStoichiometricMatrix()
+        urdme_solver_data['N'] = N
+        # Dependency Graph
+        G = self.createDependencyGraph()
+        urdme_solver_data['G']  = G
+        
+        # Volume vector
+        result =  self.createSystemMatrix()
+        vol = result['vol']
+        #TODO: Make use of all dofs values, requires modification of CORE URDME...
+        vol = vol[1::len(self.listOfSpecies)]
+        
+        urdme_solver_data['vol'] = vol
+        D = result['D']
+        urdme_solver_data['D'] = D
+        
+        # Subdomain vector
+        urdme_solver_data['sd'] = self.initializeSubdomainVector()
+        
+        # Data vector. If not present in model, it defaults to a vector with all elements zero.
+        data = np.zeros((1,self.mesh.getNumVoxels()))
+        urdme_solver_data['data'] = data
+        
+        if not hasattr(self,'u0'):
+            self.initializeInitialValue()
+        
+        urdme_solver_data['u0'] = self.u0
+        
+        tspan= np.asarray(self.tspan,dtype=np.float)
+        urdme_solver_data['tspan'] = tspan
+        
+        # Vertex coordinates
+        urdme_solver_data['p'] = self.mesh.getVoxels()
+        
+        # Connectivity matrix
+        urdme_solver_data['K'] = connectivityMatrix(self)
+    
+        return urdme_solver_data
+    
+    def serialize(self,filename=None):
+        """ Write the datastructures needed by the the core URDME solvers to a .mat input file. """
+        
+        urdme_solver_data = self.solverData()
+        self.validate(urdme_solver_data)
+        spio.savemat(filename,urdme_solver_data,oned_as='column')
 
 
 class Mesh():
@@ -846,10 +843,7 @@ def urdme(model=None,solver='nsm',solver_path="", model_file=None, input_file=No
         # Get temporary input and output files
         infile = tempfile.NamedTemporaryFile(delete=False)
 
-        # Check that the model is initialized
-        if not model.isInitialized():
-           model.initialize()
-
+        # Write the model to an input file in .mat format
         model.serialize(filename=infile)
         infile.close()
         infile_name = infile.name

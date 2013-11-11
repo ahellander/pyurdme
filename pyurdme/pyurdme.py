@@ -790,9 +790,11 @@ def read_solution(filename):
 
 
 def urdme(model=None,solver='nsm',solver_path="", model_file=None, input_file=None, seed=None,report_level=1):
-    """ URDME solver interface, analogous to the Matlab URDME interface. 
+    """ URDME solver interface.
             
         TODO: Docs...
+        
+        THIS IS A PIECE OF SHIT!
     
     """
 

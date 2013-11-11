@@ -651,7 +651,6 @@ def assemble(model):
     model.meshextend()
     
     function_space = model.xmesh.function_space
-    #function_space = OrderedDict()
     trial_functions = OrderedDict()
     test_functions = OrderedDict()
     stiffness_matrices = OrderedDict()
@@ -800,7 +799,7 @@ def urdme(model=None,solver='nsm',solver_path="", model_file=None, input_file=No
     
     """
 
-    # Set URDME_ROOT. This requires that URDME is properly installed on the system.
+    # Set URDME_ROOT. This will fail if URDME is not installed on the system.
     try:
         URDME_ROOT = subprocess.check_output(['urdme_init','-r'])
     except Exception,e:
@@ -880,10 +879,6 @@ def urdme(model=None,solver='nsm',solver_path="", model_file=None, input_file=No
           print handle.stderr.read()
       except:
         return {"status":"Failed","stderr":handle.stderr.read(),"stdout":handle.stdout.read()}
-
-    if input_file is None:
-        subprocess.call(['cp',infile.name,'./debug_input.mat'])
-    subprocess.call(['cp',outfile.name,'./debug_output.mat'])
 
     #Load the result from the hdf5 output file.
     try:

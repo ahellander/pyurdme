@@ -34,11 +34,14 @@ class MeshImportError(Exception):
 class URDMEModel(Model):
     """ 
         An URDME Model extends Model with spatial information and methods to create URDME solver input.
+        TODO: Documentiation.
     """
     
     def __init__(self,name=""):
         Model.__init__(self,name)
         
+        # urdme_solver_data will hold all the datastructures needed by the URDME
+        # core solvers after the model is initialized.
         self.urdme_solver_data = {'initialized':False}
         self.tspan = None
         self.mesh = None
@@ -450,8 +453,7 @@ class URDMEModel(Model):
             # Volume vector
             result =  self.createSystemMatrix()
             vol = result['vol']
-            #for v in vol:
-            #    print v
+            #TODO: Make use of all dofs values, requires modification of CORE URDME...
             vol = vol[1::len(self.listOfSpecies)]
             
             self.urdme_solver_data['vol'] = vol
@@ -459,12 +461,9 @@ class URDMEModel(Model):
             self.urdme_solver_data['D'] = D
             
             # Subdomain vector
-            #sd = self.initializeSubdomainVector()
-            #self.urdme_solver_data['sd'] = sd
             if not "sd" in self.urdme_solver_data:
                 self.urdme_solver_data['sd'] = self.initializeSubdomainVector()
-            
-            
+                        
             # Data vector. If not present in model, it defaults to a vector with all elements zero.
             if not "data" in self.urdme_solver_data:
                 data = np.zeros((1,self.mesh.getNumVoxels()))
@@ -594,41 +593,6 @@ def read_dolfin_mesh(filename=None):
         raise MeshImportError("Failed to import mesh: "+filename+"\n"+e)
 
 
-def createCartesianMesh(geometry=None,side_length=None,hmax=None):
-    """
-        Create a Cartesian mesh for a line, square or cube.
-    """
-    
-    valid_geometries = ["line","square","cube"]
-    if geometry not in valid_geometries:
-        raise
-    
-    mesh = Mesh(mesh_type="Cartesian")
-    
-    # Vertices
-    N = int(side_length/hmax)+1
-
-    if geometry == "line":
-        dim = 1
-        mesh.p = np.zeros((dim,N))
-        mesh.e = np.zeros(2);
-        mesh.t = np.zeros((2,N-1),dtype=np.int)
-
-        # Points
-        for i in range(N):
-            x = i*hmax
-            mesh.p[0,i]=x
-            
-        for i in range(N-1):
-            mesh.t[0,i]=i
-            mesh.t[1,i]=i+1
-
-        # Edges
-        mesh.e[0]=0
-        mesh.e[1]=N-1
-
-    return mesh
-
 def connectivityMatrix(model):
     """ Assemble a connectivity matrix in CCS format. """
 
@@ -720,10 +684,9 @@ def assemble(model):
             else:
                 differential = dolfin.dx
         
-            #function_space[spec_name] = dolfin.FunctionSpace(model.mesh.mesh,"Lagrange",1)
             trial_functions[spec_name] = dolfin.TrialFunction(function_space[spec_name])
             test_functions[spec_name] = dolfin.TestFunction(function_space[spec_name])
-            # Can't include the diffusion constant in the assembly, dolfin does not seem to deal well with "small" diffusion consants (drops small elements)
+            # Can't include the diffusion constant in the assembly, dolfin does not seem to deal well with small diffusion consants (drops small elements)
             a_K = dolfin.inner(dolfin.nabla_grad(trial_functions[spec_name]), dolfin.nabla_grad(test_functions[spec_name]))*differential
             stiffness_matrices[spec_name] = dolfin.assemble(a_K)
             # Scale with the diffusion constant here.
@@ -765,7 +728,7 @@ def assemble(model):
             if species.dimension == 2:
                 # TODO: If the dimension of the mesh is 2 (triangles) and one uses ds,
                 # The the mass matrices become strange...
-                differential = dolfin.ds
+                differential = dolfin.dx
             else:
                 differential = dolfin.dx
             if i == 0:
@@ -1042,7 +1005,7 @@ def urdme(model=None,solver='nsm',solver_path="", model_file=None, input_file=No
             
             numvox = model.mesh.getNumVoxels()
             for dof in range(numvox):
-                func_vector[dof] = float(U[dof*len(model.listOfSpecies)+i,0])
+                func_vector[dof] = float(U[dof*len(model.listOfSpecies)+i,-1])
         
             model.sol[spec_name] = func
 

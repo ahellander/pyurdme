@@ -89,7 +89,7 @@ def mincde(model_name=""):
     model.scatter(MinD_c_adp)
     model.scatter(MinD_e)
 
-    model.timespan(range(2))
+    model.timespan(range(100))
     return model
 
 if __name__=="__main__":
@@ -102,7 +102,7 @@ if __name__=="__main__":
     
     file = dolfin.File("mindm.pvd")
     file << model.sol['MinD_m']
-    
+    toXYZ(model,'mindm.xyz',format="VMD")
     #file = dolfin.File("minde.pvd")
     #file << model.sol['MinD_e']
 

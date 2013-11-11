@@ -46,7 +46,7 @@ class URDMEModel(Model):
         self.tspan = None
         self.mesh = None
     
-    def initializeSpeciesMap(self):
+    def __initializeSpeciesMap(self):
         i=0
         self.species_map = {}
         for S in self.listOfSpecies:
@@ -56,7 +56,7 @@ class URDMEModel(Model):
     def speciesMap(self):
         """ Get the species map, name to index. """
         if not hasattr(self,'species_map'):
-            self.initializeSpeciesMap()
+            self.__initializeSpeciesMap()
         
         return self.species_map
 
@@ -247,7 +247,7 @@ class URDMEModel(Model):
         self.tspan = tspan
     
     def initializeSubdomainVector(self):
-        """ Create URDME 'sd' vector. """
+        """ Create the 'sd' vector. """
         # TODO: Support arbitrary sd-numbers and more than one subdomain
         return np.ones((1,self.mesh.getNumVoxels()))
     
@@ -257,8 +257,37 @@ class URDMEModel(Model):
         nv = self.mesh.getNumVoxels()
         self.u0 = np.zeros((ns,nv))
     
-    # Some utility routines to set initial conditions follow
+    def meshextend(self):
+        """ Extend the primary mesh with information about the degrees of freedom.
+            
+            TODO: Docs...
+            
+            """
+        
+        xmesh = Xmesh()
+        
+        # Construct a species map (dict mapping model species name to an integer index)
+        species_map=self.speciesMap()
+        
+        # Initialize the function spaces and dof maps.
+        for spec in self.listOfSpecies:
+            
+            species = self.listOfSpecies[spec]
+            spec_name = species.name
+            spec_index = species_map[spec_name]
+            
+            xmesh.function_space[spec_name] = dolfin.FunctionSpace(self.mesh.mesh,"Lagrange",1)
+            # vertex_to_dof_map provides a map between the vertex index and the dof.
+            xmesh.vertex_to_dof_map[spec_name]=xmesh.function_space[spec_name].dofmap().dof_to_vertex_map(self.mesh.mesh)
+            xmesh.vertex_to_dof_map[spec_name]=len(self.listOfSpecies)*xmesh.vertex_to_dof_map[spec_name]+spec_index
+            xmesh.vertex_to_dof_map[spec_name]=xmesh.vertex_to_dof_map[spec_name]
+        
+        
+        xmesh.vertex = self.mesh.mesh.coordinates()
+        self.xmesh = xmesh
+        
     
+    # Some utility routines to set initial conditions follow
     def scatter(self,species,subdomain=None):
         """ Scatter an initial number of molecules over the voxels in a subdomain. """
     
@@ -271,7 +300,7 @@ class URDMEModel(Model):
             self.initializeInitialValue()
         
         if not hasattr(self,'xmesh'):
-            meshextend(self)
+            self.meshextend()
         
         # Map vertex index to dofs
         dofind = self.xmesh.vertex_to_dof_map[spec_name]
@@ -303,6 +332,9 @@ class URDMEModel(Model):
     
         if not hasattr(self,"u0"):
             self.initializeInitialValue()
+        
+        if not hasattr(self,'xmesh'):
+            self.meshextend()
 
         # Find the voxel with center (vertex) nearest to the point
         coords = self.mesh.getVoxels()
@@ -608,147 +640,47 @@ def connectivityMatrix(model):
     return C
 
 def assemble(model):
-    """ Assemble the diffusion matrix and volume vector. 
+    """  Assemble the mass and stiffness matrices using Dolfin.
     
-        TODO: docs. 
-    
+         Returns: A dictionary containing two dictionaries, one for the stiffness matrices
+                  and one for the mass matrices. Those dictionaries has the species names as keys and
+                  the matrices are in CSR format.
     """
-    old_assembly = True
-    if model.mesh.mesh_type == "Cartesian":
-
-        Ndofs = model.xmesh.Ndofs
-        DF  = np.zeros((Ndofs,Ndofs),dtype=np.float)
-        vol = np.zeros(Ndofs)
-        dim,nt = np.shape(model.mesh.t)
-        nodes2dofs = model.xmesh.nodes["dofs"]
-        dof_names = model.xmesh.dofs["names"]
+    
+    
+    model.meshextend()
+    
+    function_space = model.xmesh.function_space
+    #function_space = OrderedDict()
+    trial_functions = OrderedDict()
+    test_functions = OrderedDict()
+    stiffness_matrices = OrderedDict()
+    mass_matrices = OrderedDict()
+    
+    for spec in model.listOfSpecies:
         
-        for t in range(nt):
-            
-            nodes = model.mesh.t[:,t]
-            
-            coords = model.mesh.p[:,nodes]
-            coords = coords[0]
-            h = abs(coords[0]-coords[1])
-            h2 = pow(h,2)
-            
-            dofs  = nodes2dofs[:,nodes]
-            dims= np.shape(dofs)
-            ns = dims[0]
-
-            for j in range(ns):
-                dof = dofs[j]
-                vol[dof[0]]+=h/2
-                vol[dof[1]]+=h/2
-                
-                # Diffusion constant
-                d1 = model.listOfSpecies[dof_names[j]].diffusion_constant
-
-                DF[dof[0],dof[1]]  = d1/h2
-                DF[dof[0],dof[0]] -= d1/h2
-                DF[dof[1],dof[0]]  = d1/h2
-                DF[dof[1],dof[1]] -= d1/h2
-
-        D = scisp.csc_matrix(DF)
-        return (vol,D)
-    elif old_assembly:
-        # Assemble using Dolfin.
-        #
-        #
-        # Returns: A dict of two dicts (stiffness and mass matrices)
-        #          Those dicts in turn has species names as keys and contain
-        #          matrices in CSR format (as returned ny Dolfin)
-        #
-        # TODO: If the mesh is not a Dolfin mesh object, we need to convert to that here...
+        species = model.listOfSpecies[spec]
+        spec_name = species.name
         
-        # Create Function spaces, trial functions and test functions for all the species
-        
-        meshextend(model)
-        
-        function_space = model.xmesh.function_space
-        #function_space = OrderedDict()
-        trial_functions = OrderedDict()
-        test_functions = OrderedDict()
-        stiffness_matrices = OrderedDict()
-        mass_matrices = OrderedDict()
-        
-        for spec in model.listOfSpecies:
-            
-            species = model.listOfSpecies[spec]
-            spec_name = species.name
-            
-            if species.dimension == 2:
-                # TODO: If the dimension of the mesh is 2 (triangles) and one uses ds,
-                # The the mass matrices become strange...
-                differential = dolfin.dx
-            else:
-                differential = dolfin.dx
-        
-            trial_functions[spec_name] = dolfin.TrialFunction(function_space[spec_name])
-            test_functions[spec_name] = dolfin.TestFunction(function_space[spec_name])
-            # Can't include the diffusion constant in the assembly, dolfin does not seem to deal well with small diffusion consants (drops small elements)
-            a_K = dolfin.inner(dolfin.nabla_grad(trial_functions[spec_name]), dolfin.nabla_grad(test_functions[spec_name]))*differential
-            stiffness_matrices[spec_name] = dolfin.assemble(a_K)
-            # Scale with the diffusion constant here.
-            stiffness_matrices[spec_name] = species.diffusion_constant*stiffness_matrices[spec_name]
-            a_M = trial_functions[spec_name]*test_functions[spec_name]*differential
-            mass_matrices[spec_name] = dolfin.assemble(a_M)
-        
-        
-        return {'K':stiffness_matrices,'M':mass_matrices}
-
-    else:
-        # Assemble using Dolfin.
-        #
-        #
-        # Returns: A dict of two dicts (stiffness and mass matrices)
-        #          Those dicts in turn has species names as keys and contain
-        #          matrices in CSR format (as returned ny Dolfin)
-        #
-        # TODO: If the mesh is not a Dolfin mesh object, we need to convert to that here...
-        
-        # Create Function spaces, trial functions and test functions for all the species
-        
-       
-        V = dolfin.FunctionSpace(model.mesh.mesh,"Lagrange",1)
-        function_space = V
-        
-        for i in range(len(model.listOfSpecies)-1):
-            function_space = function_space * V
-        
-        trial_functions = dolfin.TrialFunction(function_space)
-        test_functions = dolfin.TestFunction(function_space)
-
-
-        for i, spec in enumerate(model.listOfSpecies):
-            
-            species = model.listOfSpecies[spec]
-            spec_name = species.name
-                
-            if species.dimension == 2:
-                # TODO: If the dimension of the mesh is 2 (triangles) and one uses ds,
-                # The the mass matrices become strange...
-                differential = dolfin.dx
-            else:
-                differential = dolfin.dx
-            if i == 0:
-                a_K = species.diffusion_constant*dolfin.inner(dolfin.nabla_grad(trial_functions[i]), dolfin.nabla_grad(test_functions[i]))*differential
-                a_M = trial_functions[i]*test_functions[i]*differential
-
-            else:
-                a_K = a_K + species.diffusion_constant*dolfin.inner(dolfin.nabla_grad(trial_functions[i]), dolfin.nabla_grad(test_functions[i]))*differential
-                a_M = a_M + trial_functions[i]*test_functions[i]*differential
-
-            #stiffness_matrices[spec_name] = dolfin.assemble(a_K)
-            
-            #a_M = trial_functions[i]*test_functions[i]*differential
-            #mass_matrices[spec_name] = dolfin.assemble(a_M)
-
-        stiffness_matrix = dolfin.assemble(a_K)
-        mass_matrix = dolfin.assemble(a_M)
-
-        return {'K':stiffness_matrix,'M':mass_matrix}
-
+        if species.dimension == 2:
+            # TODO: If the dimension of the mesh is 2 (triangles) and one uses ds,
+            # The the mass matrices become strange...
+            differential = dolfin.dx
+        else:
+            differential = dolfin.dx
+    
+        trial_functions[spec_name] = dolfin.TrialFunction(function_space[spec_name])
+        test_functions[spec_name] = dolfin.TestFunction(function_space[spec_name])
+        # We cannot include the diffusion constant in the assembly, dolfin does not seem to deal well with small diffusion consants (drops small elements)
+        a_K = dolfin.inner(dolfin.nabla_grad(trial_functions[spec_name]), dolfin.nabla_grad(test_functions[spec_name]))*differential
+        stiffness_matrices[spec_name] = dolfin.assemble(a_K)
+        # Scale with the diffusion constant here.
+        stiffness_matrices[spec_name] = species.diffusion_constant*stiffness_matrices[spec_name]
+        a_M = trial_functions[spec_name]*test_functions[spec_name]*differential
+        mass_matrices[spec_name] = dolfin.assemble(a_M)
+    
+    
+    return {'K':stiffness_matrices,'M':mass_matrices}
 
 class Xmesh():
     """ Extended mesh object.
@@ -761,37 +693,6 @@ class Xmesh():
         self.function_space = {}
         self.vertex_to_dof_map = {}
        
-
-def meshextend(model):
-    """ Extend the primary mesh with information about the degrees of freedom.
-    
-        TODO: Docs...
-        
-    """
-    
-    xmesh = Xmesh()
-    
-    # Construct a species map (dict mapping model species name to an integer index)
-    species_map=model.speciesMap()
-    
-    # Initialize the function spaces and dof maps.
-    for spec in model.listOfSpecies:
-        
-        species = model.listOfSpecies[spec]
-        spec_name = species.name
-        spec_index = species_map[spec_name]
-    
-        xmesh.function_space[spec_name] = dolfin.FunctionSpace(model.mesh.mesh,"Lagrange",1)
-        # vertex_to_dof_map provides a map between the vertex index and the dof.
-        xmesh.vertex_to_dof_map[spec_name]=xmesh.function_space[spec_name].dofmap().dof_to_vertex_map(model.mesh.mesh)
-        xmesh.vertex_to_dof_map[spec_name]=len(model.listOfSpecies)*xmesh.vertex_to_dof_map[spec_name]+spec_index
-        xmesh.vertex_to_dof_map[spec_name]=xmesh.vertex_to_dof_map[spec_name]
-
-
-    xmesh.vertex = model.mesh.mesh.coordinates()
-
-    model.xmesh = xmesh
-
 
 
 def toXYZ(model,filename,format="ParaView"):

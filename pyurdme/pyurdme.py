@@ -275,14 +275,14 @@ class URDMEModel(Model):
             spec_name = species.name
             spec_index = species_map[spec_name]
             
-            xmesh.function_space[spec_name] = dolfin.FunctionSpace(self.mesh.mesh,"Lagrange",1)
+            xmesh.function_space[spec_name] = dolfin.FunctionSpace(self.mesh,"Lagrange",1)
             # vertex_to_dof_map provides a map between the vertex index and the dof.
-            xmesh.vertex_to_dof_map[spec_name]=xmesh.function_space[spec_name].dofmap().dof_to_vertex_map(self.mesh.mesh)
+            xmesh.vertex_to_dof_map[spec_name]=xmesh.function_space[spec_name].dofmap().dof_to_vertex_map(self.mesh)
             xmesh.vertex_to_dof_map[spec_name]=len(self.listOfSpecies)*xmesh.vertex_to_dof_map[spec_name]+spec_index
             xmesh.vertex_to_dof_map[spec_name]=xmesh.vertex_to_dof_map[spec_name]
         
         
-        xmesh.vertex = self.mesh.mesh.coordinates()
+        xmesh.vertex = self.mesh.coordinates()
         self.xmesh = xmesh
         
     
@@ -534,28 +534,17 @@ class URDMEModel(Model):
         spio.savemat(filename,urdme_solver_data,oned_as='column')
 
 
-class Mesh():
-    """ A thin wrapper around the Dolfin mesh object.
-            
-        We wrap around dolfin mesh in order to present one
-        unified API (pyurdme) to the user.
-        
-    """
+class Mesh(dolfin.Mesh):
+    """ A URDME mesh extends the Dolfin mesh class. """
 
-    def __init__(self,mesh=None,mesh_type="Dolfin"):
-        
-        self.mesh_type = mesh_type
-        
-        if mesh_type == "Dolfin":
-            self.mesh = mesh
-        elif mesh_type == "Cartesian":
-            return
-
+    def __init__(self,mesh=None):
+        dolfin.Mesh.__init__(self,mesh)
+    
     def getNumVoxels(self):
-        return self.mesh.num_vertices()
+        return self.num_vertices()
     
     def getVoxels(self):
-        return self.mesh.coordinates()
+        return self.coordinates()
 
 """  Wrappers around dolfins built-in simple geometries/meshes.
     
@@ -566,37 +555,36 @@ class Mesh():
 
 def unitIntervalMesh(nx):
     mesh = dolfin.IntervalMesh(nx,0,1)
-    return Mesh(mesh=mesh)
+    return Mesh(mesh)
 
 def IntervalMesh(nx,a,b):
     mesh = dolfin.IntervalMesh(nx,a,b)
-    return Mesh(mesh=mesh)
+    return Mesh(mesh)
 
 def unitSquareMesh(nx,ny):
     """ Unit Square of with nx,ny points in the respective axes. """
     mesh = dolfin.UnitSquareMesh(nx,ny)
-    print mesh.coordinates
-    return Mesh(mesh=mesh)
+    return Mesh(mesh)
 
 def SquareMesh(L,nx,ny):
     """ Regular mesh of a square with side length L. """
     mesh = dolfin.RectangleMesh(0,0,L,L,nx,ny)
-    return Mesh(mesh=mesh)
+    return Mesh(mesh)
     
 def unitCubeMesh(nx,ny,nz):
     """ Unit Square of with nx,ny points in the respective axes. """
     mesh = dolfin.UnitCubeMesh(nx,ny,nz)
-    return Mesh(mesh=mesh)
+    return Mesh(mesh)
 
 #def unitCircle(nx,ny):
 #    """ Unit Square of with nx,ny points in the respective axes. """
 #    mesh = dolfin.UnitCircleMesh(nx,ny)
-#    return Mesh(mesh=mesh)
+#    return Mesh(mesh)
 
 #def unitSphere(nx,ny):
 #    """ Unit Square of with nx,ny points in the respective axes. """
 #    mesh = dolfin.UnitSquareMesh(nx,ny)
-#    return Mesh(mesh=mesh)
+#    return Mesh(mesh)
 
 
 
@@ -625,7 +613,7 @@ def read_dolfin_mesh(filename=None):
 def connectivityMatrix(model):
     """ Assemble a connectivity matrix in CCS format. """
 
-    fs = dolfin.FunctionSpace(model.mesh.mesh,"Lagrange",1)
+    fs = dolfin.FunctionSpace(model.mesh,"Lagrange",1)
     trial_function = dolfin.TrialFunction(fs)
     test_function = dolfin.TestFunction(fs)
     a_K = -1*dolfin.inner(dolfin.nabla_grad(trial_function), dolfin.nabla_grad(test_function))*dolfin.dx
@@ -891,7 +879,7 @@ def urdme(model=None,solver='nsm',solver_path="", model_file=None, input_file=No
     
             species = model.listOfSpecies[spec]
             spec_name = species.name
-            func = dolfin.Function(dolfin.FunctionSpace(model.mesh.mesh,"Lagrange",1))
+            func = dolfin.Function(dolfin.FunctionSpace(model.mesh,"Lagrange",1))
             func_vector = func.vector()
             dims = U.shape
             

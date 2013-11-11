@@ -31,10 +31,11 @@ if __name__ == '__main__':
     model = simple_diffusion()
     
     solver_options = {'tspan':numpy.linspace(0,1,50),
-                      'seed':1432423}
-    solver_data = model.solverData()
+                       'seed':1432423}
+    
+    #solver_data = model.solverData()
 
-    result = urdme(model,solver_options)
+    result = urdme(model)
 
     # Dump a snapshot of the state in paraview format
     file = dolfin.File("A.pvd")

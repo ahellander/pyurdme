@@ -162,11 +162,9 @@ class Model():
 class Species():
     """ Chemical species. """
     
-    def __init__(self,name="",initial_value=0,diffusion_constant=None,reaction_radius=None,dimension=3,active_on=None):
+    def __init__(self,name="",diffusion_constant=None,reaction_radius=None,dimension=3,active_on=None):
         # A species has a name (string) and an initial value (positive integer)
         self.name = name
-        self.initial_value = initial_value
-        assert self.initial_value >= 0, "A species initial value has to be a positive number."
         self.dimension=dimension
         self.diffusion_constant=diffusion_constant
         self.reaction_radius=reaction_radius

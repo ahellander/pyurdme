@@ -2,8 +2,6 @@
 
 import dolfin
 from pyurdme.pyurdme import *
-import pickle
-import json
 
 class simple_diffusion(URDMEModel):
     """ Initial condition is a delta function at the center voxel. 
@@ -15,7 +13,7 @@ class simple_diffusion(URDMEModel):
         URDMEModel.__init__(self,name="simple_diffusion")
 
         D = 0.01
-        A = Species(name="A",initial_value=1000000,diffusion_constant=D,dimension=2)
+        A = Species(name="A",diffusion_constant=D,dimension=2)
 
         self.addSpecies([A])
 
@@ -23,15 +21,17 @@ class simple_diffusion(URDMEModel):
         self.mesh = unitSquareMesh(40,40)
         
         # Place the A molecules in the voxel nearest the center of the square
-        self.placeNear(species=A,point=[0.5,0.5])
+        self.placeNear({A:100000},point=[0.5,0.5])
+
+        self.timespan(numpy.linspace(0,1,50))
 
 
 if __name__ == '__main__':
 
     model = simple_diffusion()
     
-    solver_options = {'tspan':numpy.linspace(0,1,50),
-                       'seed':1432423}
+    #solver_options = {'tspan':numpy.linspace(0,1,50),
+    #                   'seed':1432423}
     
     #solver_data = model.solverData()
 

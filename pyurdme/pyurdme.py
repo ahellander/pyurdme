@@ -323,33 +323,37 @@ class URDMEModel(Model):
             ix = (dof-specindx)/len(species_map)
             self.u0[specindx,ix]+=1
 
-    def placeNear(self,species=None, point=None):
+    def placeNear(self,spec_init, point=None):
         """ Place all molecules of kind species in the voxel nearest a given point. """
-    
-        spec_name = species.name
-        num_spec = species.initial_value
-    
+
         if not hasattr(self,"u0"):
             self.initializeInitialValue()
-        
+                
         if not hasattr(self,'xmesh'):
             self.meshextend()
 
-        # Find the voxel with center (vertex) nearest to the point
         coords = self.mesh.getVoxels()
         shape = coords.shape
-                
-        p = dolfin.Point(point[0],point[1])
-                
-        reppoint = numpy.tile(point,(shape[0],1))
-        dist = numpy.sqrt(numpy.sum((coords-reppoint)**2,axis=1))
-        ix = numpy.argmin(dist)
-       
-        species_map = self.speciesMap()
-        specindx = species_map[spec_name]
-        dofind = self.xmesh.vertex_to_dof_map[spec_name][ix]
-        ix = (dofind-specindx)/len(species_map)
-        self.u0[specindx,ix]=num_spec
+
+        
+        for spec in spec_init:
+        
+            spec_name = spec.name
+            num_spec = spec_init[spec]
+        
+            
+            # Find the voxel with center (vertex) nearest to the point
+            p = dolfin.Point(point[0],point[1])
+                    
+            reppoint = numpy.tile(point,(shape[0],1))
+            dist = numpy.sqrt(numpy.sum((coords-reppoint)**2,axis=1))
+            ix = numpy.argmin(dist)
+           
+            species_map = self.speciesMap()
+            specindx = species_map[spec_name]
+            dofind = self.xmesh.vertex_to_dof_map[spec_name][ix]
+            ix = (dofind-specindx)/len(species_map)
+            self.u0[specindx,ix]=num_spec
 
     
     def createSystemMatrix(self):

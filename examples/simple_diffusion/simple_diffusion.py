@@ -19,7 +19,7 @@ class simple_diffusion(URDMEModel):
 
         # A unit square
         self.mesh = unitSquareMesh(40,40)
-        
+                
         # Place the A molecules in the voxel nearest the center of the square
         self.placeNear({A:100000},point=[0.5,0.5])
 

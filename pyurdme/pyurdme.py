@@ -42,6 +42,7 @@ class URDMEModel(Model):
         
         # urdme_solver_data will hold all the datastructures needed by the URDME
         # core solvers after the model is initialized.
+        self.subdomains = None
         self.tspan = None
         self.mesh = None
     
@@ -245,11 +246,30 @@ class URDMEModel(Model):
         """ Set the time span of simulation. """
         self.tspan = tspan
     
-    def initializeSubdomainVector(self):
-        """ Create the 'sd' vector. """
+    def subdomainVector(self,subdomains=[]):
+        """ Create the 'sd' vector. 'subdomains' is a dolfin FacetFunction,
+            and if no subdomain input is specified, they voxels default to
+            subdomain 1. """
+        
         # TODO: Support arbitrary sd-numbers and more than one subdomain
-        return np.ones((1,self.mesh.getNumVoxels()))
+        sd = numpy.zeros((1,self.mesh.getNumVoxels()))
+
+        if subdomains == []:
+            self.sd = sd.flatten()
+        else:
+            for subdomain in subdomains:
+                # Map all facet labels to vertex labels
+                self.mesh.init()
+                tovertex = self.mesh.topology()(subdomain.dim(),0)
+                
+                for i in range(subdomain.size()):
+                    for vtx in tovertex(i):
+                        sd[0,vtx] = subdomain[i]
     
+        self.sd = sd.flatten()
+        return self.sd
+
+
     def initializeInitialValue(self):
         """ Create all-zeros inital condition matrix. """
         ns = self.getNumSpecies()
@@ -287,41 +307,50 @@ class URDMEModel(Model):
         
     
     # Some utility routines to set initial conditions follow
-    def scatter(self,species,subdomain=None):
+    def scatter(self,spec_init,subdomain=1):
         """ Scatter an initial number of molecules over the voxels in a subdomain. """
     
-        spec_name = species.name
-        num_spec = species.initial_value
-        species_map = self.speciesMap()
-        specindx= species_map[spec_name]
-        
+               
         if not hasattr(self,"u0"):
             self.initializeInitialValue()
         
         if not hasattr(self,'xmesh'):
             self.meshextend()
-        
-        # Map vertex index to dofs
-        dofind = self.xmesh.vertex_to_dof_map[spec_name]
+                
+        if not hasattr(self,'sd'):
+            self.subdomainVector(self.subdomains)
+            
+        for species in spec_init:
+            spec_name = species.name
+            num_spec = spec_init[species]
+            species_map = self.speciesMap()
+            specindx= species_map[spec_name]
 
-        active_on = species.active_on
-        if active_on is not None:
+            
+            # Map vertex index to dofs
+            dofind = self.xmesh.vertex_to_dof_map[spec_name]
+
+            #!!!!
+            #active_on = species.active_on
+                #if active_on is not None:
+        
             sd = self.sd
             table = []
             for i,ind in enumerate(sd):
-                if ind in active_on:
+                if ind in subdomain:
                    table.append(i)
-        else:
-            table = range(self.mesh.getNumVoxels())
+            #else:
+            #    table = range(self.mesh.getNumVoxels())
+                
+            ltab = len(table)
             
-        ltab = len(table)
 
-        for mol in range(species.initial_value):
-            vtx=np.random.randint(0,ltab)
-            ind = table[vtx]
-            dof = dofind[ind]
-            ix = (dof-specindx)/len(species_map)
-            self.u0[specindx,ix]+=1
+            for mol in range(num_spec):
+                vtx=np.random.randint(0,ltab)
+                ind = table[vtx]
+                dof = dofind[ind]
+                ix = (dof-specindx)/len(species_map)
+                self.u0[specindx,ix]+=1
 
     def placeNear(self,spec_init, point=None):
         """ Place all molecules of kind species in the voxel nearest a given point. """
@@ -508,7 +537,7 @@ class URDMEModel(Model):
         urdme_solver_data['D'] = D
         
         # Subdomain vector
-        urdme_solver_data['sd'] = self.initializeSubdomainVector()
+        urdme_solver_data['sd'] = self.subdomainVector(self.subdomains)
         
         # Data vector. If not present in model, it defaults to a vector with all elements zero.
         data = np.zeros((1,self.mesh.getNumVoxels()))
@@ -649,23 +678,32 @@ def assemble(model):
         
         species = model.listOfSpecies[spec]
         spec_name = species.name
+        spec_dim = species.dim()
         
-        if species.dimension == 2:
+        # Find out what subdomains this species is active on
+        # subdomain_list = model.active_on[spec_name]
+        #subdomain_list=[1,2]
+        
+        # Define a measure for this species
+        #differential = Measure('dx')[self.subdomains]
+        
+        #if species.dimension == 2:
             # TODO: If the dimension of the mesh is 2 (triangles) and one uses ds,
             # The the mass matrices become strange...
-            differential = dolfin.dx
-        else:
-            differential = dolfin.dx
+            # differential = dolfin.dx(subdomain_list)
+            
+            #else:
+        differential = dolfin.dx
     
         trial_functions[spec_name] = dolfin.TrialFunction(function_space[spec_name])
         test_functions[spec_name] = dolfin.TestFunction(function_space[spec_name])
         # We cannot include the diffusion constant in the assembly, dolfin does not seem to deal well with small diffusion consants (drops small elements)
         a_K = dolfin.inner(dolfin.nabla_grad(trial_functions[spec_name]), dolfin.nabla_grad(test_functions[spec_name]))*differential
-        stiffness_matrices[spec_name] = dolfin.assemble(a_K)
+        stiffness_matrices[spec_name] = dolfin.assemble(a_K,cell_domains=model.subdomains)
         # Scale with the diffusion constant here.
         stiffness_matrices[spec_name] = species.diffusion_constant*stiffness_matrices[spec_name]
         a_M = trial_functions[spec_name]*test_functions[spec_name]*differential
-        mass_matrices[spec_name] = dolfin.assemble(a_M)
+        mass_matrices[spec_name] = dolfin.assemble(a_M,cell_domains=model.subdomains)
     
     
     return {'K':stiffness_matrices,'M':mass_matrices}

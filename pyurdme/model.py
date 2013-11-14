@@ -162,13 +162,15 @@ class Model():
 class Species():
     """ Chemical species. """
     
-    def __init__(self,name="",diffusion_constant=None,reaction_radius=None,dimension=3,active_on=None):
+    def __init__(self,name="",diffusion_constant=None,reaction_radius=None,dimension=3):
         # A species has a name (string) and an initial value (positive integer)
         self.name = name
         self.dimension=dimension
         self.diffusion_constant=diffusion_constant
         self.reaction_radius=reaction_radius
-        self.active_on = active_on
+
+    def dim():
+        return self.dimension
 
 class Parameter():
     """ 

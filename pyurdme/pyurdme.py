@@ -40,8 +40,6 @@ class URDMEModel(Model):
     def __init__(self,name=""):
         Model.__init__(self,name)
         
-        
-        
         # Currently not used
         self.geometry = None
         

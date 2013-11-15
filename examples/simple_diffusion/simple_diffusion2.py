@@ -62,9 +62,8 @@ class simple_diffusion2(URDMEModel):
         
         # Place the A molecules in the voxel nearest to the center of the square
         self.placeNear({A:10000},point=[0,0])
-        #self.scatter({B:10000},subdomains=[3])
-        self.scatter({B:10000})
-
+        self.scatter({B:10000},subdomains=[3])
+        
 
 if __name__ == '__main__':
     

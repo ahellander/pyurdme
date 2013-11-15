@@ -40,11 +40,20 @@ class URDMEModel(Model):
     def __init__(self,name=""):
         Model.__init__(self,name)
         
-        # urdme_solver_data will hold all the datastructures needed by the URDME
-        # core solvers after the model is initialized.
-        self.subdomains = None
-        self.tspan = None
+        
+        
+        # Currently not used
+        self.geometry = None
+        
         self.mesh = None
+        
+        # subdomins is a list of MeshFunctions with subdomain marker information
+        self.subdomains = []
+
+        # This dictionary hold information about the subdomains each species is active on
+        self.species_to_subdomains = {}
+        
+        self.tspan = None
     
     def __initializeSpeciesMap(self):
         i=0
@@ -245,6 +254,31 @@ class URDMEModel(Model):
     def timespan(self, tspan):
         """ Set the time span of simulation. """
         self.tspan = tspan
+
+    def _initialize_species_to_subdomains(self):
+        """ Initialize the species mapping to subdomains. The default
+            is that a species is active in all the defined subdomains. 
+        """
+        # The unique elements of the subdomain MeshFunctions
+        sds = []
+        for subdomain in self.subdomains:
+            sds = sds + list(np.unique(subdomain.array()).flatten())
+        sds = np.unique(sds)
+        sds = list(sds)
+        # This conversion is necessary for UFL not to choke on the subdomain ids.    
+        for i,sd in enumerate(sds):
+            sds[i]=int(sd)
+
+        # If a species is not present as key in the species_to_subdomain mapping,
+        # we label it as active in all subdomains
+        for spec_name in self.listOfSpecies:
+            species = self.listOfSpecies[spec_name]
+            if species not in self.species_to_subdomains.keys():
+                self.species_to_subdomains[species] = sds
+    
+    def restrict(self,species,subdomains):
+        self.species_to_subdomains[species] = subdomains
+
     
     def subdomainVector(self,subdomains=[]):
         """ Create the 'sd' vector. 'subdomains' is a dolfin FacetFunction,
@@ -307,7 +341,7 @@ class URDMEModel(Model):
         
     
     # Some utility routines to set initial conditions follow
-    def scatter(self,spec_init,subdomain=1):
+    def scatter(self,spec_init,subdomains=None):
         """ Scatter an initial number of molecules over the voxels in a subdomain. """
     
                
@@ -316,34 +350,34 @@ class URDMEModel(Model):
         
         if not hasattr(self,'xmesh'):
             self.meshextend()
-                
+
+        self._initialize_species_to_subdomains()
+        
         if not hasattr(self,'sd'):
             self.subdomainVector(self.subdomains)
             
         for species in spec_init:
+            
+            if subdomains is None:
+                subdomains = self.species_to_subdomains[species]
+
             spec_name = species.name
             num_spec = spec_init[species]
             species_map = self.speciesMap()
             specindx= species_map[spec_name]
 
-            
             # Map vertex index to dofs
             dofind = self.xmesh.vertex_to_dof_map[spec_name]
-
-            #!!!!
-            #active_on = species.active_on
-                #if active_on is not None:
         
             sd = self.sd
             table = []
             for i,ind in enumerate(sd):
-                if ind in subdomain:
+                if ind in subdomains:
                    table.append(i)
-            #else:
-            #    table = range(self.mesh.getNumVoxels())
-                
+
             ltab = len(table)
-            
+            if ltab == 0:
+                raise Exception("scatter: No voxel in the given subdomains "+str(subdomains)+", check subdomain marking.")
 
             for mol in range(num_spec):
                 vtx=np.random.randint(0,ltab)
@@ -665,45 +699,51 @@ def assemble(model):
                   the matrices are in CSR format.
     """
     
-    
-    model.meshextend()
-    
+    if not hasattr(model,'xmesh'):
+        model.meshextend()
+
+    model._initialize_species_to_subdomains()
+            
     function_space = model.xmesh.function_space
     trial_functions = OrderedDict()
     test_functions = OrderedDict()
     stiffness_matrices = OrderedDict()
     mass_matrices = OrderedDict()
+
     
-    for spec in model.listOfSpecies:
+    # We assmble matrices one species at a time. The individual matrices are assembled into
+    # a global system matrix for the URDME core solvers by createSystemMatrix. 
+    for spec_name, species in model.listOfSpecies.items():
         
-        species = model.listOfSpecies[spec]
-        spec_name = species.name
         spec_dim = species.dim()
         
         # Find out what subdomains this species is active on
-        # subdomain_list = model.active_on[spec_name]
-        #subdomain_list=[1,2]
+        subdomain_list = model.species_to_subdomains[species]
         
-        # Define a measure for this species
-        #differential = Measure('dx')[self.subdomains]
-        
-        #if species.dimension == 2:
-            # TODO: If the dimension of the mesh is 2 (triangles) and one uses ds,
-            # The the mass matrices become strange...
-            # differential = dolfin.dx(subdomain_list)
+        if species.dim() == 2:
+            ddx = dolfin.Measure('dx')[model.subdomains[0]]
+        else:
+            ddx = dolfin.Measure('ds')[model.subdomains[0]]
             
-            #else:
-        differential = dolfin.dx
-    
         trial_functions[spec_name] = dolfin.TrialFunction(function_space[spec_name])
         test_functions[spec_name] = dolfin.TestFunction(function_space[spec_name])
-        # We cannot include the diffusion constant in the assembly, dolfin does not seem to deal well with small diffusion consants (drops small elements)
-        a_K = dolfin.inner(dolfin.nabla_grad(trial_functions[spec_name]), dolfin.nabla_grad(test_functions[spec_name]))*differential
-        stiffness_matrices[spec_name] = dolfin.assemble(a_K,cell_domains=model.subdomains)
-        # Scale with the diffusion constant here.
+
+        # Set up the weak forms. We integrate only over those subdomains where the species is active
+        for i,sd in enumerate(subdomain_list):
+            if i==0:
+                a_K = dolfin.inner(dolfin.nabla_grad(trial_functions[spec_name]), dolfin.nabla_grad(test_functions[spec_name]))*ddx(sd)
+                a_M = trial_functions[spec_name]*test_functions[spec_name]*ddx(sd)
+            else:
+                a_K = a_K+dolfin.inner(dolfin.nabla_grad(trial_functions[spec_name]), dolfin.nabla_grad(test_functions[spec_name]))*ddx(sd)
+                a_M = a_M+trial_functions[spec_name]*test_functions[spec_name]*ddx(sd)
+
+
+        # Assemble the matrices
+        stiffness_matrices[spec_name] = dolfin.assemble(a_K)
+        # We cannot include the diffusion constant in the assembly, dolfin does not seem to deal well
+        # with small diffusion constants (drops small elements)
         stiffness_matrices[spec_name] = species.diffusion_constant*stiffness_matrices[spec_name]
-        a_M = trial_functions[spec_name]*test_functions[spec_name]*differential
-        mass_matrices[spec_name] = dolfin.assemble(a_M,cell_domains=model.subdomains)
+        mass_matrices[spec_name] = dolfin.assemble(a_M)
     
     
     return {'K':stiffness_matrices,'M':mass_matrices}
@@ -724,7 +764,6 @@ class Xmesh():
 def toXYZ(model,filename,format="ParaView"):
     """ Dump the solution attached to a model as a xyz file. This format can be
         read by e.g. VMD, Jmol and Paraview. """
-    
     
     if 'U' not in model.__dict__:
         print "No solution found in the model."
@@ -819,13 +858,11 @@ def read_solution(filename):
     return {'U':U, 'tspan':tspan}
 
 
-def urdme(model=None,solver='nsm',solver_path="", model_file=None, input_file=None, seed=None,report_level=1):
+def urdme(model=None,solver='nsm',solver_path="", model_file=None, input_file=None, seed=None,report_level=0):
     """ URDME solver interface.
             
         TODO: Docs...
-        
-        THIS IS A PIECE OF SHIT!
-    
+            
     """
 
     # Set URDME_ROOT. This will fail if URDME is not installed on the system.

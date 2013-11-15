@@ -169,7 +169,7 @@ class Species():
         self.diffusion_constant=diffusion_constant
         self.reaction_radius=reaction_radius
 
-    def dim():
+    def dim(self):
         return self.dimension
 
 class Parameter():

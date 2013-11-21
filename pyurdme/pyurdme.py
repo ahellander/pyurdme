@@ -672,7 +672,7 @@ def read_dolfin_mesh(filename=None):
         mesh = Mesh(mesh=dolfin_mesh,mesh_type="Dolfin")
         return mesh
     except Exception,e:
-        raise MeshImportError("Failed to import mesh: "+filename+"\n"+e)
+        raise MeshImportError("Failed to import mesh: "+filename+"\n"+str(e))
 
 
 def connectivityMatrix(model):

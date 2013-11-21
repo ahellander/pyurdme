@@ -263,7 +263,8 @@ class URDMEModel(Model):
             sds = sds + list(np.unique(subdomain.array()).flatten())
         sds = np.unique(sds)
         sds = list(sds)
-        # This conversion is necessary for UFL not to choke on the subdomain ids.    
+        
+        # This conversion is necessary for UFL not to choke on the subdomain ids.
         for i,sd in enumerate(sds):
             sds[i]=int(sd)
 
@@ -285,7 +286,6 @@ class URDMEModel(Model):
         
         # TODO: Support arbitrary sd-numbers and more than one subdomain
         sd = numpy.zeros((1,self.mesh.getNumVoxels()))
-
         if subdomains == []:
             self.sd = sd.flatten()
         else:
@@ -293,11 +293,11 @@ class URDMEModel(Model):
                 # Map all facet labels to vertex labels
                 self.mesh.init()
                 tovertex = self.mesh.topology()(subdomain.dim(),0)
-                
+                print subdomain.dim()
                 for i in range(subdomain.size()):
                     for vtx in tovertex(i):
                         sd[0,vtx] = subdomain[i]
-    
+        
         self.sd = sd.flatten()
         return self.sd
 
@@ -353,7 +353,9 @@ class URDMEModel(Model):
         
         if not hasattr(self,'sd'):
             self.subdomainVector(self.subdomains)
-            
+        
+        print numpy.shape(self.sd)
+
         for species in spec_init:
             
             if subdomains is None:
@@ -669,7 +671,7 @@ def read_dolfin_mesh(filename=None):
     
     try:
         dolfin_mesh = dolfin.Mesh(filename)
-        mesh = Mesh(mesh=dolfin_mesh,mesh_type="Dolfin")
+        mesh = Mesh(mesh=dolfin_mesh)
         return mesh
     except Exception,e:
         raise MeshImportError("Failed to import mesh: "+filename+"\n"+str(e))

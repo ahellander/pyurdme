@@ -2,12 +2,12 @@
 
 import os
 from pyurdme.pyurdme import *
+import dolfin
 
 class mincde(URDMEModel):
 
-    
-    def __init__():
-        URDMEModel.__init__(name="mincde")
+    def __init__(self,model_name):
+        URDMEModel.__init__(self,name="mincde")
 
         # Species
         # TODO: We need a way to localize species to subdomains/boundaries
@@ -26,13 +26,28 @@ class mincde(URDMEModel):
                          MinD_e:1575,
                          MinDE:0}
         
-        # Parameters
+        # Load mesh in dolfins xml format
+        self.mesh = read_dolfin_mesh("mesh/coli.xml")
         
+        # Read the facet and interior cell physical domain markers into a Dolfin MeshFunction
+        
+        # TODO:  There is an issue here in that FeniCS dolfin-convert writes the value 0 for all the faces that
+        #        are not on the boundary. I think we migth have to write our own Gmsh2Dolfin converter. 
+        file_in = dolfin.File("mesh/coli_facet_region.xml")
+        facet_function = dolfin.MeshFunction("size_t",self.mesh)
+        file_in >> facet_function
+        
+        file_in = dolfin.File("mesh/coli_physical_region.xml")
+        physical_region = dolfin.MeshFunction("size_t",self.mesh)
+        file_in >> physical_region
+        
+        self.subdomains = [facet_function,physical_region]
         # Some kind of average mesh size to feed into the propensity functions
-        hmax = model.mesh.hmax()
-        hmin = model.mesh.hmin()
+        hmax = self.mesh.hmax()
+        hmin = self.mesh.hmin()
         h = (hmax+hmin)/2
 
+        # Parameters
         NA = Parameter(name="NA",expression="6.022e23")
         sigma_d  = Parameter(name="sigma_d",expression=2.5e-8/h)
         sigma_dD = Parameter(name="sigma_dD",expression="9.0e6/(1000.0*NA)")
@@ -42,22 +57,8 @@ class mincde(URDMEModel):
             
         self.addParameter([NA,sigma_d,sigma_dD,sigma_e,sigma_de,sigma_dt])
 
-        # Load mesh in dolfins xml format
-        self.mesh = read_dolfin_mesh("mesh/coli.xml")
-        
-        # Read the facet and interior cell physical domain markers into a Dolfin MeshFunction
-        file_in = dolfin.File("mesh/coli_facet_region.xml")
-        facet_function = dolfin.MeshFunction("size_t",model.mesh.mesh)
-        file_in >> facet_function
-        
-        file_in = dolfin.File("mesh/coli_physical_region.xml")
-        physical_region = dolfin.MeshFunction("size_t",model.mesh.mesh)
-        file_in >> physical_region
-        
-        self.subdomains = [facet_function,physical_region]
-        
         # List of Physical domain markers that match those in the  Gmsh .geo file.
-        boundary = [73,74,75]
+        boundary = [73,74,75,79]
         interior = [76]
         
         # Reactions
@@ -70,10 +71,15 @@ class mincde(URDMEModel):
         
         self.addReaction([R1,R2,R3,R4,R5,R6])
         
+        # Restrict to boundary
+        self.restrict(MinD_m,boundary)
+        self.restrict(MinDE,boundary)
+        
+        
         # Distribute molecules randomly over the mesh according to their initial values
-        self.scatter(MinD_m)
-        self.scatter(MinD_c_adp)
-        self.scatter(MinD_e)
+        self.scatter({MinD_m:1000},subdomains=boundary)
+        #self.scatter({MinD_c_atp:4500},subdomains=interior)
+        #self.scatter({MinD_e:1575},subdomains=boundary)
 
         self.timespan(range(100))
 
@@ -88,35 +94,5 @@ if __name__=="__main__":
     file = dolfin.File("mindm.pvd")
     file << model.sol['MinD_m']
     toXYZ(model,'mindm.xyz',format="VMD")
-    #file = dolfin.File("minde.pvd")
-    #file << model.sol['MinD_e']
-
-    
-    #file = dolfin.File("mincatp.pvd")
-    #file << model.sol['MinD_c_atp']
-
     
     print result
-
-
-
-#model.mesh.init()
-#
-#edge2vertex = model.mesh.mesh.topology()(1,0)
-#facet2vertex   = model.mesh.mesh.topology()(2,0)
-#cell2vertex  = model.mesh.mesh.topology()(3,0)
-
-#sd = numpy.zeros((1,model.mesh.getNumVoxels()))
-#for i in range(physical_region.size()):
-#    for vtx in cell2vertex(i):
-#        sd[0,vtx] = physical_region[i]
-
-#for i in range(facet_function.size()):
-#    for vtx in facet2vertex(i):
-#        if facet_function[i] != 0:
-#            sd[0,vtx] = facet_function[i]
-
-#model.sd = sd.flatten()
-
-#dx = dolfin.Measure("dx")[physical_region]
-#ds = dolfin.Measure("ds")[facet_function]

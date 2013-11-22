@@ -15,20 +15,20 @@ import numpy
 import scipy.sparse
 
 try:
-    import h5py
+  import h5py
 except:
-    print "pyurdme requires h5py."
-    raise
+  print "pyurdme requires h5py."
+  raise
 
 try:
-    import dolfin
-    dolfin.parameters["linear_algebra_backend"] = "uBLAS"
+  import dolfin
+  dolfin.parameters["linear_algebra_backend"] = "uBLAS"
 except:
-    print "Warning: Could not import dolphin. Only simple Cartesain examples will work."
-    ONLY_CARTESIAN=True
+  print "Warning: Could not import dolphin. Only simple Cartesain examples will work."
+  ONLY_CARTESIAN=True
 
 class MeshImportError(Exception):
-    pass
+  pass
 
 
 class URDMEModel(Model):
@@ -922,63 +922,54 @@ def urdme(model=None,solver='nsm',solver_path="", model_file=None, input_file=No
     outfile.close()
 
     # Execute the solver
+    urdme_solver_cmd = ['.urdme/'+propfilename+'.'+solver,infile_name,outfile.name]
     if seed is not None:
-     try: 
-      handle = subprocess.Popen(['.urdme/'+propfilename+'.'+solver,infile_name,outfile.name,str(seed)], stdout = subprocess.PIPE, stderr=subprocess.PIPE)
-      handle.wait()
-      if report_level >= 1:
-        print handle.stdout.read()
-        print handle.stderr.read()
-     except:
-        return {"status":"Failed","stderr":handle.stderr.read(),"stdout":handle.stdout.read()}
-    else:
-      try:
-        handle = subprocess.Popen(['.urdme/'+propfilename+'.'+solver,infile_name,outfile.name], stdout = subprocess.PIPE, stderr=subprocess.PIPE)
-        handle.wait()
-        if report_level >= 1:
-          print handle.stdout.read()
-          print handle.stderr.read()
-      except:
-        return {"status":"Failed","stderr":handle.stderr.read(),"stdout":handle.stdout.read()}
+      urdme_solver_cmd.append(str(seed))
+    sys.stdout.write('cmd: {0}\n'.format(urdme_solver_cmd))
+    handle = subprocess.Popen(urdme_solver_cmd)
+    return_code = handle.wait()
+    if return_code != 0:
+      raise URDMEError("Solver execution failed")
 
     #Load the result from the hdf5 output file.
     try:
-        
-        result = read_solution(outfile.name)
-        U = result['U']
-        tspan = result['tspan']
-        model.U = U
-        
-        # Create Dolfin Functions for all the species
-        model.sol = {}
-        # TODO: Create a dict of dolfin Functions, one for each species, indexed by tspan
-        for i,spec in enumerate(model.listOfSpecies):
+      result = read_solution(outfile.name)
+      U = result['U']
+      tspan = result['tspan']
+      model.U = U
+      
+      # Create Dolfin Functions for all the species
+      model.sol = {}
+      # TODO: Create a dict of dolfin Functions, one for each species, indexed by tspan
+      for i,spec in enumerate(model.listOfSpecies):
     
-            species = model.listOfSpecies[spec]
-            spec_name = species.name
-            func = dolfin.Function(dolfin.FunctionSpace(model.mesh,"Lagrange",1))
-            func_vector = func.vector()
-            dims = U.shape
-            
-            numvox = model.mesh.getNumVoxels()
-            for dof in range(numvox):
-                func_vector[dof] = float(U[dof*len(model.listOfSpecies)+i,-1])
+        species = model.listOfSpecies[spec]
+        spec_name = species.name
+        func = dolfin.Function(dolfin.FunctionSpace(model.mesh,"Lagrange",1))
+        func_vector = func.vector()
+        dims = U.shape
         
-            model.sol[spec_name] = func
+        numvox = model.mesh.getNumVoxels()
+        for dof in range(numvox):
+            func_vector[dof] = float(U[dof*len(model.listOfSpecies)+i,-1])
+      
+        model.sol[spec_name] = func
 
-        # Clean up
-        if input_file is None:
-            os.remove(infile.name)
-        os.remove(outfile.name)
+      # Clean up
+      if input_file is None:
+        os.remove(infile.name)
+      os.remove(outfile.name)
 
-        return dict({"Status":"Sucess","stdout":handle.stdout.read(),"stderr":handle.stderr.read()},**result)
+      #return dict({"Status":"Sucess","stdout":handle.stdout.read(),"stderr":handle.stderr.read()},**result)
+      return dict({"Status":"Sucess",},**result)
 
-    except Exception,e:
+    except Exception as e:
+       exc_info = sys.exc_info()
        # Clean up
        if input_file is None:
-           subprocess.call(['rm','-rf',infile.name])
+         subprocess.call(['rm','-rf',infile.name])
        subprocess.call(['rm','-rf',outfile.name])
-       raise
+       raise exc_info[1], None, exc_info[2]
 
 
 class URDMEError(Exception):

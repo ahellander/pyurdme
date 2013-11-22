@@ -76,5 +76,5 @@ if __name__ == '__main__':
     file1 << model.sol['A']
     file2 = dolfin.File("B.pvd")
     file2 << model.sol['B']
-    toXYZ(model,"B.xyz",format="VMD")
+    toXYZ(model,"B.xyz",file_format="VMD")
 

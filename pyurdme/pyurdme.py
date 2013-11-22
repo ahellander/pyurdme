@@ -278,7 +278,7 @@ class URDMEModel(Model):
     def restrict(self,species,subdomains):
         self.species_to_subdomains[species] = subdomains
 
-    
+
     def subdomainVector(self,subdomains=[]):
         """ Create the 'sd' vector. 'subdomains' is a dolfin FacetFunction,
             and if no subdomain input is specified, they voxels default to
@@ -293,7 +293,6 @@ class URDMEModel(Model):
                 # Map all facet labels to vertex labels
                 self.mesh.init()
                 tovertex = self.mesh.topology()(subdomain.dim(),0)
-                print subdomain.dim()
                 for i in range(subdomain.size()):
                     for vtx in tovertex(i):
                         sd[0,vtx] = subdomain[i]
@@ -341,7 +340,6 @@ class URDMEModel(Model):
     # Some utility routines to set initial conditions follow
     def scatter(self,spec_init,subdomains=None):
         """ Scatter an initial number of molecules over the voxels in a subdomain. """
-    
                
         if not hasattr(self,"u0"):
             self.initializeInitialValue()
@@ -354,8 +352,6 @@ class URDMEModel(Model):
         if not hasattr(self,'sd'):
             self.subdomainVector(self.subdomains)
         
-        print numpy.shape(self.sd)
-
         for species in spec_init:
             
             if subdomains is None:
@@ -710,8 +706,15 @@ def assemble(model):
     stiffness_matrices = OrderedDict()
     mass_matrices = OrderedDict()
 
-    
-    # We assmble matrices one species at a time. The individual matrices are assembled into
+    maxdim = 1
+    for spec in model.listOfSpecies:
+        dim = model.listOfSpecies[spec].dim()
+        if dim > maxdim:
+            maxdim = dim
+
+    print maxdim
+
+    # We assemble matrices one species at a time. The individual matrices are assembled into
     # a global system matrix for the URDME core solvers by createSystemMatrix. 
     for spec_name, species in model.listOfSpecies.items():
         
@@ -720,11 +723,13 @@ def assemble(model):
         # Find out what subdomains this species is active on
         subdomain_list = model.species_to_subdomains[species]
         
-        if species.dim() == 2:
+        if species.dim() == maxdim:
             ddx = dolfin.Measure('dx')[model.subdomains[0]]
-        else:
+        elif species.dim() == maxdim-1:
             ddx = dolfin.Measure('ds')[model.subdomains[0]]
-            
+        else:
+            raise Exception("Three levels is not supported.")
+
         trial_functions[spec_name] = dolfin.TrialFunction(function_space[spec_name])
         test_functions[spec_name] = dolfin.TestFunction(function_space[spec_name])
 
@@ -737,15 +742,13 @@ def assemble(model):
                 a_K = a_K+dolfin.inner(dolfin.nabla_grad(trial_functions[spec_name]), dolfin.nabla_grad(test_functions[spec_name]))*ddx(sd)
                 a_M = a_M+trial_functions[spec_name]*test_functions[spec_name]*ddx(sd)
 
-
         # Assemble the matrices
         stiffness_matrices[spec_name] = dolfin.assemble(a_K)
         # We cannot include the diffusion constant in the assembly, dolfin does not seem to deal well
         # with small diffusion constants (drops small elements)
         stiffness_matrices[spec_name] = species.diffusion_constant*stiffness_matrices[spec_name]
         mass_matrices[spec_name] = dolfin.assemble(a_M)
-    
-    
+
     return {'K':stiffness_matrices,'M':mass_matrices}
 
 class Xmesh():
@@ -862,6 +865,13 @@ def urdme(model=None,solver='nsm',solver_path="", model_file=None, input_file=No
     """ URDME solver interface.
             
         TODO: Docs...
+        
+        After sucessful execution, urdme returns a dictionary, result, with the following members
+            U:         the raw copy number output in a matrix with dimension (Ndofs, num_time_points)
+            tspan:     the time span vector containing the time points that corresponds to the columns in U
+            status:    Sucess if the solver executed without error
+            stdout:    the standard ouput stream from the call to the core solver
+            stderr:    the standard error stream from the call to the core solver
             
     """
 
@@ -953,20 +963,29 @@ def urdme(model=None,solver='nsm',solver_path="", model_file=None, input_file=No
         
         # Create Dolfin Functions for all the species
         model.sol = {}
-        # TODO: Create a dict of dolfin Functions, one for each species, indexed by tspan
+        
+        dims = U.shape
+        numvox = model.mesh.getNumVoxels()
+
+        # The result is loaded in dolfin Functions, one for each species and time point
         for i,spec in enumerate(model.listOfSpecies):
     
             species = model.listOfSpecies[spec]
             spec_name = species.name
-            func = dolfin.Function(dolfin.FunctionSpace(model.mesh,"Lagrange",1))
-            func_vector = func.vector()
-            dims = U.shape
+
+            spec_sol = {}
+            for j,time in enumerate(tspan):
+                func = dolfin.Function(dolfin.FunctionSpace(model.mesh,"Lagrange",1))
+                func_vector = func.vector()
             
-            numvox = model.mesh.getNumVoxels()
-            for dof in range(numvox):
-                func_vector[dof] = float(U[dof*len(model.listOfSpecies)+i,-1])
-        
-            model.sol[spec_name] = func
+                for dof in range(numvox):
+                    func_vector[dof] = float(U[dof*len(model.listOfSpecies)+i,j])
+            
+                spec_sol[time] = func
+            
+            model.sol[spec] = spec_sol
+
+        model.sol[spec_name] = func
 
         # Clean up
         if input_file is None:

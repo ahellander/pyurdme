@@ -4,6 +4,11 @@ import os
 from pyurdme.pyurdme import *
 import dolfin
 
+
+class Membrane(dolfin.SubDomain):
+    def inside(self,x,on_boundary):
+        return on_boundary
+
 class mincde(URDMEModel):
 
     def __init__(self,model_name):
@@ -19,7 +24,6 @@ class mincde(URDMEModel):
         
         self.addSpecies([MinD_m,MinD_c_atp,MinD_c_adp,MinD_e,MinDE])
 
-        
         initial_value = {MinD_m:1000,
                          MinD_c_adp:0,
                          MinD_c_atp:4500,
@@ -32,17 +36,25 @@ class mincde(URDMEModel):
         # Read the facet and interior cell physical domain markers into a Dolfin MeshFunction
         
         # TODO:  There is an issue here in that FeniCS dolfin-convert writes the value 0 for all the faces that
-        #        are not on the boundary. I think we migth have to write our own Gmsh2Dolfin converter. 
-        file_in = dolfin.File("mesh/coli_facet_region.xml")
-        facet_function = dolfin.MeshFunction("size_t",self.mesh)
-        file_in >> facet_function
+        # are not on the boundary. I think we migth have to write our own Gmsh2Dolfin converter.
+        #file_in = dolfin.File("mesh/coli_facet_region.xml")
+        #facet_function = dolfin.MeshFunction("size_t",self.mesh)
+        #file_in >> facet_function
         
-        file_in = dolfin.File("mesh/coli_physical_region.xml")
-        physical_region = dolfin.MeshFunction("size_t",self.mesh)
-        file_in >> physical_region
+        #file_in = dolfin.File("mesh/coli_physical_region.xml")
+        #physical_region = dolfin.MeshFunction("size_t",self.mesh)
+        #file_in >> physical_region
         
-        self.subdomains = [facet_function,physical_region]
-        # Some kind of average mesh size to feed into the propensity functions
+        subdomains = dolfin.MeshFunction("size_t",self.mesh,self.mesh.topology().dim()-1)
+        subdomains.set_all(1)
+        
+        # Mark the boundary points
+        membrane = Membrane()
+        membrane.mark(subdomains,2)
+        boundary = [2]
+
+        self.subdomains = [subdomains]
+        # Average mesh size to feed into the propensity functions
         hmax = self.mesh.hmax()
         hmin = self.mesh.hmin()
         h = (hmax+hmin)/2
@@ -58,8 +70,8 @@ class mincde(URDMEModel):
         self.addParameter([NA,sigma_d,sigma_dD,sigma_e,sigma_de,sigma_dt])
 
         # List of Physical domain markers that match those in the  Gmsh .geo file.
-        boundary = [73,74,75,79]
-        interior = [76]
+        #boundary = [73,74,75,79]
+        #interior = [76]
         
         # Reactions
         R1 = Reaction(name="R1",reactants={MinD_c_atp:1},products={MinD_m:1},massaction=True,rate=sigma_d, restrict_to=boundary)
@@ -75,11 +87,10 @@ class mincde(URDMEModel):
         self.restrict(MinD_m,boundary)
         self.restrict(MinDE,boundary)
         
-        
         # Distribute molecules randomly over the mesh according to their initial values
         self.scatter({MinD_m:1000},subdomains=boundary)
-        #self.scatter({MinD_c_atp:4500},subdomains=interior)
-        #self.scatter({MinD_e:1575},subdomains=boundary)
+        self.scatter({MinD_c_atp:4500})
+        self.scatter({MinD_e:1575},subdomains=boundary)
 
         self.timespan(range(100))
 
@@ -87,12 +98,11 @@ if __name__=="__main__":
     """ Dump model to a file. """
                      
     model = mincde(model_name="mincde")
-    model.initialize()
-   
     result = urdme(model)
     
     file = dolfin.File("mindm.pvd")
-    file << model.sol['MinD_m']
+    # Dump the solution at time 99 (end time) in pvd format
+    file << model.sol['MinD_m'][99]
     toXYZ(model,'mindm.xyz',format="VMD")
     
     print result

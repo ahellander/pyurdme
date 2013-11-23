@@ -102,7 +102,7 @@ if __name__=="__main__":
     
     file = dolfin.File("mindm.pvd")
     file << model.sol['MinD_m']
-    toXYZ(model,'mindm.xyz',format="VMD")
+    toXYZ(model,'mindm.xyz',file_format="VMD")
     #file = dolfin.File("minde.pvd")
     #file << model.sol['MinD_e']
 

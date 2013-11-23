@@ -87,7 +87,7 @@ if __name__ == '__main__':
   #spio.savemat("debugoutput.mat",result)
   
   # TODO: Wrap and make it be something like this instead
-  #urdme.save_solution(model,filename="",format="xyz")
+  #urdme.save_solution(model,filename="",file_format="xyz")
   #urdme.plot_solution(model, species="C",time="0")
   
   # Dump solution to file in VTK format for ParaView

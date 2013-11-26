@@ -53,7 +53,7 @@ class simple_diffusion2(URDMEModel):
         
         membrane_patch = MembranePatch()
         membrane_patch.mark(subdomains,3)
-
+        
         self.subdomains = [subdomains]
         
         # Restrict species A to the membrane subdomain
@@ -70,11 +70,14 @@ if __name__ == '__main__':
     model = simple_diffusion2()
     result = urdme(model)
     model.serialize("debug_input.mat")
-
+    
+    #dumps(model,"A","A")
+    dumps(model,"B","B")
+    
     # Dump a snapshot of the state in paraview format
-    file1 = dolfin.File("A.pvd")
-    file1 << model.sol['A']
-    file2 = dolfin.File("B.pvd")
-    file2 << model.sol['B']
+    #file1 = dolfin.File("A.pvd")
+    #file1 << model.sol['A']
+    #file2 = dolfin.File("B.pvd")
+    #file2 << model.sol['B']
     toXYZ(model,"B.xyz",format="VMD")
 

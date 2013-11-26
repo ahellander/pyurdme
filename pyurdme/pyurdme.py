@@ -264,6 +264,8 @@ class URDMEModel(Model):
         sds = np.unique(sds)
         sds = list(sds)
         
+        sds.remove(0)
+        
         # This conversion is necessary for UFL not to choke on the subdomain ids.
         for i,sd in enumerate(sds):
             sds[i]=int(sd)
@@ -284,6 +286,16 @@ class URDMEModel(Model):
             and if no subdomain input is specified, they voxels default to
             subdomain 1. """
         
+        if not hasattr(self,'xmesh'):
+            self.meshextend()
+        
+        fs = dolfin.FunctionSpace(self.mesh,"Lagrange",1)
+        # vertex_to_dof_map provides a map between the vertex index and the dof.
+        #dofmap=fs.dofmap().dof_to_vertex_map(self.mesh)
+        dofmap = self.xmesh.dof_to_vertex_map["MinD_m"]
+        
+        self.mesh.init()
+
         # TODO: Support arbitrary sd-numbers and more than one subdomain
         sd = numpy.zeros((1,self.mesh.getNumVoxels()))
         if subdomains == []:
@@ -291,12 +303,12 @@ class URDMEModel(Model):
         else:
             for subdomain in subdomains:
                 # Map all facet labels to vertex labels
-                self.mesh.init()
                 tovertex = self.mesh.topology()(subdomain.dim(),0)
                 for i in range(subdomain.size()):
                     for vtx in tovertex(i):
-                        sd[0,vtx] = subdomain[i]
-        
+                        if subdomain[i]!=0: # TODO: Temporary hack to fix issue with Gmesh facet_region files.
+                            sd[0,vtx] = subdomain[i] #?????????
+                    
         self.sd = sd.flatten()
         return self.sd
 
@@ -330,7 +342,8 @@ class URDMEModel(Model):
             # vertex_to_dof_map provides a map between the vertex index and the dof.
             xmesh.vertex_to_dof_map[spec_name]=xmesh.function_space[spec_name].dofmap().dof_to_vertex_map(self.mesh)
             xmesh.vertex_to_dof_map[spec_name]=len(self.listOfSpecies)*xmesh.vertex_to_dof_map[spec_name]+spec_index
-            xmesh.vertex_to_dof_map[spec_name]=xmesh.vertex_to_dof_map[spec_name]
+            xmesh.dof_to_vertex_map[spec_name] = xmesh.function_space[spec_name].dofmap().vertex_to_dof_map(self.mesh)
+
         
         
         xmesh.vertex = self.mesh.coordinates()
@@ -351,7 +364,7 @@ class URDMEModel(Model):
         
         if not hasattr(self,'sd'):
             self.subdomainVector(self.subdomains)
-        
+                
         for species in spec_init:
             
             if subdomains is None:
@@ -369,11 +382,14 @@ class URDMEModel(Model):
             table = []
             for i,ind in enumerate(sd):
                 if ind in subdomains:
+                   print i,ind
                    table.append(i)
+            
+            print species.name,subdomains
 
             ltab = len(table)
             if ltab == 0:
-                raise Exception("scatter: No voxel in the given subdomains "+str(subdomains)+", check subdomain marking.")
+                raise ModelException("scatter: No voxel in the given subdomains "+str(subdomains)+", check subdomain marking.")
 
             for mol in range(num_spec):
                 vtx=np.random.randint(0,ltab)
@@ -523,7 +539,6 @@ class URDMEModel(Model):
         maxcolsum = numpy.max(numpy.abs(urdme_solver_data['D'].sum(axis=0)))
         if maxcolsum > 1e-10:
             raise InvalidSystemMatrixException("Invalid diffusion matrix. The sum of the columns does not sum to zero. " + str(maxcolsum))
-    
 
     def solverData(self):
         """ Return the datastructures needed by the URDME solvers.
@@ -559,6 +574,8 @@ class URDMEModel(Model):
         # Volume vector
         result =  self.createSystemMatrix()
         vol = result['vol']
+        urdme_solver_data['dofvolumes'] = vol
+        
         #TODO: Make use of all dofs values, requires modification of CORE URDME...
         vol = vol[1::len(self.listOfSpecies)]
         
@@ -712,44 +729,54 @@ def assemble(model):
         if dim > maxdim:
             maxdim = dim
 
-    print maxdim
+    for spec in model.listOfSpecies:
+        trial_functions[spec] = dolfin.TrialFunction(function_space[spec])
+        test_functions[spec] = dolfin.TestFunction(function_space[spec])
 
-    # We assemble matrices one species at a time. The individual matrices are assembled into
-    # a global system matrix for the URDME core solvers by createSystemMatrix. 
-    for spec_name, species in model.listOfSpecies.items():
+
+    weak_form_K = {}
+    weak_form_M = {}
+
+    # Set up the weak forms
+    for i,subdomain in enumerate(model.subdomains):
         
-        spec_dim = species.dim()
-        
-        # Find out what subdomains this species is active on
-        subdomain_list = model.species_to_subdomains[species]
-        
-        if species.dim() == maxdim:
-            ddx = dolfin.Measure('dx')[model.subdomains[0]]
-        elif species.dim() == maxdim-1:
-            ddx = dolfin.Measure('ds')[model.subdomains[0]]
+        # if species.dim() == maxdim:
+        # sumbdomain dimension roughly corresponds to rdme_sdlevel
+        if subdomain.dim()==maxdim:
+            ddx = dolfin.Measure('dx')[subdomain]
+        elif subdomain.dim() == maxdim-1:
+            ddx = dolfin.Measure('ds')[subdomain]
         else:
-            raise Exception("Three levels is not supported.")
+            raise ModelException("Three subdomain levels is not supported.")
 
-        trial_functions[spec_name] = dolfin.TrialFunction(function_space[spec_name])
-        test_functions[spec_name] = dolfin.TestFunction(function_space[spec_name])
+        for spec_name, species in model.listOfSpecies.items():
+            
+            spec_dim = species.dim()
+            if species.dim() ==  subdomain.dim():
+                
+                # Find out what subdomains this species is active on
+                subdomain_list = model.species_to_subdomains[species]
+                
+                # Set up the weak forms. We integrate only over those subdomains where the species is active
+                for j,sd in enumerate(subdomain_list):
+                    if  j==0:
+                        weak_form_K[spec_name] = dolfin.inner(dolfin.nabla_grad(trial_functions[spec_name]), dolfin.nabla_grad(test_functions[spec_name]))*ddx(sd)
+                        weak_form_M[spec_name] = trial_functions[spec_name]*test_functions[spec_name]*ddx(sd)
+                    else:
+                        weak_form_K[spec_name] = weak_form_K[spec_name]+dolfin.inner(dolfin.nabla_grad(trial_functions[spec_name]), dolfin.nabla_grad(test_functions[spec_name]))*ddx(sd)
+                        weak_form_M[spec_name] = weak_form_M[spec_name]+trial_functions[spec_name]*test_functions[spec_name]*ddx(sd)
 
-        # Set up the weak forms. We integrate only over those subdomains where the species is active
-        for i,sd in enumerate(subdomain_list):
-            if i==0:
-                a_K = dolfin.inner(dolfin.nabla_grad(trial_functions[spec_name]), dolfin.nabla_grad(test_functions[spec_name]))*ddx(sd)
-                a_M = trial_functions[spec_name]*test_functions[spec_name]*ddx(sd)
-            else:
-                a_K = a_K+dolfin.inner(dolfin.nabla_grad(trial_functions[spec_name]), dolfin.nabla_grad(test_functions[spec_name]))*ddx(sd)
-                a_M = a_M+trial_functions[spec_name]*test_functions[spec_name]*ddx(sd)
-
-        # Assemble the matrices
-        stiffness_matrices[spec_name] = dolfin.assemble(a_K)
+    # Assemble the matrices
+    for spec,species in model.listOfSpecies.items():
+        stiffness_matrices[spec] = dolfin.assemble(weak_form_K[spec])
         # We cannot include the diffusion constant in the assembly, dolfin does not seem to deal well
         # with small diffusion constants (drops small elements)
-        stiffness_matrices[spec_name] = species.diffusion_constant*stiffness_matrices[spec_name]
-        mass_matrices[spec_name] = dolfin.assemble(a_M)
+        stiffness_matrices[spec] = species.diffusion_constant*stiffness_matrices[spec]
+        mass_matrices[spec] = dolfin.assemble(weak_form_M[spec])
 
     return {'K':stiffness_matrices,'M':mass_matrices}
+
+
 
 class Xmesh():
     """ Extended mesh object.
@@ -761,7 +788,23 @@ class Xmesh():
         self.coordinates = None
         self.function_space = {}
         self.vertex_to_dof_map = {}
+        self.dof_to_vertex_map = {}
        
+
+def dumps(model,species,foldername):
+    """ Dump the trajectory of species to a collection of vtk files """
+    subprocess.call(["mkdir",foldername])
+    func = dolfin.Function(dolfin.FunctionSpace(model.mesh,"Lagrange",1))
+    func_vector = func.vector()
+    file=dolfin.File(foldername+"/trajectory.pvd")
+    numvox = model.mesh.getNumVoxels()
+
+    for i,time in enumerate(model.tspan):
+        #outfile = open(foldername+"/"+filename+"."+str(i),"w")
+        solvector = (model.sol[species][time]).vector()
+        for dof in range(numvox):
+            func_vector[dof] = solvector[dof]
+        file << func
 
 
 def toXYZ(model,filename,format="ParaView"):
@@ -966,26 +1009,28 @@ def urdme(model=None,solver='nsm',solver_path="", model_file=None, input_file=No
         
         dims = U.shape
         numvox = model.mesh.getNumVoxels()
-
         # The result is loaded in dolfin Functions, one for each species and time point
         for i,spec in enumerate(model.listOfSpecies):
     
             species = model.listOfSpecies[spec]
             spec_name = species.name
+            dof_to_vertex_map = model.xmesh.dof_to_vertex_map[spec]
+            vertex_to_dof_map = model.xmesh.vertex_to_dof_map[spec]
 
             spec_sol = {}
             for j,time in enumerate(tspan):
                 func = dolfin.Function(dolfin.FunctionSpace(model.mesh,"Lagrange",1))
                 func_vector = func.vector()
             
-                for dof in range(numvox):
-                    func_vector[dof] = float(U[dof*len(model.listOfSpecies)+i,j])
+                for voxel in range(numvox):
+                    dof = voxel*len(model.listOfSpecies)+i
+                    #dof = vertex_to_dof_map[voxel]
+                    func_vector[voxel] = float(U[dof,j]) # ??? Permutation needed ??
             
                 spec_sol[time] = func
             
             model.sol[spec] = spec_sol
 
-        model.sol[spec_name] = func
 
         # Clean up
         if input_file is None:
@@ -1007,6 +1052,9 @@ class URDMEError(Exception):
 
 if __name__ == '__main__':
     """ Command line interface to URDME. Execute URDME given a model file. """ 
+
+class ModelException(Exception):
+    pass
 
 
 class InvalidSystemMatrixException(Exception):

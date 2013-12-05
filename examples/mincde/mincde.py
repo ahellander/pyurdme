@@ -127,16 +127,6 @@ if __name__=="__main__":
     model = mincde(model_name="mincde")
     model.serialize("debug_input.mat")
     result = urdme(model)
-<<<<<<< HEAD
-    
-    file = dolfin.File("mindm.pvd")
-    file << model.sol['MinD_m']
-    toXYZ(model,'mindm.xyz',file_format="VMD")
-    #file = dolfin.File("minde.pvd")
-    #file << model.sol['MinD_e']
-=======
-    U = result["U"]
->>>>>>> mincdesubdomains
 
     print numpy.sum(U[::5,:],axis=0)
     dumps(model,"MinD_m","mindout")

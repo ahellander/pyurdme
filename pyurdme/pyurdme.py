@@ -74,6 +74,8 @@ class URDMEModel(Model):
     def createStoichiometricMatrix(self):
         """ Generate a stoichiometric matrix in sparse CSC format. """
 
+        if not hasattr(self, 'species_map'):
+            self.__initializeSpeciesMap()
         if self.getNumReactions() > 0:
             ND = np.zeros((self.getNumSpecies(), self.getNumReactions()))
             for i, r in enumerate(self.listOfReactions):
@@ -223,9 +225,14 @@ class URDMEModel(Model):
 
             else:
                 func += "if("
-                for sd in self.listOfReactions[R].restrict_to:
-                    func += "sd == " + str(sd) + "||"
-                func = func[:-2]
+                if isinstance(self.listOfReactions[R].restrict_to, list):
+                    for sd in self.listOfReactions[R].restrict_to:
+                        func += "sd == " + str(sd) + "||"
+                    func = func[:-2]
+                elif isinstance(self.listOfReactions[R].restrict_to, int):
+                    func += "sd == " +  str(self.listOfReactions[R].restrict_to)
+                else:
+                    raise URDMEError("When restricting reaction to subdomains, you must specify either a list or an int")
                 func += ")\n"
                 func += "\treturn " + self.listOfReactions[R].propensity_function
                 order = len(self.listOfReactions[R].reactants)

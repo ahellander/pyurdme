@@ -23,7 +23,7 @@ class cylinderDemo3D(pyurdme.URDMEModel):
         pyurdme.URDMEModel.__init__(self, model_name)
 
         # System constants
-        D_const = 1
+        D_const = 0.1
         k_react = pyurdme.Parameter(name="k_react", expression=1)
         k_creat = pyurdme.Parameter(name="k_creat", expression=200)
         self.addParameter([k_react, k_creat])
@@ -38,16 +38,16 @@ class cylinderDemo3D(pyurdme.URDMEModel):
         self.mesh = pyurdme.Mesh(mesh=dolfin.Mesh(cylinder, 32))
         # Define Subdomains
         subdomains = dolfin.MeshFunction("size_t", self.mesh, self.mesh.topology().dim()-1)
-        subdomains.set_all(0)
+        subdomains.set_all(1)
         # Mark the boundary points
-        Edge1().mark(subdomains,1)
-        Edge2().mark(subdomains,2)
+        Edge1().mark(subdomains,2)
+        Edge2().mark(subdomains,3)
         self.subdomains = [subdomains]
         # Define Reactions
         R1 = pyurdme.Reaction(name="R1", reactants=None, products={A:1}, 
-           massaction=True, rate=k_creat, restrict_to=1)
+           massaction=True, rate=k_creat, restrict_to=2)
         R2 = pyurdme.Reaction(name="R2", reactants=None, products={B:1}, 
-            massaction=True, rate=k_creat, restrict_to=2)
+            massaction=True, rate=k_creat, restrict_to=3)
         R3 = pyurdme.Reaction(name="R3", reactants={A:1, B:1}, products=None, 
             massaction=True, rate=k_react)
         self.addReaction([R1, R2, R3])
@@ -59,5 +59,6 @@ class cylinderDemo3D(pyurdme.URDMEModel):
 if __name__ == "__main__":
     model = cylinderDemo3D()
     result = pyurdme.urdme(model)
+    pyurdme.dumps(model,species='A',foldername="Aout")
     print result
 

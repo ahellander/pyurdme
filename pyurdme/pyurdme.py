@@ -290,7 +290,7 @@ class URDMEModel(Model):
                 self.species_to_subdomains[species] = sds
 
         for spec_name,species in self.listOfSpecies.items():
-            if 0 self.species_to_subdomain[species]:
+            if 0 in self.species_to_subdomains[species]:
                 raise ModelException("Subdimain number 0 is reserved. Please check your model.")
 
     def restrict(self, species, subdomains):
@@ -355,8 +355,7 @@ class URDMEModel(Model):
             # vertex_to_dof_map provides a map between the vertex index and the dof.
             xmesh.vertex_to_dof_map[spec_name] = xmesh.function_space[spec_name].dofmap().dof_to_vertex_map(self.mesh)
             xmesh.vertex_to_dof_map[spec_name] = len(self.listOfSpecies) * xmesh.vertex_to_dof_map[spec_name] + spec_index
-            xmesh.vertex_to_dof_map[spec_name] = xmesh.vertex_to_dof_map[spec_name]
-
+            xmesh.dof_to_vertex_map[spec_name] = xmesh.function_space[spec_name].dofmap().vertex_to_dof_map(self.mesh)
 
         xmesh.vertex = self.mesh.coordinates()
         self.xmesh = xmesh
@@ -779,29 +778,28 @@ def assemble(model):
             raise ModelException("Three subdomain levels is not supported.")
 
         for spec_name, species in model.listOfSpecies.items():
-            
             spec_dim = species.dim()
-            if species.dim() ==  subdomain.dim():
+                #if species.dim() ==  subdomain.dim():
                 
-                # Find out what subdomains this species is active on
-                subdomain_list = model.species_to_subdomains[species]
-                
-                # Set up the weak forms. We integrate only over those subdomains where the species is active
-                for j,sd in enumerate(subdomain_list):
-                    if  j==0:
-                        weak_form_K[spec_name] = dolfin.inner(dolfin.nabla_grad(trial_functions[spec_name]), dolfin.nabla_grad(test_functions[spec_name]))*ddx(sd)
-                        weak_form_M[spec_name] = trial_functions[spec_name]*test_functions[spec_name]*ddx(sd)
-                    else:
-                        weak_form_K[spec_name] = weak_form_K[spec_name]+dolfin.inner(dolfin.nabla_grad(trial_functions[spec_name]), dolfin.nabla_grad(test_functions[spec_name]))*ddx(sd)
-                        weak_form_M[spec_name] = weak_form_M[spec_name]+trial_functions[spec_name]*test_functions[spec_name]*ddx(sd)
+            # Find out what subdomains this species is active on
+            subdomain_list = model.species_to_subdomains[species]
+
+            # Set up the weak forms. We integrate only over those subdomains where the species is active
+            for j,sd in enumerate(subdomain_list):
+                if  j==0:
+                    weak_form_K[spec_name] = dolfin.inner(dolfin.nabla_grad(trial_functions[spec_name]), dolfin.nabla_grad(test_functions[spec_name]))*ddx(sd)
+                    weak_form_M[spec_name] = trial_functions[spec_name]*test_functions[spec_name]*ddx(sd)
+                else:
+                    weak_form_K[spec_name] = weak_form_K[spec_name]+dolfin.inner(dolfin.nabla_grad(trial_functions[spec_name]), dolfin.nabla_grad(test_functions[spec_name]))*ddx(sd)
+                    weak_form_M[spec_name] = weak_form_M[spec_name]+trial_functions[spec_name]*test_functions[spec_name]*ddx(sd)
 
     # Assemble the matrices
     for spec_name,species in model.listOfSpecies.items():
-        stiffness_matrices[spec] = dolfin.assemble(weak_form_K[spec])
+        stiffness_matrices[spec_name] = dolfin.assemble(weak_form_K[spec_name])
         # We cannot include the diffusion constant in the assembly, dolfin does not seem to deal well
         # with small diffusion constants (drops small elements)
         stiffness_matrices[spec_name] = species.diffusion_constant * stiffness_matrices[spec_name]
-        mass_matrices[spec_name] = dolfin.assemble(a_M)
+        mass_matrices[spec_name] = dolfin.assemble(weak_form_M[spec_name])
 
 
     return {'K':stiffness_matrices, 'M':mass_matrices}

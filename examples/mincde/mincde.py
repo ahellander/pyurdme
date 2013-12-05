@@ -22,7 +22,7 @@ class mincde(URDMEModel):
 
         # Species
         # TODO: We need a way to localize species to subdomains/boundaries
-        MinD_m     = Species(name="MinD_m",diffusion_constant=0.0,dimension=2)
+        MinD_m     = Species(name="MinD_m",diffusion_constant=1e-14,dimension=2)
         MinD_c_atp = Species(name="MinD_c_atp",diffusion_constant=2.5e-12)
         MinD_c_adp = Species(name="MinD_c_adp",diffusion_constant=2.5e-12)
         MinD_e     = Species(name="MinD_e",diffusion_constant=2.5e-12)
@@ -134,29 +134,21 @@ if __name__=="__main__":
     
     sd = model.subdomainVector(model.subdomains)
     func = dolfin.Function(model.xmesh.function_space["MinD_m"])
+    dofmap = model.xmesh.vertex_to_dof_map["MinD_m"]
+    
     numvox = model.mesh.getNumVoxels()
     #func = dolfin.MeshFunction("uint",model.mesh,1)
     func_vector = func.vector()
     #func_vector = func.array()
 
+    # This works!!
     for i in range(numvox):
-        func_vector[i] = sd[i]
+        dof = dofmap[i]
+        vox = dof/5
+        func_vector[vox] = sd[i]
     file = dolfin.File("sd.pvd")
     file << func
-#file << model.subdomains[1]
 
-    file = dolfin.File("mindm.pvd")
-
-
-    # Dump the solution at time 99 (end time) in pvd format
-    #func = model.sol['MinD_m'][9]
-    #funcvector=func.vector()
-    #sumv = 0
-    #for i in range(848):
-    #    if funcvector[i] > 0:
-    #        print model.sd[i]
-    #print sumv
-    #file << model.sol['MinD_m'][9]
     toXYZ(model,'mindm.xyz',format="VMD")
     
 #print result

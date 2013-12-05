@@ -288,13 +288,14 @@ class URDMEModel(Model):
         
         if not hasattr(self,'xmesh'):
             self.meshextend()
-        
-        fs = dolfin.FunctionSpace(self.mesh,"Lagrange",1)
+        #fs = dolfin.FunctionSpace(self.mesh,"Lagrange",1)
         # vertex_to_dof_map provides a map between the vertex index and the dof.
-        #dofmap=fs.dofmap().dof_to_vertex_map(self.mesh)
-        dofmap = self.xmesh.dof_to_vertex_map["MinD_m"]
-        
+        #dofmap=fs.dofmap().vertex_to_dof_map(self.mesh)
+        #dofmap = self.xmesh.vertex_to_dof_map["MinD_m"]
+        #print dofmap
         self.mesh.init()
+        #species_map = self.speciesMap()
+        #specindx= species_map["MinD_m"]
 
         # TODO: Support arbitrary sd-numbers and more than one subdomain
         sd = numpy.zeros((1,self.mesh.getNumVoxels()))
@@ -307,8 +308,10 @@ class URDMEModel(Model):
                 for i in range(subdomain.size()):
                     for vtx in tovertex(i):
                         if subdomain[i]!=0: # TODO: Temporary hack to fix issue with Gmesh facet_region files.
+                            #dof = dofmap[vtx]
+                            #ix = (dof-specindx)/len(species_map)
                             sd[0,vtx] = subdomain[i] #?????????
-                    
+            
         self.sd = sd.flatten()
         return self.sd
 
@@ -350,7 +353,7 @@ class URDMEModel(Model):
         self.xmesh = xmesh
         
     
-    # Some utility routines to set initial conditions follow
+    # Some utility routines to set initial conditions
     def scatter(self,spec_init,subdomains=None):
         """ Scatter an initial number of molecules over the voxels in a subdomain. """
                
@@ -375,28 +378,21 @@ class URDMEModel(Model):
             species_map = self.speciesMap()
             specindx= species_map[spec_name]
 
-            # Map vertex index to dofs
-            dofind = self.xmesh.vertex_to_dof_map[spec_name]
-        
             sd = self.sd
             table = []
             for i,ind in enumerate(sd):
                 if ind in subdomains:
-                   print i,ind
                    table.append(i)
-            
-            print species.name,subdomains
 
             ltab = len(table)
             if ltab == 0:
                 raise ModelException("scatter: No voxel in the given subdomains "+str(subdomains)+", check subdomain marking.")
-
+            
             for mol in range(num_spec):
                 vtx=np.random.randint(0,ltab)
                 ind = table[vtx]
-                dof = dofind[ind]
-                ix = (dof-specindx)/len(species_map)
-                self.u0[specindx,ix]+=1
+                self.u0[specindx,ind]+=1
+                
 
     def placeNear(self,spec_init, point=None):
         """ Place all molecules of kind species in the voxel nearest a given point. """
@@ -430,12 +426,134 @@ class URDMEModel(Model):
             ix = (dofind-specindx)/len(species_map)
             self.u0[specindx,ix]=num_spec
 
-    
+
+
     def createSystemMatrix(self):
-        """ 
+        """
             Create the system (diffusion) matrix for input to the URDME solvers. The matrix
             is built by concatenating the individually assembled matrices for each of the species,
             and multiplying with the lumped mass matrix (which define the volume of the voxels).
+            
+            The dofs in the Dolfin-assembled matrices are reordered so that each column in the
+            result matrix corresponds to the vertex numbering in the mesh.
+            
+            Negative off-diagonal elements in the matrix are set to zero, and the diagonal is renormalized
+            in order to assure that the returned matrix is a Markov transition matrix.
+            
+            Returns a dictionary containing the volumes of the subvolumes, the system diffusion matrix
+            and the fraction of the mass of the negative off-diagonal elements that has been filtered out.
+            
+            """
+        
+        # Check if the individual stiffness and mass matrices (per species) have been assembled, otherwise assemble them.
+        try:
+            stiffness_matrices = self.stiffness_matrices
+            mass_matrices = self.mass_matrices
+        except:
+            matrices = assemble(self)
+            self.stiffness_matrices = matrices['K']
+            self.mass_matrices = matrices['M']
+            stiffness_matrices = self.stiffness_matrices
+            mass_matrices = self.mass_matrices
+        
+        # Make a dok matrix of dimension (Ndofs,Ndofs) for easier manipulatio
+        
+        i=1;
+        Mspecies = len(self.listOfSpecies)
+        Nvoxels = self.mesh.getNumVoxels()
+        Ndofs = Nvoxels*Mspecies
+        S = scipy.sparse.dok_matrix((Ndofs,Ndofs))
+        
+        # Create the volume vector by lumping the mass matrices
+        vol = numpy.zeros((Ndofs,1))
+        spec = 0
+        
+        xmesh = self.xmesh
+        
+        for species,M in mass_matrices.iteritems():
+            
+            dof2vtx = xmesh.dof_to_vertex_map[species]
+            
+            rows,cols,vals = M.data()
+            SM = scipy.sparse.csr_matrix((vals,cols,rows))
+            vols = SM.sum(axis=1)
+            
+            spec = self.species_map[species]
+            for j in range(len(vols)):
+                vx = dof2vtx[j]
+                dof = Mspecies*vx+spec
+                vol[dof,0]=vols[j]
+
+        # This is necessary in order for the array to have the right dimension (Ndofs,1)
+        vol = vol.flatten()
+        
+        # Assemble one big matrix from the indiviudal stiffness matrices. Multiply by the inverse of
+        # the lumped mass matrix, filter out any entries with the wrong sign and renormalize the columns.
+        spec = 0
+        positive_mass = 0.0
+        total_mass = 0.0
+        
+        for species,K in stiffness_matrices.iteritems():
+            
+            rows,cols,vals = K.data()
+            Kcrs = scipy.sparse.csr_matrix((vals,cols,rows))
+            #Kcsc = Kscr.tocsc()
+            Kdok = Kcrs.todok()
+            
+            dof2vtx = xmesh.dof_to_vertex_map[species]
+            
+            
+            for entries in Kdok.items():
+                ind = entries[0]
+                ir = dof2vtx[ind[0]]
+                ij = dof2vtx[ind[1]]
+                
+                val = entries[1]
+                
+                if ir != ij:
+                    if val > 0.0:
+                        positive_mass += val
+                        val = 0.0
+                    else:
+                        total_mass += val
+                
+                
+                
+                # The volume can be zero, if the species is not active at the vertex (such as a 2D species at a 3D node)
+                if vol[Mspecies*ij+spec]==0:
+                    vi = 1
+                else:
+                    vi = vol[Mspecies*ij+spec]
+                
+                S[Mspecies*ir+spec,Mspecies*ij+spec]=-val/vi
+            
+            spec = spec+1
+        
+        # Convert to compressed column for compatibility with the URDME solvers.
+        D = S.tocsc()
+        
+        # Renormalize the columns (may not sum to zero since elements may have been filtered out
+        sumcol = numpy.zeros((Ndofs,1))
+        for i in range(Ndofs):
+            col = D.getcol(i)
+            for val in col.data:
+                if val > 0.0:
+                    sumcol[i] += val
+        
+        D.setdiag(-sumcol.flatten())
+        
+        #print "Fraction of positive off-diagonal entries: " + str(numpy.abs(positive_mass/total_mass))
+        return {'vol':vol,'D':D,'relative_positive_mass':positive_mass/total_mass}
+
+    def createSystemMatrix2(self):
+        """
+            Create the system (diffusion) matrix for input to the URDME solvers. The matrix
+            is built by concatenating the individually assembled matrices for each of the species,
+            and multiplying with the lumped mass matrix (which define the volume of the voxels).
+            
+            The dofs are reordered so that each column in the result matrix corresponds to 
+            the vertex numbering in the mesh.
+            
             Negative off-diagonal elements in the matrix are set to zero, and the diagonal is renormalized
             in order to assure that the returned matrix is a Markov transition matrix. 
             
@@ -465,13 +583,19 @@ class URDMEModel(Model):
         vol = numpy.zeros((Ndofs,1))
         spec = 0
         
+        xmesh = self.xmesh
+    
         for species,M in mass_matrices.iteritems():
+            
+            dof2vtx = xmesh.dof_to_vertex_map[species]
+            
             rows,cols,vals = M.data()
             SM = scipy.sparse.csr_matrix((vals,cols,rows))
             vols = SM.sum(axis=1)
             spec = self.species_map[species]
             for j in range(len(vols)):
-                vol[Mspecies*j+spec,0]=vols[j]
+                dof = Mspecies*j+spec
+                vol[dof,0]=vols[dof2vtx[j]]
 
         # This is necessary in order for the array to have the right dimension (Ndofs,1) 
         vol = vol.flatten()
@@ -488,24 +612,32 @@ class URDMEModel(Model):
             Kcrs = scipy.sparse.csr_matrix((vals,cols,rows))
             Kdok = Kcrs.todok()
             
+            dof2vtx = xmesh.dof_to_vertex_map[species]
+
+
             for entries in Kdok.items():
                 ind = entries[0]
+                ir = dof2vtx[ind[0]]
+                ij = dof2vtx[ind[1]]
+
                 val = entries[1]
                 
-                if ind[0] != ind[1]:
+                if ir != ij:
                     if val > 0.0:
                         positive_mass += val
                         val = 0.0
                     else:
                         total_mass += val
-                        
+            
+            
+            
                 # The volume can be zero, if the species is not active at the vertex (such as a 2D species at a 3D node)
-                if vol[Mspecies*ind[1]+spec]==0:
+                if vol[Mspecies*ij+spec]==0:
                     vi = 1
                 else:
-                    vi = vol[Mspecies*ind[1]+spec]
+                    vi = vol[Mspecies*ir+spec]
             
-                S[Mspecies*ind[0]+spec,Mspecies*ind[1]+spec]=-val/vi
+                S[Mspecies*ir+spec,Mspecies*ij+spec]=-val/vi
             
             spec = spec+1
 
@@ -745,7 +877,7 @@ def assemble(model):
         if subdomain.dim()==maxdim:
             ddx = dolfin.Measure('dx')[subdomain]
         elif subdomain.dim() == maxdim-1:
-            ddx = dolfin.Measure('ds')[subdomain]
+            ddx = dolfin.Measure('dx')[subdomain]
         else:
             raise ModelException("Three subdomain levels is not supported.")
 
@@ -1024,9 +1156,10 @@ def urdme(model=None,solver='nsm',solver_path="", model_file=None, input_file=No
             
                 for voxel in range(numvox):
                     dof = voxel*len(model.listOfSpecies)+i
-                    #dof = vertex_to_dof_map[voxel]
-                    func_vector[voxel] = float(U[dof,j]) # ??? Permutation needed ??
-            
+                    ix  = vertex_to_dof_map[voxel]
+                    dolfvox = (ix-i)/len(model.listOfSpecies)
+                    func_vector[dolfvox] = float(U[dof,j])
+                
                 spec_sol[time] = func
             
             model.sol[spec] = spec_sol

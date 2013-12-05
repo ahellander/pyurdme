@@ -261,20 +261,22 @@ class Reaction():
             raise ReactionError(errmsg)
         
         self.reactants = {}
-        for r in reactants:
-            rtype = type(r).__name__
-            if rtype=='instance':
-                self.reactants[r.name] = reactants[r]
-            else:
-                self.reactants[r]=reactants[r]
+        if reactants is not None:
+            for r in reactants:
+                rtype = type(r).__name__
+                if rtype=='instance':
+                    self.reactants[r.name] = reactants[r]
+                else:
+                    self.reactants[r]=reactants[r]
     
         self.products = {}
-        for p in products:
-            rtype = type(p).__name__
-            if rtype=='instance':
-                self.products[p.name] = products[p]
-            else:
-                self.products[p]=products[p]
+        if products is not None:
+            for p in products:
+                rtype = type(p).__name__
+                if rtype=='instance':
+                    self.products[p.name] = products[p]
+                else:
+                    self.products[p]=products[p]
 
         if self.massaction:
             self.type = "mass-action"

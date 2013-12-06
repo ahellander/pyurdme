@@ -65,7 +65,7 @@ class mincde(URDMEModel):
         physical_region.set_all(1)
         
         facet_function = dolfin.MeshFunction("size_t",self.mesh,self.mesh.topology().dim()-1)
-        facet_function.set_all(0)
+        facet_function.set_all(1)
         # Mark the boundary points
         membrane = Membrane()
         # interior = Cytosol()

@@ -290,8 +290,8 @@ class URDMEModel(Model):
                 self.species_to_subdomains[species] = sds
 
         for spec_name,species in self.listOfSpecies.items():
-            if 0 self.species_to_subdomain[species]:
-                raise ModelException("Subdimain number 0 is reserved. Please check your model.")
+            if 0 in self.species_to_subdomains[species]:
+                raise ModelException("Subdimain number 0 is reserved. Please choose a difference identifier.")
 
     def restrict(self, species, subdomains):
         self.species_to_subdomains[species] = subdomains
@@ -767,11 +767,11 @@ def assemble(model):
     weak_form_M = {}
 
     # Set up the weak forms
-    for i,subdomain in enumerate(model.subdomains):
+    for i, subdomain in enumerate(model.subdomains):
         
         # if species.dim() == maxdim:
         # sumbdomain dimension roughly corresponds to rdme_sdlevel
-        if subdomain.dim()==maxdim:
+        if subdomain.dim() == maxdim:
             ddx = dolfin.Measure('dx')[subdomain]
         elif subdomain.dim() == maxdim-1:
             ddx = dolfin.Measure('dx')[subdomain]
@@ -787,8 +787,8 @@ def assemble(model):
                 subdomain_list = model.species_to_subdomains[species]
                 
                 # Set up the weak forms. We integrate only over those subdomains where the species is active
-                for j,sd in enumerate(subdomain_list):
-                    if  j==0:
+                for j, sd in enumerate(subdomain_list):
+                    if j == 0:
                         weak_form_K[spec_name] = dolfin.inner(dolfin.nabla_grad(trial_functions[spec_name]), dolfin.nabla_grad(test_functions[spec_name]))*ddx(sd)
                         weak_form_M[spec_name] = trial_functions[spec_name]*test_functions[spec_name]*ddx(sd)
                     else:
@@ -796,11 +796,12 @@ def assemble(model):
                         weak_form_M[spec_name] = weak_form_M[spec_name]+trial_functions[spec_name]*test_functions[spec_name]*ddx(sd)
 
     # Assemble the matrices
-    for spec_name,species in model.listOfSpecies.items():
-        stiffness_matrices[spec] = dolfin.assemble(weak_form_K[spec])
+    for spec_name, species in model.listOfSpecies.items():
+        stiffness_matrices[spec_name] = dolfin.assemble(weak_form_K[spec_name])
         # We cannot include the diffusion constant in the assembly, dolfin does not seem to deal well
         # with small diffusion constants (drops small elements)
         stiffness_matrices[spec_name] = species.diffusion_constant * stiffness_matrices[spec_name]
+        #stiffness_matrices[spec_name] = species.diffusion_constant * stiffness_matrices[spec_name]
         mass_matrices[spec_name] = dolfin.assemble(a_M)
 
 

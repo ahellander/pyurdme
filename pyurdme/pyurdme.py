@@ -637,9 +637,9 @@ class URDMEModel(Model):
         # Connectivity matrix
         urdme_solver_data['K'] = connectivityMatrix(self)
 
-        rows,cols,vals = self.stiffness_matrices["MinD_m"].data()
-        SM = scipy.sparse.csr_matrix((vals,cols,rows))
-        urdme_solver_data["Kmindm"] = SM.tocsc()
+        #rows,cols,vals = self.stiffness_matrices["MinD_m"].data()
+        #SM = scipy.sparse.csr_matrix((vals,cols,rows))
+        #urdme_solver_data["Kmindm"] = SM.tocsc()
 
 
 

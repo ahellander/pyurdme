@@ -281,7 +281,11 @@ class URDMEModel(Model):
         # This conversion is necessary for UFL not to choke on the subdomain ids.
         for i,sd in enumerate(sds):
             sds[i]=int(sd)
-
+        try:
+            sds.remove(0)
+        except:
+            pass
+        
         # If a species is not present as key in the species_to_subdomain mapping,
         # we label it as active in all subdomains
         for spec_name in self.listOfSpecies:
@@ -289,9 +293,7 @@ class URDMEModel(Model):
             if species not in self.species_to_subdomains.keys():
                 self.species_to_subdomains[species] = sds
 
-        for spec_name,species in self.listOfSpecies.items():
-            if 0 in self.species_to_subdomains[species]:
-                raise ModelException("Subdimain number 0 is reserved. Please choose a difference identifier.")
+
 
     def restrict(self, species, subdomains):
         self.species_to_subdomains[species] = subdomains
@@ -355,8 +357,7 @@ class URDMEModel(Model):
             # vertex_to_dof_map provides a map between the vertex index and the dof.
             xmesh.vertex_to_dof_map[spec_name] = xmesh.function_space[spec_name].dofmap().dof_to_vertex_map(self.mesh)
             xmesh.vertex_to_dof_map[spec_name] = len(self.listOfSpecies) * xmesh.vertex_to_dof_map[spec_name] + spec_index
-            xmesh.vertex_to_dof_map[spec_name] = xmesh.vertex_to_dof_map[spec_name]
-
+            xmesh.dof_to_vertex_map[spec_name] = xmesh.function_space[spec_name].dofmap().vertex_to_dof_map(self.mesh)
 
         xmesh.vertex = self.mesh.coordinates()
         self.xmesh = xmesh
@@ -512,6 +513,8 @@ class URDMEModel(Model):
             
             for entries in Kdok.items():
                 ind = entries[0]
+                ir = ind[0]
+                ij = ind[1]
                 ir = dof2vtx[ind[0]]
                 ij = dof2vtx[ind[1]]
                 
@@ -523,8 +526,6 @@ class URDMEModel(Model):
                         val = 0.0
                     else:
                         total_mass += val
-                
-                
                 
                 # The volume can be zero, if the species is not active at the vertex (such as a 2D species at a 3D node)
                 if vol[Mspecies*ij+spec]==0:
@@ -560,6 +561,10 @@ class URDMEModel(Model):
             since the solvers themselves do very limited error checking of the input.
 
         """
+
+        for spec_name,species in self.listOfSpecies.items():
+            if 0 in self.species_to_subdomains[species]:
+                raise ModelException("Subdomain number 0 is reserved. Please check your model.")
 
         # Check that all the columns of the system matrix sums to zero (or close to zero). If not, it does
         # not define a Markov process and the solvers might segfault or produce erraneous results.
@@ -631,6 +636,12 @@ class URDMEModel(Model):
 
         # Connectivity matrix
         urdme_solver_data['K'] = connectivityMatrix(self)
+
+        #rows,cols,vals = self.stiffness_matrices["MinD_m"].data()
+        #SM = scipy.sparse.csr_matrix((vals,cols,rows))
+        #urdme_solver_data["Kmindm"] = SM.tocsc()
+
+
 
         return urdme_solver_data
 
@@ -767,42 +778,46 @@ def assemble(model):
     weak_form_M = {}
 
     # Set up the weak forms
-    for i, subdomain in enumerate(model.subdomains):
+    #    for i,subdomain in enumerate(model.subdomains):
         
         # if species.dim() == maxdim:
         # sumbdomain dimension roughly corresponds to rdme_sdlevel
-        if subdomain.dim() == maxdim:
-            ddx = dolfin.Measure('dx')[subdomain]
-        elif subdomain.dim() == maxdim-1:
-            ddx = dolfin.Measure('dx')[subdomain]
-        else:
-            raise ModelException("Three subdomain levels is not supported.")
+        #if subdomain.dim()==maxdim:
+        #        ddx = dolfin.Measure('dx')[subdomain]
+#elif subdomain.dim() == maxdim-1:
+#           ddx = dolfin.Measure('dx')[subdomain]
+#       else:
+#            raise ModelException("Three subdomain levels is not supported.")
 
-        for spec_name, species in model.listOfSpecies.items():
+    for spec_name, species in model.listOfSpecies.items():
+        spec_dim = species.dim()
+            #if species.dim() ==  subdomain.dim():
             
-            spec_dim = species.dim()
-            if species.dim() ==  subdomain.dim():
-                
-                # Find out what subdomains this species is active on
-                subdomain_list = model.species_to_subdomains[species]
-                
-                # Set up the weak forms. We integrate only over those subdomains where the species is active
-                for j, sd in enumerate(subdomain_list):
-                    if j == 0:
-                        weak_form_K[spec_name] = dolfin.inner(dolfin.nabla_grad(trial_functions[spec_name]), dolfin.nabla_grad(test_functions[spec_name]))*ddx(sd)
-                        weak_form_M[spec_name] = trial_functions[spec_name]*test_functions[spec_name]*ddx(sd)
-                    else:
-                        weak_form_K[spec_name] = weak_form_K[spec_name]+dolfin.inner(dolfin.nabla_grad(trial_functions[spec_name]), dolfin.nabla_grad(test_functions[spec_name]))*ddx(sd)
-                        weak_form_M[spec_name] = weak_form_M[spec_name]+trial_functions[spec_name]*test_functions[spec_name]*ddx(sd)
+        # Find out what subdomains this species is active on
+        subdomain_list = model.species_to_subdomains[species]
+        
+        # Set up the weak forms. We integrate only over those subdomains where the species is active
+        for i,subdomain in enumerate(model.subdomains):
+            #if spec_dim == maxdim:
+            ddx = dolfin.Measure('dx')[subdomain]
+                    # else:
+                    #    ddx = dolfin.Measure('ds')[subdomain]
+            
+            for j,sd in enumerate(subdomain_list):
+                if j==0:
+                    weak_form_K[spec_name] = dolfin.inner(dolfin.nabla_grad(trial_functions[spec_name]), dolfin.nabla_grad(test_functions[spec_name]))*ddx(sd)
+                    weak_form_M[spec_name] = trial_functions[spec_name]*test_functions[spec_name]*ddx(sd)
+                else:
+                    weak_form_K[spec_name] = weak_form_K[spec_name]+dolfin.inner(dolfin.nabla_grad(trial_functions[spec_name]), dolfin.nabla_grad(test_functions[spec_name]))*ddx(sd)
+                    weak_form_M[spec_name] = weak_form_M[spec_name]+trial_functions[spec_name]*test_functions[spec_name]*ddx(sd)
 
     # Assemble the matrices
-    for spec_name, species in model.listOfSpecies.items():
+    for spec_name,species in model.listOfSpecies.items():
         stiffness_matrices[spec_name] = dolfin.assemble(weak_form_K[spec_name])
         # We cannot include the diffusion constant in the assembly, dolfin does not seem to deal well
         # with small diffusion constants (drops small elements)
         stiffness_matrices[spec_name] = species.diffusion_constant * stiffness_matrices[spec_name]
-        #stiffness_matrices[spec_name] = species.diffusion_constant * stiffness_matrices[spec_name]
-        mass_matrices[spec_name] = dolfin.assemble(a_M)
+        mass_matrices[spec_name] = dolfin.assemble(weak_form_M[spec_name])
 
 
     return {'K':stiffness_matrices, 'M':mass_matrices}

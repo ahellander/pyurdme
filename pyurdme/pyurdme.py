@@ -471,26 +471,26 @@ class URDMEModel(Model):
         Nvoxels = self.mesh.getNumVoxels()
         Ndofs = Nvoxels*Mspecies
         S = scipy.sparse.dok_matrix((Ndofs,Ndofs))
+        species_map = self.speciesMap()
         
         # Create the volume vector by lumping the mass matrices
         vol = numpy.zeros((Ndofs,1))
-        spec = 0
         
         xmesh = self.xmesh
+        spec_map = self.speciesMap()
         
         for species,M in mass_matrices.iteritems():
             
             dof2vtx = xmesh.dof_to_vertex_map[species]
-            
+            spec = species_map[species]
             rows,cols,vals = M.data()
             SM = scipy.sparse.csr_matrix((vals,cols,rows))
             vols = SM.sum(axis=1)
             
-            spec = self.species_map[species]
             for j in range(len(vols)):
                 vx = dof2vtx[j]
-                dof = Mspecies*vx+spec
-                vol[dof,0]=vols[j]
+                global_dof = Mspecies*vx+spec
+                vol[global_dof,0]=vols[j]
 
         # This is necessary in order for the array to have the right dimension (Ndofs,1)
         vol = vol.flatten()
@@ -505,22 +505,26 @@ class URDMEModel(Model):
             
             rows,cols,vals = K.data()
             Kcrs = scipy.sparse.csr_matrix((vals,cols,rows))
-            #Kcsc = Kscr.tocsc()
             Kdok = Kcrs.todok()
-            
+    
+            spec = species_map[species]
             dof2vtx = xmesh.dof_to_vertex_map[species]
             
-            
             for entries in Kdok.items():
+                
                 ind = entries[0]
-                ir = ind[0]
-                ij = ind[1]
-                ir = dof2vtx[ind[0]]
-                ij = dof2vtx[ind[1]]
+    
+                dof = ind[0]
+                to_dof = ind[1]
+                vox = dof
+                to_vox = to_dof
+                #vox = dof2vtx[dof]
+                #to_vox = dof2vtx[to_dof]
                 
                 val = entries[1]
                 
-                if ir != ij:
+                # if it is not a diagnal entry
+                if vox != to_vox:
                     if val > 0.0:
                         positive_mass += val
                         val = 0.0
@@ -528,14 +532,17 @@ class URDMEModel(Model):
                         total_mass += val
                 
                 # The volume can be zero, if the species is not active at the vertex (such as a 2D species at a 3D node)
-                if vol[Mspecies*ij+spec]==0:
-                    vi = 1
-                else:
-                    vi = vol[Mspecies*ij+spec]
+                global_vox  = vox * Mspecies + spec
+                global_to_vox  = to_vox * Mspecies + spec
                 
-                S[Mspecies*ir+spec,Mspecies*ij+spec]=-val/vi
+                if vol[global_to_vox]==0.0:
+                    vi = 1.0
+                else:
+                    vi = vol[global_to_vox]
+                
+                S[Mspecies*vox+spec,Mspecies*to_vox+spec]=-val/vi
             
-            spec = spec+1
+            #spec = spec+1
         
         # Convert to compressed column for compatibility with the URDME solvers.
         D = S.tocsc()
@@ -642,7 +649,15 @@ class URDMEModel(Model):
         urdme_solver_data["Kmindm"] = SM.tocsc()
 
 
-
+        dof2vtx = self.xmesh.dof_to_vertex_map["MinD_m"]
+        dfv= numpy.zeros((self.mesh.getNumVoxels(),1),dtype="int")
+        for j in range(self.mesh.getNumVoxels()):
+            dfv[j] = int(dof2vtx[j]+1)
+        
+        urdme_solver_data["dof2vtx"] = dfv
+        
+        urdme_solver_data["Kt"] = self.stiffness_matrices["MinD_m"].data()
+        
         return urdme_solver_data
 
 
@@ -791,25 +806,25 @@ def assemble(model):
 
     for spec_name, species in model.listOfSpecies.items():
         spec_dim = species.dim()
-            #if species.dim() ==  subdomain.dim():
-            
+        
         # Find out what subdomains this species is active on
         subdomain_list = model.species_to_subdomains[species]
         
         # Set up the weak forms. We integrate only over those subdomains where the species is active
-        for i,subdomain in enumerate(model.subdomains):
-            #if spec_dim == maxdim:
-            ddx = dolfin.Measure('dx')[subdomain]
-                    # else:
-                    #    ddx = dolfin.Measure('ds')[subdomain]
-            
-            for j,sd in enumerate(subdomain_list):
-                if j==0:
-                    weak_form_K[spec_name] = dolfin.inner(dolfin.nabla_grad(trial_functions[spec_name]), dolfin.nabla_grad(test_functions[spec_name]))*ddx(sd)
-                    weak_form_M[spec_name] = trial_functions[spec_name]*test_functions[spec_name]*ddx(sd)
-                else:
-                    weak_form_K[spec_name] = weak_form_K[spec_name]+dolfin.inner(dolfin.nabla_grad(trial_functions[spec_name]), dolfin.nabla_grad(test_functions[spec_name]))*ddx(sd)
-                    weak_form_M[spec_name] = weak_form_M[spec_name]+trial_functions[spec_name]*test_functions[spec_name]*ddx(sd)
+        #for i,subdomain in enumerate(model.subdomains):
+        if spec_dim == maxdim:
+            dx = dolfin.Measure("dx")[model.subdomains[0]]
+        else:
+            dx = dolfin.Measure("ds")[model.subdomains[1]]
+
+        for j,sd in enumerate(subdomain_list):
+            if j==0:
+                print spec_name,sd
+                weak_form_K[spec_name] = dolfin.inner(dolfin.nabla_grad(trial_functions[spec_name]), dolfin.nabla_grad(test_functions[spec_name]))*dx(sd)
+                weak_form_M[spec_name] = trial_functions[spec_name]*test_functions[spec_name]*dx(sd)
+            else:
+                weak_form_K[spec_name] = weak_form_K[spec_name]+dolfin.inner(dolfin.nabla_grad(trial_functions[spec_name]), dolfin.nabla_grad(test_functions[spec_name]))*dx(sd)
+                weak_form_M[spec_name] = weak_form_M[spec_name]+trial_functions[spec_name] * test_functions[spec_name]*dx(sd)
 
     # Assemble the matrices
     for spec_name,species in model.listOfSpecies.items():

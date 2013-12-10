@@ -24,10 +24,10 @@ class mincde(pyurdme.URDMEModel):
 
         # Species
         # TODO: We need a way to localize species to subdomains/boundaries
-        MinD_m     = pyurdme.Species(name="MinD_m",diffusion_constant=1e-14,dimension=2)
-        MinD_c_atp = pyurdme.Species(name="MinD_c_atp",diffusion_constant=2.5e-12)
-        MinD_c_adp = pyurdme.Species(name="MinD_c_adp",diffusion_constant=2.5e-12)
-        MinD_e     = pyurdme.Species(name="MinD_e",diffusion_constant=2.5e-12)
+        MinD_m     = pyurdme.Species(name="MinD_m",diffusion_constant=1,dimension=2)
+        MinD_c_atp = pyurdme.Species(name="MinD_c_atp",diffusion_constant=2.5e-12,dimension=3)
+        MinD_c_adp = pyurdme.Species(name="MinD_c_adp",diffusion_constant=2.5e-12,dimension=3)
+        MinD_e     = pyurdme.Species(name="MinD_e",diffusion_constant=2.5e-12,dimension=3)
         MinDE      = pyurdme.Species(name="MinDE",diffusion_constant=1e-14,dimension=2)
         
         self.addSpecies([MinD_m,MinD_c_atp,MinD_c_adp,MinD_e,MinDE])
@@ -38,15 +38,15 @@ class mincde(pyurdme.URDMEModel):
         # Build CSG Coli using Dolfin.
         #sphere1 = dolfin.Sphere(dolfin.Point(0,0,2.25),0.5)
         #sphere2 = dolfin.Sphere(dolfin.Point(0,0,-2.25),0.5)
-        #cylinder = dolfin.Cylinder(dolfin.Point(0,0,2.25),dolfin.Point(0,0,-2.25),0.5)
+        cylinder = dolfin.Cylinder(dolfin.Point(0,0,2.25),dolfin.Point(0,0,-2.25),0.5)
         #dolfin.plot(cylinder+sphere1+sphere2)
         #geom = cylinder+sphere1+sphere2
-        #self.mesh = dolfin.Mesh(geom,1)
+        self.mesh = pyurdme.Mesh(dolfin.Mesh(cylinder,30))
         #dolfin.info(self.mesh)
         #dolfin.plot(self.mesh)
         #dolfin.interactive()
         
-        self.mesh = pyurdme.read_dolfin_mesh("mesh/coli.xml")
+        #self.mesh = pyurdme.read_dolfin_mesh("mesh/coli.xml")
         
         
         # Read the facet and interior cell physical domain markers into a Dolfin MeshFunction
@@ -61,12 +61,15 @@ class mincde(pyurdme.URDMEModel):
         #physical_region = dolfin.MeshFunction("size_t",self.mesh)
         #file_in >> physical_region
         
-        subdomains = dolfin.MeshFunction("size_t",self.mesh,self.mesh.topology().dim()-1)
-        subdomains.set_all(1)
-#physical_region = dolfin.MeshFunction("size_t",self.mesh,self.mesh.topology().dim())
-#        physical_region.set_all(1)
-        
+        interior = dolfin.CellFunction("size_t",self.mesh)
+        interior.set_all(1)
+        #physical_region = dolfin.MeshFunction("size_t",self.mesh,self.mesh.topology().dim())
+        #physical_region.set_all(1)
+
+
+        boundary = dolfin.FacetFunction("size_t",self.mesh)
         #       facet_function = dolfin.MeshFunction("size_t",self.mesh,self.mesh.topology().dim()-1)
+        boundary.set_all(0)
         #   facet_function.set_all(0)
         # Mark the boundary points
         membrane = Membrane()
@@ -74,8 +77,8 @@ class mincde(pyurdme.URDMEModel):
         #membrane.mark(facet_function,74)
         #interior.mark(subdomains,5)
         #boundary = [2]
-        membrane.mark(subdomains,74)
-        self.subdomains = [subdomains]
+        membrane.mark(boundary,74)
+        self.subdomains = [interior,boundary]
         #self.subdomains = [physical_region, facet_function]
         # Average mesh size to feed into the propensity functions
         hmax = self.mesh.hmax()
@@ -121,6 +124,8 @@ class mincde(pyurdme.URDMEModel):
         #self.scatter({MinD_c_adp:4500})
         #self.scatter({MinD_e:1575},subdomains=boundary)
 
+
+#self.timespan(numpy.linspace(0,1,100));
         self.timespan(range(100))
 
 if __name__=="__main__":

@@ -844,6 +844,9 @@ class URDMEResult(dict):
     
     def __init__(self, model, filename=None):
         self.model = model
+        self.sol = None
+        self.U = None
+        self.tspan = None
         if filename is not None:
             self.read_solution(filename)
     
@@ -856,21 +859,58 @@ class URDMEResult(dict):
             raise AttributeError, "Cannot set '%s', cls attribute already exists" % ( k, )
     
     def __getattr__(self, k):
+        if k == 'sol':
+            ret = self.get('sol')
+            if ret is None:
+                return self.initialize_sol()
+            return ret
         if k in self.keys():
             return self[k]
         raise AttributeError
+    
+    def initialize_sol(self):
+        """ Initialize the sol variable. """
+        # Create Dolfin Functions for all the species
+        sol = {}
+        
+        dims = self.U.shape
+        numvox = self.model.mesh.getNumVoxels()
+        # The result is loaded in dolfin Functions, one for each species and time point
+        for i,spec in enumerate(self.model.listOfSpecies):
+            
+            species = self.model.listOfSpecies[spec]
+            spec_name = species.name
+            dof_to_vertex_map = self.model.xmesh.dof_to_vertex_map[spec]
+            vertex_to_dof_map = self.model.xmesh.vertex_to_dof_map[spec]
+            
+            spec_sol = {}
+            for j,time in enumerate(self.tspan):
+                func = dolfin.Function(dolfin.FunctionSpace(self.model.mesh,"Lagrange",1))
+                func_vector = func.vector()
+                
+                for voxel in range(numvox):
+                    dof = voxel*len(self.model.listOfSpecies)+i
+                    ix  = vertex_to_dof_map[voxel]
+                    dolfvox = (ix-i)/len(self.model.listOfSpecies)
+                    func_vector[dolfvox] = float(self.U[dof,j])
+                
+                spec_sol[time] = func
+            
+            sol[spec] = spec_sol
+        self.sol = sol
+        return sol
 
     def dumps(self,species,foldername):
         """ Dump the trajectory of species to a collection of vtk files """
-        subprocess.call(["mkdir",foldername])
+        subprocess.call(["mkdir","-p",foldername])
         func = dolfin.Function(dolfin.FunctionSpace(self.model.mesh,"Lagrange",1))
         func_vector = func.vector()
         file=dolfin.File(foldername+"/trajectory.pvd")
         numvox = self.model.mesh.getNumVoxels()
 
-        for i,time in enumerate(self.model.tspan):
+        for i,time in enumerate(self.tspan):
             #outfile = open(foldername+"/"+filename+"."+str(i),"w")
-            solvector = (self.model.sol[species][time]).vector()
+            solvector = (self.sol[species][time]).vector()
             for dof in range(numvox):
                 func_vector[dof] = solvector[dof]
             file << func
@@ -881,11 +921,11 @@ class URDMEResult(dict):
         """ Dump the solution attached to a model as a xyz file. This format can be
             read by e.g. VMD, Jmol and Paraview. """
 
-        if 'U' not in self.model.__dict__:
+        if self.U is None:
             raise URDMEError("No solution found in the model.")
 
         #outfile = open(filename,"w")
-        dims = numpy.shape(self.model.U)
+        dims = numpy.shape(self.U)
         Ndofs = dims[0]
         Mspecies = len(self.model.listOfSpecies)
         Ncells = Ndofs / Mspecies
@@ -901,7 +941,7 @@ class URDMEResult(dict):
                 filestr += (str(number_of_atoms) + "\n" + "timestep " + str(i) + " time " + str(time) + "\n")
                 for j, spec in enumerate(self.model.listOfSpecies):
                     for k in range(Ncells):
-                        for mol in range(self.model.U[k * Mspecies + j, i]):
+                        for mol in range(self.U[k * Mspecies + j, i]):
                             linestr = spec + "\t" + '\t'.join(coordinatestr[k, :]) + "\n"
                             filestr += linestr
 
@@ -911,9 +951,9 @@ class URDMEResult(dict):
         elif file_format == "ParaView":
             foldername = filename
             os.mkdir(foldername)
-            for i, time in enumerate(self.model.tspan):
+            for i, time in enumerate(self.tspan):
                 outfile = open(foldername + "/" + filename + "." + str(i), "w")
-                number_of_atoms = numpy.sum(model.U[:, i])
+                number_of_atoms = numpy.sum(self.U[:, i])
                 filestr = ""
                 filestr += (str(number_of_atoms) + "\n" + "timestep " + str(i) + " time " + str(time) + "\n")
                 for j, spec in enumerate(self.model.listOfSpecies):
@@ -928,24 +968,24 @@ class URDMEResult(dict):
         """ Dump the solution attached to a model as a .csv file. """
         #TODO: Make this work for 2D meshes with only two coordinates.
 
-        if 'U' not in self.model.__dict__:
+        if self.U is None:
             raise URDMEError("No solution found in the model.")
 
-        dims = numpy.shape(model.U)
+        dims = numpy.shape(self.U)
         Ndofs = dims[0]
         Mspecies = len(self.model.listOfSpecies)
         Ncells = Ndofs/Mspecies
 
         coordinates = self.model.mesh.getVoxels()
         coordinatestr = coordinates.astype(str)
-        subprocess.call(["mkdir", filename])
-        for i, time in enumerate(self.model.tspan):
+        subprocess.call(["mkdir","-p", filename])
+        for i, time in enumerate(self.tspan):
             outfile = open(filename + '/' + filename + str(i) + ".csv", "w")
-            number_of_atoms = numpy.sum(self.model.U[:, i])
+            number_of_atoms = numpy.sum(self.U[:, i])
             filestr = "xcoord,ycoord,zcoord,radius,type\n"
             for j, spec in enumerate(self.model.listOfSpecies):
                 for k in range(Ncells):
-                    for mol in range(self.model.U[k * Mspecies + j, i]):
+                    for mol in range(self.U[k * Mspecies + j, i]):
                         obj = self.model.listOfSpecies[spec]
                         reaction_radius = obj.reaction_radius
                         linestr = coordinatestr[k, 0] + "," + coordinatestr[k, 1] + "," + coordinatestr[k, 2] + "," + str(reaction_radius) + "," + str(j) + "\n"
@@ -968,8 +1008,8 @@ class URDMEResult(dict):
         tspan = resultfile['tspan']
         tspan = numpy.array(tspan).flatten()
         resultfile.close()
-        self['U'] = U
-        self['tspan'] = tspan
+        self.U = U
+        self.tspan = tspan
 
 
 def urdme(model=None, solver='nsm', solver_path="", model_file=None, input_file=None, seed=None, report_level=0):
@@ -1066,37 +1106,6 @@ def urdme(model=None, solver='nsm', solver_path="", model_file=None, input_file=
     #Load the result from the hdf5 output file.
     try:
         result = URDMEResult(model, outfile.name)
-        U = result['U']
-        tspan = result['tspan']
-        model.U = U
-
-        # Create Dolfin Functions for all the species
-        model.sol = {}
-   
-        dims = U.shape
-        numvox = model.mesh.getNumVoxels()
-        # The result is loaded in dolfin Functions, one for each species and time point
-        for i,spec in enumerate(model.listOfSpecies):
-    
-            species = model.listOfSpecies[spec]
-            spec_name = species.name
-            dof_to_vertex_map = model.xmesh.dof_to_vertex_map[spec]
-            vertex_to_dof_map = model.xmesh.vertex_to_dof_map[spec]
-
-            spec_sol = {}
-            for j,time in enumerate(tspan):
-                func = dolfin.Function(dolfin.FunctionSpace(model.mesh,"Lagrange",1))
-                func_vector = func.vector()
-            
-                for voxel in range(numvox):
-                    dof = voxel*len(model.listOfSpecies)+i
-                    ix  = vertex_to_dof_map[voxel]
-                    dolfvox = (ix-i)/len(model.listOfSpecies)
-                    func_vector[dolfvox] = float(U[dof,j])
-                
-                spec_sol[time] = func
-            
-            model.sol[spec] = spec_sol
 
         # Clean up
         if input_file is None:

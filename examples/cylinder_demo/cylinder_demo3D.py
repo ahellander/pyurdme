@@ -68,7 +68,7 @@ if __name__ == "__main__":
     result.dumps(species='A',foldername="Aout")
     result.dumps(species='B',foldername="Bout")
 
-    print result
+    #print result
 
     # Plot of the time-average spatial concentration.
     x_vals = model.mesh.coordinates()[:, 0]

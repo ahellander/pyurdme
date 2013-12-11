@@ -65,7 +65,8 @@ if __name__ == "__main__":
     # This line here dumps the state of A at all timepoints to Paraview comaptible output (VTK). The trajectory
     # is written to a folder "Aout", where each snapshot is stored in a separate file. To open the "movie",
     # just open Aout/trajectory.pvd, then you can animate etc.
-    #pyurdme.dumps(model,species='A',foldername="Aout")
+    result.dumps(species='A',foldername="Aout")
+    result.dumps(species='B',foldername="Bout")
 
     print result
 

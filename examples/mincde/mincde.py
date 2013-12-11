@@ -46,7 +46,7 @@ class mincde(pyurdme.URDMEModel):
         #dolfin.plot(self.mesh)
         #dolfin.interactive()
         
-        self.mesh = pyurdme.read_dolfin_mesh("mesh/coli.xml")
+        self.mesh = pyurdme.Mesh.read_dolfin_mesh("mesh/coli.xml")
         
         
         # Read the facet and interior cell physical domain markers into a Dolfin MeshFunction
@@ -132,6 +132,6 @@ if __name__=="__main__":
 
     U = result["U"]
     print numpy.sum(U[::5,:],axis=0)
-    pyurdme.dumps(model,"MinD_m","mindout")
-    pyurdme.toXYZ(model,'mindm.xyz',file_format="VMD")
+    result.dumps("MinD_m","mindout")
+    result.toXYZ('mindm.xyz',file_format="VMD")
     

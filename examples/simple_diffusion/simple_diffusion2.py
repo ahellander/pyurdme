@@ -71,6 +71,6 @@ if __name__ == '__main__':
     result = urdme(model)
     model.serialize("debug_input.mat")
     # Dump timeseries in Paraview format
-    dumps(model,"B","B")
+    result.dumps("B","B")
 
 

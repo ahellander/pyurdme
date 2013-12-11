@@ -885,7 +885,7 @@ class URDMEResult(dict):
             raise URDMEError("No solution found in the model.")
 
         #outfile = open(filename,"w")
-        dims = numpy.shape(model.U)
+        dims = numpy.shape(self.model.U)
         Ndofs = dims[0]
         Mspecies = len(self.model.listOfSpecies)
         Ncells = Ndofs / Mspecies

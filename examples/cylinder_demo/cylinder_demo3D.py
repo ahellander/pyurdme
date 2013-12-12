@@ -4,6 +4,9 @@ import os
 from pyurdme import pyurdme
 import dolfin
 
+import matplotlib.pyplot as plt
+import numpy
+
 # Global Constants
 MAX_X_DIM = 5.0
 MIN_X_DIM = -5.0
@@ -23,7 +26,7 @@ class cylinderDemo3D(pyurdme.URDMEModel):
         pyurdme.URDMEModel.__init__(self, model_name)
 
         # System constants
-        D_const = 0.1
+        D_const = 0.01
         k_react = pyurdme.Parameter(name="k_react", expression=1)
         k_creat = pyurdme.Parameter(name="k_creat", expression=200)
         self.addParameter([k_react, k_creat])
@@ -63,5 +66,17 @@ if __name__ == "__main__":
     # is written to a folder "Aout", where each snapshot is stored in a separate file. To open the "movie",
     # just open Aout/trajectory.pvd, then you can animate etc.
     pyurdme.dumps(model,species='A',foldername="Aout")
+
     print result
+
+    # Plot of the time-average spatial concentration.
+    #x_vals = model.mesh.coordinates()[:, 0]
+    #l = x_vals.shape[0]
+    #A_vals = numpy.sum(result['U'], axis=1)[0:2*l-1:2]
+    #B_vals = numpy.sum(result['U'], axis=1)[1:2*l:2]
+    #plt.plot(x_vals,A_vals,'.r',x_vals,B_vals,'.b')
+    #plt.legend(['A', 'B'])
+#plt.show()
+
+
 

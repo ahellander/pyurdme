@@ -32,7 +32,7 @@ class simple_diffusion2(URDMEModel):
     def __init__(self):
         URDMEModel.__init__(self,name="simple_diffusion2")
 
-        D = 0.1
+        D = 0.01
         A = Species(name="A",diffusion_constant=D,dimension=2)
         B = Species(name="B",diffusion_constant=0.1*D,dimension=1)
 
@@ -43,22 +43,27 @@ class simple_diffusion2(URDMEModel):
         mesh = dolfin.Mesh(c1,20)
         self.mesh = Mesh(mesh)
         
-        # Create a mesh function over vertices of the mesh
-        subdomains = dolfin.MeshFunction("size_t",self.mesh,self.mesh.topology().dim()-1)
-        subdomains.set_all(1)
+        # A mesh function for the cells
+        cell_function = dolfin.CellFunction("size_t",self.mesh)
+        cell_function.set_all(1)
+        
+        # Create a mesh function over then edges of the mesh
+        facet_function = dolfin.FacetFunction("size_t",self.mesh)
+        facet_function.set_all(0)
         
         # Mark the boundary points
         membrane = Membrane()
-        membrane.mark(subdomains,2)
+        membrane.mark(facet_function,2)
         
         membrane_patch = MembranePatch()
-        membrane_patch.mark(subdomains,3)
+        membrane_patch.mark(facet_function,3)
         
-        self.subdomains = [subdomains]
+        self.addSubDomain(cell_function)
+        self.addSubDomain(facet_function)
         
         # Restrict species A to the membrane subdomain
         self.restrict(species=B,subdomains=[2,3])
-        self.timespan(numpy.linspace(0,10,50))
+        self.timespan(numpy.linspace(0,1,50))
         
         # Place the A molecules in the voxel nearest to the center of the square
         self.placeNear({A:10000},point=[0,0])
@@ -68,9 +73,14 @@ class simple_diffusion2(URDMEModel):
 if __name__ == '__main__':
     
     model = simple_diffusion2()
-    result = urdme(model)
+    result = urdme(model,report_level=1)
     model.serialize("debug_input.mat")
+    U = result["U"]
+    
+    print numpy.sum(U[::2,:],axis=0)
+    
     # Dump timeseries in Paraview format
-    dumps(model,"B","B")
+    dumps(model,"B","Bout")
+    dumps(model,"A","Aout")
 
 

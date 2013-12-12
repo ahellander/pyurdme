@@ -61,6 +61,7 @@ class mincde(pyurdme.URDMEModel):
         #physical_region = dolfin.MeshFunction("size_t",self.mesh)
         #file_in >> physical_region
         
+<<<<<<< HEAD
         interior = dolfin.CellFunction("size_t",self.mesh)
         interior.set_all(1)
         #physical_region = dolfin.MeshFunction("size_t",self.mesh,self.mesh.topology().dim())
@@ -71,6 +72,15 @@ class mincde(pyurdme.URDMEModel):
         #       facet_function = dolfin.MeshFunction("size_t",self.mesh,self.mesh.topology().dim()-1)
         boundary.set_all(0)
         #   facet_function.set_all(0)
+=======
+        subdomains = dolfin.MeshFunction("size_t",self.mesh,self.mesh.topology().dim()-1)
+        subdomains.set_all(1)
+        #physical_region = dolfin.MeshFunction("size_t",self.mesh,self.mesh.topology().dim())
+        #physical_region.set_all(1)
+        
+        #facet_function = dolfin.MeshFunction("size_t",self.mesh,self.mesh.topology().dim()-1)
+        #facet_function.set_all(0)
+>>>>>>> f59518bfd2b9e48740870c9e4604218b11be656a
         # Mark the boundary points
         membrane = Membrane()
         # interior = Cytosol()

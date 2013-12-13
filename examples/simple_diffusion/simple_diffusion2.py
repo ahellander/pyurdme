@@ -32,9 +32,8 @@ class simple_diffusion2(URDMEModel):
     def __init__(self):
         URDMEModel.__init__(self,name="simple_diffusion2")
 
-        D = 0.1
-        A = Species(name="A",diffusion_constant=D,dimension=2)
-        B = Species(name="B",diffusion_constant=0.1*D,dimension=1)
+        A = Species(name="A",diffusion_constant=0.01,dimension=2)
+        B = Species(name="B",diffusion_constant=0.01,dimension=1)
 
         self.addSpecies([A,B])
 
@@ -63,7 +62,7 @@ class simple_diffusion2(URDMEModel):
         
         # Restrict species A to the membrane subdomain
         self.restrict(species=B,subdomains=[2,3])
-        self.timespan(numpy.linspace(0,100,50))
+        self.timespan(numpy.linspace(0,1,50))
         
         # Place the A molecules in the voxel nearest to the center of the square
         self.placeNear({A:10000},point=[0,0])

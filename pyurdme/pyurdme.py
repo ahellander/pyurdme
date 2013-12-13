@@ -430,15 +430,14 @@ class URDMEModel(Model):
             num_spec = spec_init[spec]
 
             # Find the voxel with center (vertex) nearest to the point
-
             reppoint = numpy.tile(point, (shape[0], 1))
             dist = numpy.sqrt(numpy.sum((coords-reppoint)**2, axis=1))
             ix = numpy.argmin(dist)
 
             species_map = self.speciesMap()
             specindx = species_map[spec_name]
-            dofind = self.xmesh.vertex_to_dof_map[spec_name][ix]
-            ix = (dofind - specindx) / len(species_map)
+            #dofind = self.xmesh.vertex_to_dof_map[spec_name][ix]
+            #ix = (dofind - specindx) / len(species_map)
             self.u0[specindx, ix] = num_spec
 
 
@@ -890,7 +889,6 @@ class URDMEResult(dict):
                     dof = voxel*len(self.model.listOfSpecies)+i
                     ix  = vertex_to_dof_map[voxel]
                     dolfvox = (ix-i)/len(self.model.listOfSpecies)
-                    # TODO: Divide copy number by volume to scale with voxel size.
                     func_vector[dolfvox] = float(self.U[dof,j]/self.model.vol[voxel])
                 
                 spec_sol[time] = func

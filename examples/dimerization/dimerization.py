@@ -33,7 +33,7 @@ class  dimerization(URDMEModel):
     R2 = Reaction(name="R2",reactants={C:1},products={A:1,B:1},massaction=True,rate=k2)
     self.addReaction([R1,R2])
 
-    self.mesh = read_dolfin_mesh('meshes/plane.xml')
+    self.mesh = Mesh.read_dolfin_mesh('meshes/plane.xml')
       
     # Assemble the subdomain vector.
 

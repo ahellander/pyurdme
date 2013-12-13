@@ -30,10 +30,6 @@ except Exception:
     ONLY_CARTESIAN = True
 
 
-class MeshImportError(Exception):
-    """ Exception to raise when encourntering and error importing a mesh. """
-    pass
-
 
 class URDMEModel(Model):
     """
@@ -50,7 +46,7 @@ class URDMEModel(Model):
         self.mesh = None
 
         # subdomins is a list of MeshFunctions with subdomain marker information
-        self.subdomains = {}
+        self.subdomains = OrderedDict()
 
         # This dictionary hold information about the subdomains each species is active on
         self.species_to_subdomains = {}
@@ -72,10 +68,10 @@ class URDMEModel(Model):
         return self.species_map
 
     def addSubDomain(self,subdomain):
-        try:
+        if not subdomain.dim() in self.subdomains.keys():
             self.subdomains[subdomain.dim()] = subdomain
-        except:
-            raise ModelError("Failed to add subdomain function of dimension"+str(subdomain.dim())+". Only one subdomain function per tompological dimension is allowed.")
+        else:
+            raise ModelException("Failed to add subdomain function of dim "+str(subdomain.dim())+". Only one subdomain function of a given dimension is allowed.")
 
     def createStoichiometricMatrix(self):
         """ Generate a stoichiometric matrix in sparse CSC format. """
@@ -274,7 +270,7 @@ class URDMEModel(Model):
         """
         # The unique elements of the subdomain MeshFunctions
         sds = []
-        for subdomain_dim,subdomain in self.subdomains.items():
+        for dim, subdomain in self.subdomains.items():
             sds = sds + list(np.unique(subdomain.array()).flatten())
         sds = np.unique(sds)
         sds = list(sds)
@@ -310,6 +306,11 @@ class URDMEModel(Model):
             and if no subdomain input is specified, they voxels default to
             subdomain 1. """
         
+        
+        # TODO: We need to make sure that the highest dimension is applied
+        #       first, otherwise the cell level will overwrite all markings
+        #       applied on boundaries.
+        
         if not hasattr(self,'xmesh'):
             self.meshextend()
     
@@ -317,13 +318,13 @@ class URDMEModel(Model):
        
         # TODO: Support arbitrary sd-numbers and more than one subdomain
         sd = numpy.zeros((1,self.mesh.getNumVoxels()))
-
         if subdomains == {}:
             self.sd = sd.flatten()
+            print subdomains
         else:
-            for subdomain_dim, subdomain in subdomains.items():
+            for dim,subdomain in subdomains.items():
                 # Map all facet labels to vertex labels
-                tovertex = self.mesh.topology()(subdomain.dim(),0)
+                tovertex = self.mesh.topology()(dim,0)
                 for i in range(subdomain.size()):
                     for vtx in tovertex(i):
                         if subdomain[i]!=0: # TODO: Temporary hack to fix issue with Gmesh facet_region files.
@@ -401,7 +402,7 @@ class URDMEModel(Model):
 
             ltab = len(table)
             if ltab == 0:
-                raise ModelException("scatter: No voxel was found in the subdomains on which the species is active, sd="+str(subdomains)+", please check subdomain marking.")
+                raise ModelException("scatter: No voxel in the given subdomains "+str(subdomains)+", check subdomain marking.")
             
             for mol in range(num_spec):
                 vtx = np.random.randint(0, ltab)
@@ -435,8 +436,8 @@ class URDMEModel(Model):
 
             species_map = self.speciesMap()
             specindx = species_map[spec_name]
-            # dofind = self.xmesh.vertex_to_dof_map[spec_name][ix]
-            #ix = (dofind - specindx) / len(species_map)
+            dofind = self.xmesh.vertex_to_dof_map[spec_name][ix]
+            ix = (dofind - specindx) / len(species_map)
             self.u0[specindx, ix] = num_spec
 
 
@@ -463,7 +464,7 @@ class URDMEModel(Model):
             stiffness_matrices = self.stiffness_matrices
             mass_matrices = self.mass_matrices
         except:
-            matrices = assemble(self)
+            matrices = self.assemble()
             self.stiffness_matrices = matrices['K']
             self.mass_matrices = matrices['M']
             stiffness_matrices = self.stiffness_matrices
@@ -476,26 +477,26 @@ class URDMEModel(Model):
         Nvoxels = self.mesh.getNumVoxels()
         Ndofs = Nvoxels*Mspecies
         S = scipy.sparse.dok_matrix((Ndofs,Ndofs))
-        species_map = self.speciesMap()
         
         # Create the volume vector by lumping the mass matrices
         vol = numpy.zeros((Ndofs,1))
+        spec = 0
         
         xmesh = self.xmesh
-        spec_map = self.speciesMap()
         
         for species,M in mass_matrices.iteritems():
             
             dof2vtx = xmesh.dof_to_vertex_map[species]
-            spec = species_map[species]
+            
             rows,cols,vals = M.data()
             SM = scipy.sparse.csr_matrix((vals,cols,rows))
             vols = SM.sum(axis=1)
             
+            spec = self.species_map[species]
             for j in range(len(vols)):
                 vx = dof2vtx[j]
-                global_dof = Mspecies*vx+spec
-                vol[global_dof,0]=vols[j]
+                dof = Mspecies*vx+spec
+                vol[dof,0]=vols[j]
 
         # This is necessary in order for the array to have the right dimension (Ndofs,1)
         vol = vol.flatten()
@@ -506,30 +507,38 @@ class URDMEModel(Model):
         positive_mass = 0.0
         total_mass = 0.0
         
+        
+        sd = self.sd
+        
         for species,K in stiffness_matrices.iteritems():
             
             rows,cols,vals = K.data()
             Kcrs = scipy.sparse.csr_matrix((vals,cols,rows))
+            #Kcsc = Kscr.tocsc()
             Kdok = Kcrs.todok()
-    
-            spec = species_map[species]
+            
             dof2vtx = xmesh.dof_to_vertex_map[species]
+            
             
             for entries in Kdok.items():
                 
                 ind = entries[0]
-    
-                dof = ind[0]
-                to_dof = ind[1]
-                vox = dof
-                to_vox = to_dof
-                #vox = dof2vtx[dof]
-                #to_vox = dof2vtx[to_dof]
+                ir = ind[0]
+                ij = ind[1]
+                # Permutation to make the matrix ordering match that 
+                ir = dof2vtx[ind[0]]
+                ij = dof2vtx[ind[1]]
                 
                 val = entries[1]
                 
-                # if it is not a diagnal entry
-                if vox != to_vox:
+                if ir != ij:
+                    
+                    # Check if this is an edge that the species should diffuse along,
+                    # if not, set the diffusion coefficient along this edge to zero. This is
+                    # equivalent to how boundary species are handled in the current Matlab interface.
+                    if sd[ir] not in self.species_to_subdomains[self.listOfSpecies[species]]:
+                        val = 0.0
+                    
                     if val > 0.0:
                         positive_mass += val
                         val = 0.0
@@ -537,17 +546,14 @@ class URDMEModel(Model):
                         total_mass += val
                 
                 # The volume can be zero, if the species is not active at the vertex (such as a 2D species at a 3D node)
-                global_vox  = vox * Mspecies + spec
-                global_to_vox  = to_vox * Mspecies + spec
-                
-                if vol[global_to_vox]==0.0:
-                    vi = 1.0
+                if vol[Mspecies*ij+spec]==0:
+                    vi = 1
                 else:
-                    vi = vol[global_to_vox]
+                    vi = vol[Mspecies*ij+spec]
                 
-                S[Mspecies*vox+spec,Mspecies*to_vox+spec]=-val/vi
+                S[Mspecies*ir+spec,Mspecies*ij+spec]=-val/vi
             
-            #spec = spec+1
+            spec = spec+1
         
         # Convert to compressed column for compatibility with the URDME solvers.
         D = S.tocsc()
@@ -647,22 +653,12 @@ class URDMEModel(Model):
         urdme_solver_data['p'] = self.mesh.getVoxels()
 
         # Connectivity matrix
-        urdme_solver_data['K'] = connectivityMatrix(self)
+        urdme_solver_data['K'] = self.connectivityMatrix()
 
-        rows,cols,vals = self.stiffness_matrices["B"].data()
-        SM = scipy.sparse.csr_matrix((vals,cols,rows))
-        urdme_solver_data["KB"] = SM.tocsc()
+        #rows,cols,vals = self.stiffness_matrices["MinD_m"].data()
+        #SM = scipy.sparse.csr_matrix((vals,cols,rows))
+        #urdme_solver_data["Kmindm"] = SM.tocsc()
 
-
-#dof2vtx = self.xmesh.dof_to_vertex_map["MinD_m"]
-#        dfv= numpy.zeros((self.mesh.getNumVoxels(),1),dtype="int")
-#        for j in range(self.mesh.getNumVoxels()):
-#            dfv[j] = int(dof2vtx[j]+1)
-#
-#        urdme_solver_data["dof2vtx"] = dfv
-#
-#        urdme_solver_data["Kt"] = self.stiffness_matrices["MinD_m"].data()
-#
         return urdme_solver_data
 
 
@@ -672,6 +668,76 @@ class URDMEModel(Model):
         urdme_solver_data = self.solverData()
         self.validate(urdme_solver_data)
         spio.savemat(filename, urdme_solver_data, oned_as='column')
+
+
+    def connectivityMatrix(self):
+        """ Assemble a connectivity matrix in CCS format. """
+        
+        fs = dolfin.FunctionSpace(self.mesh, "Lagrange", 1)
+        trial_function = dolfin.TrialFunction(fs)
+        test_function = dolfin.TestFunction(fs)
+        a_K = -1*dolfin.inner(dolfin.nabla_grad(trial_function), dolfin.nabla_grad(test_function)) * dolfin.dx
+        C = dolfin.assemble(a_K)
+        rows, cols, vals = C.data()
+        C = scipy.sparse.csr_matrix((vals, cols, rows))
+        C = C.tocsc()
+        return C
+
+    def assemble(self):
+        """  Assemble the mass and stiffness matrices using Dolfin.
+            
+            Returns: A dictionary containing two dictionaries, one for the stiffness matrices
+            and one for the mass matrices. Those dictionaries has the species names as keys and
+            the matrices are in CSR format.
+            """
+        
+        if not hasattr(self, 'xmesh'):
+            self.meshextend()
+        
+        self._initialize_species_to_subdomains()
+        
+        function_space = self.xmesh.function_space
+        trial_functions = OrderedDict()
+        test_functions = OrderedDict()
+        stiffness_matrices = OrderedDict()
+        mass_matrices = OrderedDict()
+        
+        # The maximum dimension that a species is active on (currently not used)
+        maxdim = 1
+        for spec in self.listOfSpecies:
+            dim = self.listOfSpecies[spec].dim()
+            if dim > maxdim:
+                maxdim = dim
+        
+        for spec in self.listOfSpecies:
+            trial_functions[spec] = dolfin.TrialFunction(function_space[spec])
+            test_functions[spec] = dolfin.TestFunction(function_space[spec])
+        
+        
+        weak_form_K = {}
+        weak_form_M = {}
+        
+        # Set up the forms
+        for spec_name, species in self.listOfSpecies.items():
+            
+            # Find out what subdomains this species is active on
+            subdomain_list = self.species_to_subdomains[species]
+            weak_form_K[spec_name] = dolfin.inner(dolfin.nabla_grad(trial_functions[spec_name]), dolfin.nabla_grad(test_functions[spec_name]))*dolfin.dx
+            weak_form_M[spec_name] = trial_functions[spec_name]*test_functions[spec_name]*dolfin.dx
+
+        # Assemble the matrices
+        for spec_name,species in self.listOfSpecies.items():
+            stiffness_matrices[spec_name] = dolfin.assemble(weak_form_K[spec_name])
+            # We cannot include the diffusion constant in the assembly, dolfin does not seem to deal well
+            # with small diffusion constants (drops small elements)
+            stiffness_matrices[spec_name] = species.diffusion_constant * stiffness_matrices[spec_name]
+            mass_matrices[spec_name] = dolfin.assemble(weak_form_M[spec_name])
+        
+        
+        return {'K':stiffness_matrices, 'M':mass_matrices}
+
+
+
 
 
 class Mesh(dolfin.Mesh):
@@ -686,157 +752,76 @@ class Mesh(dolfin.Mesh):
     def getVoxels(self):
         return self.coordinates()
 
-"""  Wrappers around dolfins built-in simple geometries/meshes.
+    """  Wrappers around dolfins built-in simple geometries/meshes.
 
-    These following methods will all give regular meshes that will produce discretizations that are
-    equivalent to Cartesian grids.
+        These following methods will all give regular meshes that will produce discretizations that are
+        equivalent to Cartesian grids.
 
-"""
-
-def unitIntervalMesh(nx):
-    mesh = dolfin.IntervalMesh(nx, 0, 1)
-    return Mesh(mesh)
-
-def IntervalMesh(nx, a, b):
-    mesh = dolfin.IntervalMesh(nx, a, b)
-    return Mesh(mesh)
-
-def unitSquareMesh(nx, ny):
-    """ Unit Square of with nx,ny points in the respective axes. """
-    mesh = dolfin.UnitSquareMesh(nx, ny)
-    return Mesh(mesh)
-
-def SquareMesh(L, nx, ny):
-    """ Regular mesh of a square with side length L. """
-    mesh = dolfin.RectangleMesh(0, 0, L, L, nx, ny)
-    return Mesh(mesh)
-
-def unitCubeMesh(nx, ny, nz):
-    """ Unit Square of with nx,ny points in the respective axes. """
-    mesh = dolfin.UnitCubeMesh(nx, ny, nz)
-    return Mesh(mesh)
-
-#def unitCircle(nx,ny):
-#    """ Unit Square of with nx,ny points in the respective axes. """
-#    mesh = dolfin.UnitCircleMesh(nx,ny)
-#    return Mesh(mesh)
-
-#def unitSphere(nx,ny):
-#    """ Unit Square of with nx,ny points in the respective axes. """
-#    mesh = dolfin.UnitSquareMesh(nx,ny)
-#    return Mesh(mesh)
-
-
-
-def read_gmsh_mesh(meshfile):
-
-    """ Read a Gmsh mesh from file. """
-    mr = GmshMeshReceiverBase()
-    try:
-        mesh = read_gmsh(mr, filename=meshfile)
-    except:
-        raise MeshImportError("Failed to import mesh: " + filename)
-
-    return mesh
-
-def read_dolfin_mesh(filename=None):
-    """ Import a mesh in Dolfins native .xml format """
-
-    try:
-        dolfin_mesh = dolfin.Mesh(filename)
-        mesh = Mesh(mesh=dolfin_mesh)
-        return mesh
-    except Exception as e:
-        raise MeshImportError("Failed to import mesh: " + filename+"\n" + str(e))
-
-
-def connectivityMatrix(model):
-    """ Assemble a connectivity matrix in CCS format. """
-
-    fs = dolfin.FunctionSpace(model.mesh, "Lagrange", 1)
-    trial_function = dolfin.TrialFunction(fs)
-    test_function = dolfin.TestFunction(fs)
-    a_K = -1*dolfin.inner(dolfin.nabla_grad(trial_function), dolfin.nabla_grad(test_function)) * dolfin.dx
-    C = dolfin.assemble(a_K)
-    rows, cols, vals = C.data()
-    C = scipy.sparse.csr_matrix((vals, cols, rows))
-    C = C.tocsc()
-
-    return C
-
-def assemble(model):
-    """  Assemble the mass and stiffness matrices using Dolfin.
-
-         Returns: A dictionary containing two dictionaries, one for the stiffness matrices
-                  and one for the mass matrices. The dictionaries contains assembled matrices for 
-                  each species (indexed by the species name). 
-                  
     """
 
-    if not hasattr(model, 'xmesh'):
-        model.meshextend()
+    @classmethod
+    def unitIntervalMesh(cls, nx):
+        mesh = dolfin.IntervalMesh(nx, 0, 1)
+        return Mesh(mesh)
 
-    model._initialize_species_to_subdomains()
+    @classmethod
+    def IntervalMesh(cls, nx, a, b):
+        mesh = dolfin.IntervalMesh(nx, a, b)
+        return Mesh(mesh)
 
-    function_space = model.xmesh.function_space
-    trial_functions = OrderedDict()
-    test_functions = OrderedDict()
-    stiffness_matrices = OrderedDict()
-    mass_matrices = OrderedDict()
+    @classmethod
+    def unitSquareMesh(cls, nx, ny):
+        """ Unit Square of with nx,ny points in the respective axes. """
+        mesh = dolfin.UnitSquareMesh(nx, ny)
+        return Mesh(mesh)
 
-    # Determine the maximum dimension of species, so we can use this
-    # to decide what measure to use on a given subdomain (dx,ds)
-    maxdim = 1
-    for spec in model.listOfSpecies:
-        dim = model.listOfSpecies[spec].dim()
-        if dim > maxdim:
-            maxdim = dim
+    @classmethod
+    def SquareMesh(cls, L, nx, ny):
+        """ Regular mesh of a square with side length L. """
+        mesh = dolfin.RectangleMesh(0, 0, L, L, nx, ny)
+        return Mesh(mesh)
 
-    # Create Test and Trial functions for each species defined on the function spaces.
-    for spec in model.listOfSpecies:
-        trial_functions[spec] = dolfin.TrialFunction(function_space[spec])
-        test_functions[spec] = dolfin.TestFunction(function_space[spec])
+    @classmethod
+    def unitCubeMesh(cls, nx, ny, nz):
+        """ Unit Square of with nx,ny points in the respective axes. """
+        mesh = dolfin.UnitCubeMesh(nx, ny, nz)
+        return Mesh(mesh)
 
-    # Dictionaries to hold the forms that will be assembled into the stiffness and mass matrices.
-    weak_form_K = {}
-    weak_form_M = {}
+    #@classmethod
+    #def unitCircle(cls, nx,ny):
+    #    """ Unit Square of with nx,ny points in the respective axes. """
+    #    mesh = dolfin.UnitCircleMesh(nx,ny)
+    #    return Mesh(mesh)
 
-    for spec_name, species in model.listOfSpecies.items():
-        spec_dim = species.dim()
-        
-        # Find out what subdomains this species is active on.
-        subdomain_list = model.species_to_subdomains[species]
-        
-        # Set up the weak forms. We integrate only over those subdomains where the species is active
-        # for i,subdomain in enumerate(model.subdomains):
+    #@classmethod
+    #def unitSphere(cls, nx,ny):
+    #    """ Unit Square of with nx,ny points in the respective axes. """
+    #    mesh = dolfin.UnitSquareMesh(nx,ny)
+    #    return Mesh(mesh)
+
+
+
+    @classmethod
+    def read_gmsh_mesh(cls, meshfile):
+        """ Read a Gmsh mesh from file. """
+        mr = GmshMeshReceiverBase()
         try:
-            dx = dolfin.Measure("dx")[model.subdomains[spec_dim]]
-        except Error,e:
-            raise ModelError("Could not define measure on subdomains for species "+spec_name + "." + str(e))
-        #if spec_dim == maxdim:
-        #    dx = dolfin.Measure("dx")[model.subdomains[0]]
-        #else:
-        #    dx = dolfin.Measure("dx")[model.subdomains[1]]
+            mesh = read_gmsh(mr, filename=meshfile)
+        except:
+            raise MeshImportError("Failed to import mesh: " + filename)
 
-        for j,sd in enumerate(subdomain_list):
-            if j==0:
-                print spec_name,sd
-                weak_form_K[spec_name] = dolfin.inner(dolfin.nabla_grad(trial_functions[spec_name]), dolfin.nabla_grad(test_functions[spec_name]))*dx(sd)
-                weak_form_M[spec_name] = trial_functions[spec_name] * test_functions[spec_name] * dx(sd)
-            else:
-                weak_form_K[spec_name] = weak_form_K[spec_name]+dolfin.inner(dolfin.nabla_grad(trial_functions[spec_name]), dolfin.nabla_grad(test_functions[spec_name]))*dx(sd)
-                weak_form_M[spec_name] = weak_form_M[spec_name]+trial_functions[spec_name] * test_functions[spec_name] * dx(sd)
+        return mesh
 
-    # Assemble the stiffness and mass matrices
-    for spec_name,species in model.listOfSpecies.items():
-        stiffness_matrices[spec_name] = dolfin.assemble(weak_form_K[spec_name])
-        # We cannot include the diffusion constant in the assembly, dolfin does not seem to deal well
-        # with small diffusion constants (drops small elements)
-        stiffness_matrices[spec_name] = species.diffusion_constant * stiffness_matrices[spec_name]
-        mass_matrices[spec_name] = dolfin.assemble(weak_form_M[spec_name])
+    @classmethod
+    def read_dolfin_mesh(cls, filename=None):
+        """ Import a mesh in Dolfins native .xml format """
 
-
-    return {'K':stiffness_matrices, 'M':mass_matrices}
+        try:
+            dolfin_mesh = dolfin.Mesh(filename)
+            mesh = Mesh(mesh=dolfin_mesh)
+            return mesh
+        except Exception as e:
+            raise MeshImportError("Failed to import mesh: " + filename+"\n" + str(e))
 
 
 class Xmesh():
@@ -851,116 +836,178 @@ class Xmesh():
         self.vertex_to_dof_map = {}
         self.dof_to_vertex_map = {}
 
-def dumps(model,species,foldername):
-    """ Dump the trajectory of species to a collection of vtk files """
-    subprocess.call(["mkdir",foldername])
-    func = dolfin.Function(dolfin.FunctionSpace(model.mesh,"Lagrange",1))
-    func_vector = func.vector()
-    file=dolfin.File(foldername+"/trajectory.pvd")
-    numvox = model.mesh.getNumVoxels()
+class URDMEResult(dict):
+    """ Result object for a URDME simulation, extendes the dict object. """
+    
+    def __init__(self, model, filename=None):
+        self.model = model
+        self.sol = None
+        self.U = None
+        self.tspan = None
+        if filename is not None:
+            self.read_solution(filename)
+    
+    def __setattr__(self, k, v):
+        if k in self.keys():
+            self[k] = v
+        elif not hasattr(self, k):
+            self[k] = v
+        else:
+            raise AttributeError, "Cannot set '%s', cls attribute already exists" % ( k, )
+    
+    def __getattr__(self, k):
+        if k == 'sol':
+            ret = self.get('sol')
+            if ret is None:
+                return self.initialize_sol()
+            return ret
+        if k in self.keys():
+            return self[k]
+        raise AttributeError
+    
+    def _initialize_sol(self):
+        """ Initialize the sol variable. """
+        # Create Dolfin Functions for all the species
+        sol = {}
+        
+        dims = self.U.shape
+        numvox = self.model.mesh.getNumVoxels()
+        # The result is loaded in dolfin Functions, one for each species and time point
+        for i,spec in enumerate(self.model.listOfSpecies):
+            
+            species = self.model.listOfSpecies[spec]
+            spec_name = species.name
+            dof_to_vertex_map = self.model.xmesh.dof_to_vertex_map[spec]
+            vertex_to_dof_map = self.model.xmesh.vertex_to_dof_map[spec]
+            
+            spec_sol = {}
+            for j,time in enumerate(self.tspan):
+                func = dolfin.Function(dolfin.FunctionSpace(self.model.mesh,"Lagrange",1))
+                func_vector = func.vector()
+                
+                for voxel in range(numvox):
+                    dof = voxel*len(self.model.listOfSpecies)+i
+                    ix  = vertex_to_dof_map[voxel]
+                    dolfvox = (ix-i)/len(self.model.listOfSpecies)
+                    # TODO: Divide copy number by volume to scale with voxel size.
+                    func_vector[dolfvox] = float(self.U[dof,j])
+                
+                spec_sol[time] = func
+            
+            sol[spec] = spec_sol
+        self.sol = sol
+        return sol
 
-    for i,time in enumerate(model.tspan):
-        #outfile = open(foldername+"/"+filename+"."+str(i),"w")
-        solvector = (model.sol[species][time]).vector()
-        for dof in range(numvox):
-            func_vector[dof] = solvector[dof]
-        file << func
+    def dumps(self,species,folder_name):
+        """ Dump the trajectory of species to a collection of vtk files """
+        self._initialize_sol()
+        subprocess.call(["mkdir","-p",folder_name])
+        func = dolfin.Function(dolfin.FunctionSpace(self.model.mesh,"Lagrange",1))
+        func_vector = func.vector()
+        file=dolfin.File(folder_name+"/trajectory.pvd")
+        numvox = self.model.mesh.getNumVoxels()
+
+        for i,time in enumerate(self.tspan):
+            solvector = (self.sol[species][time]).vector()
+            for dof in range(numvox):
+                func_vector[dof] = solvector[dof]
+            file << func
 
 
 
-def toXYZ(model, filename, file_format="ParaView"):
-    """ Dump the solution attached to a model as a xyz file. This format can be
-        read by e.g. VMD, Jmol and Paraview. """
+    def toXYZ(self, filename, file_format="ParaView"):
+        """ Dump the solution attached to a model as a xyz file. This format can be
+            read by e.g. VMD, Jmol and Paraview. """
 
-    if 'U' not in model.__dict__:
-        raise URDMEError("No solution found in the model.")
+        if self.U is None:
+            raise URDMEError("No solution found in the model.")
 
-    #outfile = open(filename,"w")
-    dims = numpy.shape(model.U)
-    Ndofs = dims[0]
-    Mspecies = len(model.listOfSpecies)
-    Ncells = Ndofs / Mspecies
+        #outfile = open(filename,"w")
+        dims = numpy.shape(self.U)
+        Ndofs = dims[0]
+        Mspecies = len(self.model.listOfSpecies)
+        Ncells = Ndofs / Mspecies
 
-    coordinates = model.mesh.getVoxels()
-    coordinatestr = coordinates.astype(str)
+        coordinates = self.model.mesh.getVoxels()
+        coordinatestr = coordinates.astype(str)
 
-    if file_format == "VMD":
-        outfile = open(filename, "w")
-        filestr = ""
-        for i, time in enumerate(model.tspan):
-            number_of_atoms = numpy.sum(model.U[:, i])
-            filestr += (str(number_of_atoms) + "\n" + "timestep " + str(i) + " time " + str(time) + "\n")
-            for j, spec in enumerate(model.listOfSpecies):
-                for k in range(Ncells):
-                    for mol in range(model.U[k * Mspecies + j, i]):
-                        linestr = spec + "\t" + '\t'.join(coordinatestr[k, :]) + "\n"
-                        filestr += linestr
-
-        outfile.write(filestr)
-        outfile.close()
-
-    elif file_format == "ParaView":
-        foldername = filename
-        os.mkdir(foldername)
-        for i, time in enumerate(model.tspan):
-            outfile = open(foldername + "/" + filename + "." + str(i), "w")
-            number_of_atoms = numpy.sum(model.U[:, i])
+        if file_format == "VMD":
+            outfile = open(filename, "w")
             filestr = ""
-            filestr += (str(number_of_atoms) + "\n" + "timestep " + str(i) + " time " + str(time) + "\n")
-            for j, spec in enumerate(model.listOfSpecies):
+            for i, time in enumerate(self.tspan):
+                number_of_atoms = numpy.sum(self.U[:, i])
+                filestr += (str(number_of_atoms) + "\n" + "timestep " + str(i) + " time " + str(time) + "\n")
+                for j, spec in enumerate(self.model.listOfSpecies):
+                    for k in range(Ncells):
+                        for mol in range(self.U[k * Mspecies + j, i]):
+                            linestr = spec + "\t" + '\t'.join(coordinatestr[k, :]) + "\n"
+                            filestr += linestr
+
+            outfile.write(filestr)
+            outfile.close()
+
+        elif file_format == "ParaView":
+            foldername = filename
+            os.mkdir(foldername)
+            for i, time in enumerate(self.tspan):
+                outfile = open(foldername + "/" + filename + "." + str(i), "w")
+                number_of_atoms = numpy.sum(self.U[:, i])
+                filestr = ""
+                filestr += (str(number_of_atoms) + "\n" + "timestep " + str(i) + " time " + str(time) + "\n")
+                for j, spec in enumerate(self.model.listOfSpecies):
+                    for k in range(Ncells):
+                        for mol in range(model.U[k * Mspecies + j, i]):
+                            linestr = spec + "\t" + '\t'.join(coordinatestr[k, :]) + "\n"
+                            filestr += linestr
+                outfile.write(filestr)
+                outfile.close()
+
+    def toCSV(self, filename):
+        """ Dump the solution attached to a model as a .csv file. """
+        #TODO: Make this work for 2D meshes with only two coordinates.
+
+        if self.U is None:
+            raise URDMEError("No solution found in the model.")
+
+        dims = numpy.shape(self.U)
+        Ndofs = dims[0]
+        Mspecies = len(self.model.listOfSpecies)
+        Ncells = Ndofs/Mspecies
+
+        coordinates = self.model.mesh.getVoxels()
+        coordinatestr = coordinates.astype(str)
+        subprocess.call(["mkdir","-p", filename])
+        for i, time in enumerate(self.tspan):
+            outfile = open(filename + '/' + filename + str(i) + ".csv", "w")
+            number_of_atoms = numpy.sum(self.U[:, i])
+            filestr = "xcoord,ycoord,zcoord,radius,type\n"
+            for j, spec in enumerate(self.model.listOfSpecies):
                 for k in range(Ncells):
-                    for mol in range(model.U[k * Mspecies + j, i]):
-                        linestr = spec + "\t" + '\t'.join(coordinatestr[k, :]) + "\n"
+                    for mol in range(self.U[k * Mspecies + j, i]):
+                        obj = self.model.listOfSpecies[spec]
+                        reaction_radius = obj.reaction_radius
+                        linestr = coordinatestr[k, 0] + "," + coordinatestr[k, 1] + "," + coordinatestr[k, 2] + "," + str(reaction_radius) + "," + str(j) + "\n"
                         filestr += linestr
             outfile.write(filestr)
             outfile.close()
 
-def toCSV(model, filename):
-    """ Dump the solution attached to a model as a .csv file. """
-    #TODO: Make this work for 2D meshes with only two coordinates.
 
-    if 'U' not in model.__dict__:
-        raise URDMEError("No solution found in the model.")
+    def read_solution(self, filename):
 
-    dims = numpy.shape(model.U)
-    Ndofs = dims[0]
-    Mspecies = len(model.listOfSpecies)
-    Ncells = Ndofs/Mspecies
+        resultfile = h5py.File(filename, 'r')
 
-    coordinates = model.mesh.getVoxels()
-    coordinatestr = coordinates.astype(str)
-    subprocess.call(["mkdir", filename])
-    for i, time in enumerate(model.tspan):
-        outfile = open(filename + '/' + filename + str(i) + ".csv", "w")
-        number_of_atoms = numpy.sum(model.U[:, i])
-        filestr = "xcoord,ycoord,zcoord,radius,type\n"
-        for j, spec in enumerate(model.listOfSpecies):
-            for k in range(Ncells):
-                for mol in range(model.U[k * Mspecies + j, i]):
-                    obj = model.listOfSpecies[spec]
-                    reaction_radius = obj.reaction_radius
-                    linestr = coordinatestr[k, 0] + "," + coordinatestr[k, 1] + "," + coordinatestr[k, 2] + "," + str(reaction_radius) + "," + str(j) + "\n"
-                    filestr += linestr
-        outfile.write(filestr)
-        outfile.close()
+        U = resultfile['U']
+        U = numpy.array(U)
+        # This little hack makes U have the same structure as in the Matlab interface...
+        dims = numpy.shape(U)
+        U = U.reshape((dims[1], dims[0]))
+        U = U.transpose()
 
-
-def read_solution(filename):
-
-    resultfile = h5py.File(filename, 'r')
-
-    U = resultfile['U']
-    U = numpy.array(U)
-    # This little hack makes U have the same structure as in the Matlab interface...
-    dims = numpy.shape(U)
-    U = U.reshape((dims[1], dims[0]))
-    U = U.transpose()
-
-    tspan = resultfile['tspan']
-    tspan = numpy.array(tspan).flatten()
-    resultfile.close()
-
-    return {'U':U, 'tspan':tspan}
+        tspan = resultfile['tspan']
+        tspan = numpy.array(tspan).flatten()
+        resultfile.close()
+        self.U = U
+        self.tspan = tspan
 
 
 def urdme(model=None, solver='nsm', solver_path="", model_file=None, input_file=None, seed=None, report_level=0):
@@ -1049,49 +1096,14 @@ def urdme(model=None, solver='nsm', solver_path="", model_file=None, input_file=
         urdme_solver_cmd.append(str(seed))
     if report_level >= 1:
         print 'cmd: {0}\n'.format(urdme_solver_cmd)
-    handle = subprocess.Popen(urdme_solver_cmd,stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    handle = subprocess.Popen(urdme_solver_cmd)
     return_code = handle.wait()
-
     if return_code != 0:
-        print handle.stderr.read()
-        print handle.stdout.read()
-        raise URDMEError("Solver execution failed: ")
+        raise URDMEError("Solver execution failed")
 
     #Load the result from the hdf5 output file.
     try:
-        result = read_solution(outfile.name)
-        U = result['U']
-        tspan = result['tspan']
-        model.U = U
-        spio.savemat("debug_output.mat",{"U":U,"tspan":tspan})
-
-        # Create Dolfin Functions for all the species
-        model.sol = {}
-   
-        dims = U.shape
-        numvox = model.mesh.getNumVoxels()
-        # The result is loaded in dolfin Functions, one for each species and time point
-        for i,spec in enumerate(model.listOfSpecies):
-    
-            species = model.listOfSpecies[spec]
-            spec_name = species.name
-            dof_to_vertex_map = model.xmesh.dof_to_vertex_map[spec]
-            vertex_to_dof_map = model.xmesh.vertex_to_dof_map[spec]
-
-            spec_sol = {}
-            for j,time in enumerate(tspan):
-                func = dolfin.Function(dolfin.FunctionSpace(model.mesh,"Lagrange",1))
-                func_vector = func.vector()
-            
-                for voxel in range(numvox):
-                    dof = voxel*len(model.listOfSpecies)+i
-                    ix  = vertex_to_dof_map[voxel]
-                    dolfvox = (ix-i)/len(model.listOfSpecies)
-                    func_vector[dolfvox] = float(U[dof,j])
-                
-                spec_sol[time] = func
-            
-            model.sol[spec] = spec_sol
+        result = URDMEResult(model, outfile.name)
 
         # Clean up
         if input_file is None:
@@ -1099,7 +1111,9 @@ def urdme(model=None, solver='nsm', solver_path="", model_file=None, input_file=
         os.remove(outfile.name)
 
         #return dict({"Status":"Sucess","stdout":handle.stdout.read(),"stderr":handle.stderr.read()},**result)
-        return dict({"Status":"Sucess"}, **result)
+        #return dict({"Status":"Sucess"}, **result)
+        result["Status"] = "Sucess"
+        return result
 
     except Exception as e:
         exc_info = sys.exc_info()
@@ -1110,15 +1124,22 @@ def urdme(model=None, solver='nsm', solver_path="", model_file=None, input_file=
         raise exc_info[1], None, exc_info[2]
 
 
+
+class MeshImportError(Exception):
+    """ Exception to raise when encourntering and error importing a mesh. """
+    pass
+
 class URDMEError(Exception):
     pass
 
 class ModelException(Exception):
     pass
 
-
 class InvalidSystemMatrixException(Exception):
     pass
 
 
+
+if __name__ == '__main__':
+    """ Command line interface to URDME. Execute URDME given a model file. """
 

@@ -41,11 +41,12 @@ class cylinderDemo3D(pyurdme.URDMEModel):
         self.mesh = pyurdme.Mesh(mesh=dolfin.Mesh(cylinder, 32))
         # Define Subdomains
         subdomains = dolfin.MeshFunction("size_t", self.mesh, self.mesh.topology().dim()-1)
+        #subdomains = dolfin.CellFunction("size_t",self.mesh)
         subdomains.set_all(1)
         # Mark the boundary points
         Edge1().mark(subdomains,2)
         Edge2().mark(subdomains,3)
-        self.subdomains = [subdomains]
+        self.addSubDomain(subdomains)
         # Define Reactions
         R1 = pyurdme.Reaction(name="R1", reactants=None, products={A:1}, 
            massaction=True, rate=k_creat, restrict_to=2)
@@ -65,8 +66,8 @@ if __name__ == "__main__":
     # This line here dumps the state of A at all timepoints to Paraview comaptible output (VTK). The trajectory
     # is written to a folder "Aout", where each snapshot is stored in a separate file. To open the "movie",
     # just open Aout/trajectory.pvd, then you can animate etc.
-    result.dumps(species='A',foldername="Aout")
-    result.dumps(species='B',foldername="Bout")
+    result.dumps(species='A',folder_name="Aout")
+    result.dumps(species='B',folder_name="Bout")
 
     #print result
 

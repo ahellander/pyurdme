@@ -32,8 +32,8 @@ class simple_diffusion2(URDMEModel):
     def __init__(self):
         URDMEModel.__init__(self,name="simple_diffusion2")
 
-        A = Species(name="A",diffusion_constant=0.01,dimension=2)
-        B = Species(name="B",diffusion_constant=0.01,dimension=1)
+        A = Species(name="A",diffusion_constant=0.1,dimension=2)
+        B = Species(name="B",diffusion_constant=0.1,dimension=1)
 
         self.addSpecies([A,B])
 
@@ -60,13 +60,18 @@ class simple_diffusion2(URDMEModel):
         self.addSubDomain(cell_function)
         self.addSubDomain(facet_function)
         
-        # Restrict species A to the membrane subdomain
+        k1 = Parameter(name="k1",expression=100.0)
+        self.addParameter([k1])
+        R1 = Reaction(name="R1",reactants={A:1},products={B:1},massaction=True,rate=k1,restrict_to=3)
+        self.addReaction([R1])
+        
+        # Restrict species B to the membrane subdomain
         self.restrict(species=B,subdomains=[2,3])
         self.timespan(numpy.linspace(0,1,50))
         
         # Place the A molecules in the voxel nearest to the center of the square
         self.placeNear({A:10000},point=[0,0])
-        self.scatter({B:10000},subdomains=[3])
+        #self.scatter({B:10000},subdomains=[3])
         
 
 if __name__ == '__main__':
@@ -76,7 +81,8 @@ if __name__ == '__main__':
     model.serialize("debug_input.mat")
     U = result["U"]
     
-    #print numpy.sum(U[::2,:],axis=0)
+    print numpy.sum(U[1::2,:],axis=0)
+    print numpy.sum(U[::2,:],axis=0)
     
     # Dump timeseries in Paraview format
     result.dumps(species="B",folder_name="Bout")

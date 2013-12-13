@@ -30,20 +30,17 @@ class mincde(pyurdme.URDMEModel):
         MinD_e     = pyurdme.Species(name="MinD_e",diffusion_constant=2.5e-12,dimension=3)
         MinDE      = pyurdme.Species(name="MinDE",diffusion_constant=1e-14,dimension=2)
         
-        self.addSpecies([MinD_m,MinD_c_atp,MinD_c_adp,MinD_e,MinDE])        
+        self.addSpecies([MinD_m,MinD_c_atp,MinD_c_adp,MinD_e,MinDE])
         self.mesh = pyurdme.Mesh.read_dolfin_mesh("mesh/coli.xml")
         
-        # Read the facet and interior cell physical domain markers into a Dolfin MeshFunction
-        
-        # TODO:  There is an issue here in that FeniCS dolfin-convert writes the value 0 for all the faces that
-        # are not on the boundary. I think we migth have to write our own Gmsh2Dolfin converter.
+        # Read the facet and interior cell physical domain markers into Dolfin MeshFunctions
         #file_in = dolfin.File("mesh/coli_facet_region.xml")
-        #facet_function = dolfin.MeshFunction("size_t",self.mesh)
-        #file_in >> facet_function
+        #boundary = dolfin.FacetFunction("size_t",self.mesh)
+        #file_in >> boundary
         
         #file_in = dolfin.File("mesh/coli_physical_region.xml")
-        #physical_region = dolfin.MeshFunction("size_t",self.mesh)
-        #file_in >> physical_region
+        #interior = dolfin.CellFunction("size_t",self.mesh)
+        #file_in >> interior
         
         interior = dolfin.CellFunction("size_t",self.mesh)
         interior.set_all(1)
@@ -51,7 +48,7 @@ class mincde(pyurdme.URDMEModel):
         boundary.set_all(0)
         # Mark the boundary points
         membrane = Membrane()
-        membrane.mark(boundary,74)
+        membrane.mark(boundary,2)
         
         self.addSubDomain(interior)
         self.addSubDomain(boundary)
@@ -72,7 +69,8 @@ class mincde(pyurdme.URDMEModel):
         self.addParameter([NA,sigma_d,sigma_dD,sigma_e,sigma_de,sigma_dt])
 
         # List of Physical domain markers that match those in the  Gmsh .geo file.
-        boundary = [74]
+        interior = [1]
+        boundary = [2]
         
         # Reactions
         R1 = pyurdme.Reaction(name="R1",reactants={MinD_c_atp:1},products={MinD_m:1},massaction=True,rate=sigma_d, restrict_to=boundary)
@@ -88,9 +86,10 @@ class mincde(pyurdme.URDMEModel):
         self.restrict(MinD_m,boundary)
         self.restrict(MinDE,boundary)
         
-        # Distribute molecules randomly over the mesh according to their initial values
+        # Distribute molecules over the mesh according to their initial values
+        #self.scatter({MinD_m:1000},subdomains=boundary)
         self.scatter({MinD_c_adp:4500})
-        self.scatter({MinD_e:1575},subdomains=boundary)
+        self.scatter({MinD_e:1575})
 
         self.timespan(range(400))
 
@@ -102,7 +101,8 @@ if __name__=="__main__":
     result = pyurdme.urdme(model)
 
     U = result["U"]
-    #print numpy.sum(U[::5,:],axis=0)
+    
+    
     result.dumps("MinD_m","mindout")
     #result.toXYZ('mindm.xyz',file_format="VMD")
     

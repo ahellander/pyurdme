@@ -280,7 +280,6 @@ class URDMEModel(Model):
         for i, sd in enumerate(sds):
             sds[i] = int(sd)
         
-        
         # This conversion is necessary for UFL not to choke on the subdomain ids.
         for i,sd in enumerate(sds):
             sds[i]=int(sd)
@@ -295,7 +294,6 @@ class URDMEModel(Model):
             species = self.listOfSpecies[spec_name]
             if species not in self.species_to_subdomains.keys():
                 self.species_to_subdomains[species] = sds
-
 
 
     def restrict(self, species, subdomains):
@@ -507,15 +505,18 @@ class URDMEModel(Model):
         positive_mass = 0.0
         total_mass = 0.0
         
-        
-        sd = self.sd
-        
+        try:
+            sd = self.sd
+        except:
+            sd = self.subdomainVector(self.subdomains)
+       
         for species,K in stiffness_matrices.iteritems():
             
             rows,cols,vals = K.data()
             Kcrs = scipy.sparse.csr_matrix((vals,cols,rows))
             #Kcsc = Kscr.tocsc()
             Kdok = Kcrs.todok()
+            print species,self.species_to_subdomains[self.listOfSpecies[species]]
             
             dof2vtx = xmesh.dof_to_vertex_map[species]
             

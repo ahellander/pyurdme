@@ -56,7 +56,7 @@ class cylinderDemo3D(pyurdme.URDMEModel):
         self.addReaction([R1, R2, R3])
 
         # Define simulation timespan
-        self.timespan(range(100))
+        self.timespan(range(200))
 
 
 if __name__ == "__main__":
@@ -75,7 +75,8 @@ if __name__ == "__main__":
     l = x_vals.shape[0]
     A_vals = numpy.sum(result['U'], axis=1)[0:2*l-1:2]
     B_vals = numpy.sum(result['U'], axis=1)[1:2*l:2]
-    plt.plot(x_vals,A_vals,'.r',x_vals,B_vals,'.b')
+    #plt.plot(x_vals,A_vals,'.r',x_vals,B_vals,'.b')
+    plt.plot(x_vals,A_vals/model.vol,'.r',x_vals,B_vals/model.vol,'.b')
     plt.legend(['A', 'B'])
     plt.show()
 

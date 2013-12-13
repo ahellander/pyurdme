@@ -891,7 +891,7 @@ class URDMEResult(dict):
                     ix  = vertex_to_dof_map[voxel]
                     dolfvox = (ix-i)/len(self.model.listOfSpecies)
                     # TODO: Divide copy number by volume to scale with voxel size.
-                    func_vector[dolfvox] = float(self.U[dof,j])
+                    func_vector[dolfvox] = float(self.U[dof,j]/self.model.vol[voxel])
                 
                 spec_sol[time] = func
             

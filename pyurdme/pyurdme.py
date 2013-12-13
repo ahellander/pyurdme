@@ -514,19 +514,17 @@ class URDMEModel(Model):
             
             rows,cols,vals = K.data()
             Kcrs = scipy.sparse.csr_matrix((vals,cols,rows))
-            #Kcsc = Kscr.tocsc()
             Kdok = Kcrs.todok()
-            print species,self.species_to_subdomains[self.listOfSpecies[species]]
             
             dof2vtx = xmesh.dof_to_vertex_map[species]
-            
             
             for entries in Kdok.items():
                 
                 ind = entries[0]
                 ir = ind[0]
                 ij = ind[1]
-                # Permutation to make the matrix ordering match that 
+                
+                # Permutation to make the matrix ordering match that of sd, u0. (Dolfin dof -> URDME dof)
                 ir = dof2vtx[ind[0]]
                 ij = dof2vtx[ind[1]]
                 
@@ -1110,8 +1108,6 @@ def urdme(model=None, solver='nsm', solver_path="", model_file=None, input_file=
             os.remove(infile.name)
         os.remove(outfile.name)
 
-        #return dict({"Status":"Sucess","stdout":handle.stdout.read(),"stderr":handle.stderr.read()},**result)
-        #return dict({"Status":"Sucess"}, **result)
         result["Status"] = "Sucess"
         return result
 

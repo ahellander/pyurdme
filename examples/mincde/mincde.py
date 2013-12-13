@@ -61,7 +61,7 @@ class mincde(pyurdme.URDMEModel):
         # Parameters
         NA = pyurdme.Parameter(name="NA",expression="6.022e23")
         sigma_d  = pyurdme.Parameter(name="sigma_d",expression=2.5e-8/hmin)
-        sigma_dD = pyurdme.Parameter(name="sigma_dD",expression="9.0e6/(1000.0*NA)")
+        sigma_dD = pyurdme.Parameter(name="sigma_dD",expression="9.0e5/(1000.0*NA)")
         sigma_e  = pyurdme.Parameter(name="sigma_e",expression="5.56e7/(1000.0*NA)")
         sigma_de = pyurdme.Parameter(name="sigma_de",expression=0.7)
         sigma_dt = pyurdme.Parameter(name="sigma_dt",expression=1.0)

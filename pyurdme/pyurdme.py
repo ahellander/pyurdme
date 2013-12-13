@@ -52,6 +52,7 @@ class URDMEModel(Model):
         self.species_to_subdomains = {}
 
         self.tspan = None
+        self.vol = None
 
     def __initializeSpeciesMap(self):
         i = 0
@@ -628,9 +629,9 @@ class URDMEModel(Model):
         urdme_solver_data['dofvolumes'] = vol
         
         #TODO: Make use of all dofs values, requires modification of CORE URDME...
-        vol = vol[1::len(self.listOfSpecies)]
+        self.vol = vol[1::len(self.listOfSpecies)]
 
-        urdme_solver_data['vol'] = vol
+        urdme_solver_data['vol'] = self.vol
         D = result['D']
         urdme_solver_data['D'] = D
 

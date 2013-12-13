@@ -26,7 +26,7 @@ class cylinderDemo3D(pyurdme.URDMEModel):
         pyurdme.URDMEModel.__init__(self, model_name)
 
         # System constants
-        D_const = 0.01
+        D_const = 0.1
         k_react = pyurdme.Parameter(name="k_react", expression=1)
         k_creat = pyurdme.Parameter(name="k_creat", expression=200)
         self.addParameter([k_react, k_creat])
@@ -56,7 +56,7 @@ class cylinderDemo3D(pyurdme.URDMEModel):
         self.addReaction([R1, R2, R3])
 
         # Define simulation timespan
-        self.timespan(range(100))
+        self.timespan(range(200))
 
 
 if __name__ == "__main__":
@@ -65,23 +65,20 @@ if __name__ == "__main__":
     # This line here dumps the state of A at all timepoints to Paraview comaptible output (VTK). The trajectory
     # is written to a folder "Aout", where each snapshot is stored in a separate file. To open the "movie",
     # just open Aout/trajectory.pvd, then you can animate etc.
-<<<<<<< HEAD
-    pyurdme.dumps(model,species='A',foldername="Aout")
-=======
     result.dumps(species='A',foldername="Aout")
     result.dumps(species='B',foldername="Bout")
->>>>>>> 392d109aa45fc8887851b713134ef215a07a90fe
 
     #print result
 
     # Plot of the time-average spatial concentration.
-    #x_vals = model.mesh.coordinates()[:, 0]
-    #l = x_vals.shape[0]
-    #A_vals = numpy.sum(result['U'], axis=1)[0:2*l-1:2]
-    #B_vals = numpy.sum(result['U'], axis=1)[1:2*l:2]
+    x_vals = model.mesh.coordinates()[:, 0]
+    l = x_vals.shape[0]
+    A_vals = numpy.sum(result['U'], axis=1)[0:2*l-1:2]
+    B_vals = numpy.sum(result['U'], axis=1)[1:2*l:2]
     #plt.plot(x_vals,A_vals,'.r',x_vals,B_vals,'.b')
-    #plt.legend(['A', 'B'])
-#plt.show()
+    plt.plot(x_vals,A_vals/model.vol,'.r',x_vals,B_vals/model.vol,'.b')
+    plt.legend(['A', 'B'])
+    plt.show()
 
 
 

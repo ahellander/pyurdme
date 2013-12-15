@@ -913,7 +913,7 @@ class URDMEResult(dict):
 
 
 
-    def toXYZ(self, filename, file_format="ParaView"):
+    def toXYZ(self, filename, species=None, file_format="VMD"):
         """ Dump the solution attached to a model as a xyz file. This format can be
             read by e.g. VMD, Jmol and Paraview. """
 
@@ -929,15 +929,20 @@ class URDMEResult(dict):
         coordinates = self.model.mesh.getVoxels()
         coordinatestr = coordinates.astype(str)
 
+        if species == None:
+            species = list(self.model.listOfSpecies.keys())
+
         if file_format == "VMD":
             outfile = open(filename, "w")
             filestr = ""
             for i, time in enumerate(self.tspan):
                 number_of_atoms = numpy.sum(self.U[:, i])
                 filestr += (str(number_of_atoms) + "\n" + "timestep " + str(i) + " time " + str(time) + "\n")
-                for j, spec in enumerate(self.model.listOfSpecies):
+                for j, spec in enumerate(species):
                     for k in range(Ncells):
                         for mol in range(self.U[k * Mspecies + j, i]):
+                            # Sample a random position in a sphere of radius computed from the voxel volume
+                            # TODO: Sample volume
                             linestr = spec + "\t" + '\t'.join(coordinatestr[k, :]) + "\n"
                             filestr += linestr
 

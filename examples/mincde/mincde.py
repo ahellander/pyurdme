@@ -91,7 +91,7 @@ class mincde(pyurdme.URDMEModel):
         self.scatter({MinD_c_adp:4500})
         self.scatter({MinD_e:1575})
 
-        self.timespan(range(400))
+        self.timespan(range(50))
 
 if __name__=="__main__":
     """ Dump model to a file. """
@@ -99,10 +99,7 @@ if __name__=="__main__":
     model = mincde(model_name="mincde")
     model.serialize("debug_input.mat")
     result = pyurdme.urdme(model)
-
-    U = result["U"]
-    
-    
     result.dumps("MinD_m","mindout")
+    result.toXYZ(filename="mindm.xyz",species=["MinD_m"])
     #result.toXYZ('mindm.xyz',file_format="VMD")
     

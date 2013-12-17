@@ -1025,12 +1025,15 @@ def urdme(model=None, solver='nsm', solver_path="", model_file=None, input_file=
 
     # Set URDME_ROOT. This will fail if URDME is not installed on the system.
     try:
-        URDME_ROOT = subprocess.check_output(['urdme_init', '-r'])
+        #URDME_ROOT = subprocess.check_output(['urdme_init', '-r'])
+        urdme_init = subprocess.check_output(['which','urdme_init']).strip()
+        path = os.readlink(urdme_init)
+        if not path.endswith('/urdme/bin/urdme_init'):
+          raise Exception('path={0}\n'.format(path))
+        URDME_ROOT = path.replace('bin/urdme_init','')
     except Exception as e:
         raise URDMEError("Could not determine the location of URDME.")
 
-    # Trim newline
-    URDME_ROOT = URDME_ROOT[:-1]
     if solver_path == "":
         URDME_BUILD = URDME_ROOT + '/build/'
     else:

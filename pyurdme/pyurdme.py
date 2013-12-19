@@ -17,8 +17,6 @@ import gmsh
 import numpy
 import scipy.sparse
 
-from nsmsolver import NSMSolver
-from nemsolver import NEMSolver
 
 try:
     import h5py
@@ -866,26 +864,18 @@ class URDMEResult(dict):
 class URDMESolver:
     """ Abstract class for URDME solvers. """
     
-    @classmethod
-    def get_solver_instance(cls, solver_name, model, solver_path=None):
-        """ Lookup table for solvers regitered with pyurdme. """
-        if solver_name == 'nsm':
-            return NSMSolver(model,solver_path)
-        elif solver_name == 'nem':
-            return NEMSolver(model,solver_path)
-        else:
-            raise URDMEError("Unknown solver: {0}".format(solver_name))
-            
-    
-    def __init__(self, model, solver_path=None):
+    def __init__(self, model, solver_path=None, report_level=0):
         """ Constructor. """
         if not isinstance(model,URDMEModel):
           raise URDMEError("URDMEsolver constructors must take a URDMEModel as an argument.")
+        if not issubclass(self.__class__, URDMESolver):
+          raise URDMEError("Solver classes must be a subclass of URDMESolver.")
         if not hasattr(self, 'NAME'):
-            raise URDMEError("")
+            raise URDMEError("Solver classes must implement a NAME attribute.")
 
         self.model = model
         self.is_compiled = False
+        self.report_level = report_level
 
         # Set URDME_ROOT. This will fail if URDME is not installed on the system.
         try:
@@ -896,36 +886,45 @@ class URDMESolver:
             self.URDME_ROOT = path.replace('bin/urdme_init','')
         except Exception as e:
             raise URDMEError("Could not determine the location of URDME.")
-        
-        if solver_path is None:
+        if solver_path is None or solver_path == "":
             self.URDME_BUILD = self.URDME_ROOT + '/build/'
         else:
             self.URDME_BUILD = solver_path + '/build/'
             os.environ['SOLVER_ROOT'] = solver_path
+
+    def serialize(self, filename=None):
+        """ Searilize the model/solver along with all files necessary to compile
+            the solver and run on a remote system (solver files do not need to 
+            be on the remote system).  Writes a file that is compatiable with 
+            the "pickle.load()" functionality.
+        """
+        #TODO
+        pass
     
     
-    def compile(self, model_file=None):
+    def compile(self, model_file=None, input_file=None):
         """ Compile the model."""
-        # Write the propensity file
+
+        #TODO: fix this, should be a unique directory each time call to compile.
         if os.path.isdir('.urdme'):
             shutil.rmtree('.urdme')
-        
         try:
             os.mkdir('.urdme')
         except Exception as e:
             pass
         
-        propfilename = self.model.name + '_pyurdme_generated_model'
+        # Write the propensity file
+        self.propfilename = self.model.name + '_pyurdme_generated_model'
         if model_file == None:
-            propfilename = self.model.name + '_pyurdme_generated_model'
-            self.createPropensityFile(file_name='.urdme/' + propfilename + '.c')
+            self.propfilename = self.model.name + '_pyurdme_generated_model'
+            self.createPropensityFile(file_name='.urdme/' + self.propfilename + '.c')
         else:
-            subprocess.call(['cp', model_file, '.urdme/' + propfilename + '.c'])
+            subprocess.call(['cp', model_file, '.urdme/' + self.propfilename + '.c'])
         
         # Build the solver
         makefile = 'Makefile.' + self.NAME
-        cmd = ['make', '-f', self.URDME_BUILD + makefile, 'URDME_ROOT=' + self.URDME_ROOT, 'URDME_MODEL=' + propfilename]
-        if report_level >= 1:
+        cmd = ['make', '-f', self.URDME_BUILD + makefile, 'URDME_ROOT=' + self.URDME_ROOT, 'URDME_MODEL=' + self.propfilename]
+        if self.report_level >= 1:
             print "cmd: {0}\n".format(cmd)
         handle = subprocess.Popen(cmd, stdout = subprocess.PIPE, stderr=subprocess.PIPE)
         return_code = handle.wait()
@@ -935,18 +934,10 @@ class URDMESolver:
             print handle.stderr.read()
             raise URDMEError("Compilation of solver failed")
         
-        if report_level >= 1:
+        if self.report_level >= 1:
             print handle.stdout.read()
             print handle.stderr.read()
 
-    
-    
-    def run(self, input_file=None, seed=None, report_level=0):
-        """ Run one simulation of the model.
-            
-        Returns:
-            URDMEResult object
-        """
         if input_file is None:
             # Get temporary input and output files
             infile = tempfile.NamedTemporaryFile(delete=False)
@@ -954,19 +945,33 @@ class URDMESolver:
             # Write the model to an input file in .mat format
             self.model.serialize(filename=infile)
             infile.close()
-            infile_name = infile.name
+            self.infile_name = infile.name
+            self.delete_infile = True
         else:
-            infile_name = input_file
-        
+            self.infile_name = input_file
+            self.delete_infile = False
+
+        self.is_compiled = True
+    
+    
+    def run(self, seed=None):
+        """ Run one simulation of the model.
+            
+        Returns:
+            URDMEResult object
+        """
+        #TODO: Check if compiled, call compile() if not.
+        if not self.is_compiled:
+          self.compile()
         
         outfile = tempfile.NamedTemporaryFile(delete=False)
         outfile.close()
         
         # Execute the solver
-        urdme_solver_cmd = ['.urdme/' + propfilename + '.' + self.NAME , infile_name , outfile.name]
+        urdme_solver_cmd = ['.urdme/' + self.propfilename + '.' + self.NAME , self.infile_name , outfile.name]
         if seed is not None:
             urdme_solver_cmd.append(str(seed))
-        if report_level >= 1:
+        if self.report_level >= 1:
             print 'cmd: {0}\n'.format(urdme_solver_cmd)
         handle = subprocess.Popen(urdme_solver_cmd)
         return_code = handle.wait()
@@ -975,11 +980,11 @@ class URDMESolver:
         
         #Load the result from the hdf5 output file.
         try:
-            result = URDMEResult(model, outfile.name)
+            result = URDMEResult(self.model, outfile.name)
             
             # Clean up
-            if input_file is None:
-                os.remove(infile.name)
+            if self.delete_infile:
+                os.remove(self.infile_name)
             os.remove(outfile.name)
             
             result["Status"] = "Sucess"
@@ -988,8 +993,8 @@ class URDMESolver:
         except Exception as e:
             exc_info = sys.exc_info()
             # Clean up
-            if input_file is None:
-                os.remove(infile.name)
+            if self.delete_infile:
+                os.remove(self.infile_name)
             os.remove(outfile.name)
             raise exc_info[1], None, exc_info[2]    
 
@@ -1090,9 +1095,18 @@ def urdme(model=None, solver='nsm', solver_path="", model_file=None, input_file=
         stderr:    the standard error stream from the call to the core solver
         
         """
-    solver = URDMESolver.get_solver_instance(solver,model,solver_path)
-    solver.compile(model_file)
-    return solver.run(input_file, seed, report_level)
+    
+    if solver == 'nsm':
+        from nsmsolver import NSMSolver
+        solver = NSMSolver(model,solver_path,report_level)
+    elif solver == 'nem':
+        from nemsolver import NEMSolver
+        solver = NEMSolver(model,solver_path,report_level)
+    else:
+        raise URDMEError("Unknown solver: {0}".format(solver_name))
+            
+    solver.compile(model_file, input_file)
+    return solver.run(seed)
 
 
 

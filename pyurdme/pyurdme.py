@@ -1,22 +1,20 @@
 # pylint: disable-msg=C0301
 # pylint: disable-msg=C0103
 
-from model import *
-
-import numpy as np
 import os
 import re
-import scipy.io as spio
-import scipy.sparse as scisp
 import shutil
 import subprocess
 import sys
 import tempfile
+import types
 
-import gmsh
 import numpy
+import scipy.io
 import scipy.sparse
 
+import gmsh
+from model import *
 
 try:
     import h5py
@@ -81,7 +79,7 @@ class URDMEModel(Model):
         if not hasattr(self, 'species_map'):
             self.__initializeSpeciesMap()
         if self.getNumReactions() > 0:
-            ND = np.zeros((self.getNumSpecies(), self.getNumReactions()))
+            ND = numpy.zeros((self.getNumSpecies(), self.getNumReactions()))
             for i, r in enumerate(self.listOfReactions):
                 R = self.listOfReactions[r]
                 reactants = R.reactants
@@ -92,7 +90,7 @@ class URDMEModel(Model):
                 for s in products:
                     ND[self.species_map[s], i] += products[s]
 
-            N = scisp.csc_matrix(ND)
+            N = scipy.sparse.csc_matrix(ND)
         else:
             N = numpy.zeros((self.getNumSpecies(), self.getNumReactions()))
 
@@ -102,9 +100,9 @@ class URDMEModel(Model):
         """ Construct the sparse dependecy graph. """
 
         #TODO: Automatically create a dependency graph (cannot be optimal, but good enough.)
-        GF = np.ones((self.getNumReactions(), self.getNumReactions() + self.getNumSpecies()))
+        GF = numpy.ones((self.getNumReactions(), self.getNumReactions() + self.getNumSpecies()))
         try:
-            G = scisp.csc_matrix(GF)
+            G = scipy.sparse.csc_matrix(GF)
         except:
             G = GF
 
@@ -125,8 +123,8 @@ class URDMEModel(Model):
         # The unique elements of the subdomain MeshFunctions
         sds = []
         for dim, subdomain in self.subdomains.items():
-            sds = sds + list(np.unique(subdomain.array()).flatten())
-        sds = np.unique(sds)
+            sds = sds + list(numpy.unique(subdomain.array()).flatten())
+        sds = numpy.unique(sds)
         sds = list(sds)
 
         # This explicit typecast is necessary for UFL not to choke on the subdomain ids.
@@ -190,7 +188,7 @@ class URDMEModel(Model):
         """ Create all-zeros inital condition matrix. """
         ns = self.getNumSpecies()
         nv = self.mesh.getNumVoxels()
-        self.u0 = np.zeros((ns, nv))
+        self.u0 = numpy.zeros((ns, nv))
 
     def meshextend(self):
         """ Extend the primary mesh with information about the degrees of freedom.
@@ -257,7 +255,7 @@ class URDMEModel(Model):
                 raise ModelException("scatter: No voxel in the given subdomains "+str(subdomains)+", check subdomain marking.")
             
             for mol in range(num_spec):
-                vtx = np.random.randint(0, ltab)
+                vtx = numpy.random.randint(0, ltab)
                 ind = table[vtx]
                 self.u0[specindx,ind]+=1
                 
@@ -490,7 +488,7 @@ class URDMEModel(Model):
         urdme_solver_data['sd'] = self.subdomainVector(self.subdomains)
 
         # Data vector. If not present in model, it defaults to a vector with all elements zero.
-        data = np.zeros((1, self.mesh.getNumVoxels()))
+        data = numpy.zeros((1, self.mesh.getNumVoxels()))
         urdme_solver_data['data'] = data
 
         if not hasattr(self,'u0'):
@@ -498,7 +496,7 @@ class URDMEModel(Model):
 
         urdme_solver_data['u0'] = self.u0
 
-        tspan = np.asarray(self.tspan, dtype=np.float)
+        tspan = numpy.asarray(self.tspan, dtype=numpy.float)
         urdme_solver_data['tspan'] = tspan
 
         # Vertex coordinates
@@ -519,7 +517,7 @@ class URDMEModel(Model):
 
         urdme_solver_data = self.solverData()
         self.validate(urdme_solver_data)
-        spio.savemat(filename, urdme_solver_data, oned_as='column')
+        scipy.io.savemat(filename, urdme_solver_data, oned_as='column')
 
 
     def connectivityMatrix(self):
@@ -1095,18 +1093,23 @@ def urdme(model=None, solver='nsm', solver_path="", model_file=None, input_file=
         stderr:    the standard error stream from the call to the core solver
         
         """
-    
-    if solver == 'nsm':
-        from nsmsolver import NSMSolver
-        solver = NSMSolver(model,solver_path,report_level)
-    elif solver == 'nem':
-        from nemsolver import NEMSolver
-        solver = NEMSolver(model,solver_path,report_level)
+    #TODO: if solver is a subclass of URDMESolver, use it directly.    
+    if isinstance(solver, (type, types.ClassType)) and  issubclass(solver, pyurdme.URDMESolver):
+        sol = solver(model,solver_path,report_level)
+    elif type(solver) is str:
+        if solver == 'nsm':
+            from nsmsolver import NSMSolver
+            sol = NSMSolver(model,solver_path,report_level)
+        elif solver == 'nem':
+            from nemsolver import NEMSolver
+            sol = NEMSolver(model,solver_path,report_level)
+        else:
+            raise URDMEError("Unknown solver: {0}".format(solver_name))
     else:
-        raise URDMEError("Unknown solver: {0}".format(solver_name))
+        raise URDMEError("solver argument to urdme() must be a string or a class object.")
             
-    solver.compile(model_file, input_file)
-    return solver.run(seed)
+    sol.compile(model_file, input_file)
+    return sol.run(seed)
 
 
 

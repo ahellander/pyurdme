@@ -884,6 +884,7 @@ class URDMESolver:
             self.URDME_ROOT = path.replace('bin/urdme_init','')
         except Exception as e:
             raise URDMEError("Could not determine the location of URDME.")
+        print "solver_path={0}".format(solver_path)
         if solver_path is None or solver_path == "":
             self.URDME_BUILD = self.URDME_ROOT + '/build/'
         else:
@@ -1093,8 +1094,8 @@ def urdme(model=None, solver='nsm', solver_path="", model_file=None, input_file=
         stderr:    the standard error stream from the call to the core solver
         
         """
-    #TODO: if solver is a subclass of URDMESolver, use it directly.    
-    if isinstance(solver, (type, types.ClassType)) and  issubclass(solver, pyurdme.URDMESolver):
+    #If solver is a subclass of URDMESolver, use it directly.    
+    if isinstance(solver, (type, types.ClassType)) and  issubclass(solver, URDMESolver):
         sol = solver(model,solver_path,report_level)
     elif type(solver) is str:
         if solver == 'nsm':

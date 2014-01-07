@@ -884,31 +884,54 @@ class URDMESolver:
             self.URDME_ROOT = path.replace('bin/urdme_init','')
         except Exception as e:
             raise URDMEError("Could not determine the location of URDME.")
-        print "solver_path={0}".format(solver_path)
+        #print "solver_path={0}".format(solver_path)
         if solver_path is None or solver_path == "":
             self.URDME_BUILD = self.URDME_ROOT + '/build/'
         else:
             self.URDME_BUILD = solver_path + '/build/'
             os.environ['SOLVER_ROOT'] = solver_path
 
-    def serialize(self, filename=None):
-        """ Searilize the model/solver along with all files necessary to compile
-            the solver and run on a remote system (solver files do not need to 
-            be on the remote system).  Writes a file that is compatiable with 
-            the "pickle.load()" functionality.
-        """
-        #TODO
-        pass
+   #def __getstate__():
+   #    """ Save the state of the solver, saves all instance variables
+   #        and reads all the files necessary to compile the solver off
+   #        of the file system and stores it in a separate state variable.
+   #        If the solver model files is specified, it saves that too.
+   #        This is used by Pickle.
+   #    """
+
+   #def __setstate__(state):
+   #    """ Set all instance variables for the object, and create a unique temporary
+   #        directory to store all the sovler files.  URDME_BUILD is set to this dir,
+   #        and is_compiled is always set to false.  This is used by Pickle.
+   #    """
+
+    def __del__(self):
+        """ Deconstructor.  Removes the compiled solver."""
+        if self.solver_base_dir is not None:
+            try:
+                shutil.rmtree(self.solver_base_dir)
+            except OSError as e:
+                print "Could not delete '{0}'".format(self.solver_base_dir)
+   
     
-    
+    #TODO: model_file should go to the constructor.
+    #TODO: input_file should go to the run method.
     def compile(self, model_file=None, input_file=None):
         """ Compile the model."""
 
         #TODO: fix this, should be a unique directory each time call to compile.
-        if os.path.isdir('.urdme'):
-            shutil.rmtree('.urdme')
+        #self.solver_dir = '.urdme/'
+        self.solver_base_dir = tempfile.mkdtemp()
+        self.solver_dir = self.solver_base_dir + '/.urdme/'
+        #print "URDMESolver.compile()  self.solver_dir={0}".format(self.solver_dir)
+
+        if os.path.isdir(self.solver_dir):
+            try:
+                shutil.rmtree(self.solver_dir)
+            except OSError as e:
+                pass
         try:
-            os.mkdir('.urdme')
+            os.mkdir(self.solver_dir)
         except Exception as e:
             pass
         
@@ -916,17 +939,22 @@ class URDMESolver:
         self.propfilename = self.model.name + '_pyurdme_generated_model'
         if model_file == None:
             self.propfilename = self.model.name + '_pyurdme_generated_model'
-            self.createPropensityFile(file_name='.urdme/' + self.propfilename + '.c')
+            self.createPropensityFile(file_name=self.solver_dir + self.propfilename + '.c')
         else:
-            subprocess.call(['cp', model_file, '.urdme/' + self.propfilename + '.c'])
+            subprocess.call(['cp', model_file, self.solver_dir + self.propfilename + '.c'])
         
         # Build the solver
         makefile = 'Makefile.' + self.NAME
-        cmd = ['make', '-f', self.URDME_BUILD + makefile, 'URDME_ROOT=' + self.URDME_ROOT, 'URDME_MODEL=' + self.propfilename]
+        cmd = " ".join([ 'cd', self.solver_base_dir , ';', 'make', '-f', self.URDME_BUILD + makefile, 'URDME_ROOT=' + self.URDME_ROOT, 'URDME_MODEL=' + self.propfilename])
         if self.report_level >= 1:
             print "cmd: {0}\n".format(cmd)
-        handle = subprocess.Popen(cmd, stdout = subprocess.PIPE, stderr=subprocess.PIPE)
-        return_code = handle.wait()
+        try:
+            handle = subprocess.Popen(cmd, stdout = subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+            return_code = handle.wait()
+        except OSError as e:
+            print "Error, execution of compilation raised and exception: {0}".format(e)
+            print "cmd = {0}".format(cmd)
+            raise URDMEError("Compilation of solver failed")
         
         if return_code != 0:
             print handle.stdout.read()
@@ -967,13 +995,19 @@ class URDMESolver:
         outfile.close()
         
         # Execute the solver
-        urdme_solver_cmd = ['.urdme/' + self.propfilename + '.' + self.NAME , self.infile_name , outfile.name]
+        urdme_solver_cmd = [self.solver_dir + self.propfilename + '.' + self.NAME , self.infile_name , outfile.name]
         if seed is not None:
             urdme_solver_cmd.append(str(seed))
         if self.report_level >= 1:
             print 'cmd: {0}\n'.format(urdme_solver_cmd)
-        handle = subprocess.Popen(urdme_solver_cmd)
-        return_code = handle.wait()
+        try:
+            handle = subprocess.Popen(urdme_solver_cmd)
+            return_code = handle.wait()
+        except OSError as e:
+            print "Error, execution of solver raised and exception: {0}".format(e)
+            print "urdme_solver_cmd = {0}".format(urdme_solver_cmd)
+            raise URDMEError("Solver execution failed")
+
         if return_code != 0:
             raise URDMEError("Solver execution failed")
         

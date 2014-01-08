@@ -1,21 +1,20 @@
 # pylint: disable-msg=C0301
 # pylint: disable-msg=C0103
 
-from model import *
-
-import numpy as np
 import os
 import re
-import scipy.io as spio
-import scipy.sparse as scisp
 import shutil
 import subprocess
 import sys
 import tempfile
+import types
+
+import numpy
+import scipy.io
+import scipy.sparse
 
 import gmsh
-import numpy
-import scipy.sparse
+from model import *
 
 try:
     import h5py
@@ -80,7 +79,7 @@ class URDMEModel(Model):
         if not hasattr(self, 'species_map'):
             self.__initializeSpeciesMap()
         if self.getNumReactions() > 0:
-            ND = np.zeros((self.getNumSpecies(), self.getNumReactions()))
+            ND = numpy.zeros((self.getNumSpecies(), self.getNumReactions()))
             for i, r in enumerate(self.listOfReactions):
                 R = self.listOfReactions[r]
                 reactants = R.reactants
@@ -91,7 +90,7 @@ class URDMEModel(Model):
                 for s in products:
                     ND[self.species_map[s], i] += products[s]
 
-            N = scisp.csc_matrix(ND)
+            N = scipy.sparse.csc_matrix(ND)
         else:
             N = numpy.zeros((self.getNumSpecies(), self.getNumReactions()))
 
@@ -101,165 +100,17 @@ class URDMEModel(Model):
         """ Construct the sparse dependecy graph. """
 
         #TODO: Automatically create a dependency graph (cannot be optimal, but good enough.)
-        GF = np.ones((self.getNumReactions(), self.getNumReactions() + self.getNumSpecies()))
+        GF = numpy.ones((self.getNumReactions(), self.getNumReactions() + self.getNumSpecies()))
         try:
-            G = scisp.csc_matrix(GF)
+            G = scipy.sparse.csc_matrix(GF)
         except:
             G = GF
 
         return G
 
-    def createNewPropensityFile(self, file_name=None):
-        """ Generate a C propensity file on the new experimental format. """
-
-        template = open(os.path.abspath(os.path.dirname(__file__)) + '/data/propensity_file_new_template.c', 'r')
-        propfile = open(file_name, "w")
-        propfilestr = template.read()
-
-        propfilestr = propfilestr.replace("__NUMBER_OF_REACTIONS__", str(self.getNumReactions()))
-        propfilestr = propfilestr.replace("__NUMBER_OF_SPECIES__", str(len(self.listOfSpecies)))
+    
 
 
-        speciesdef = ""
-        for i, sname in enumerate(self.listOfSpecies):
-            S = self.listOfSpecies[sname]
-            speciesdef += "species *" + sname + ";\n\t"
-            speciesdef += sname + "= (species *)malloc(sizeof(species));\n\t"
-            speciesdef += sname + "->gamma = " + str(S.diffusion_constant) + ";\n\t"
-            speciesdef += sname + "->sigma = " + str(S.reaction_radius) + ";\n\t"
-            speciesdef += "ptr["+str(i)+"] = " + sname + ";\n\n\t"
-
-
-        propfilestr = propfilestr.replace("__DEFINE_SPECIES__", speciesdef)
-
-
-        # Make sure all paramters are evaluated to scalars before we write them to the file.
-        self.resolveParameters()
-
-        reacstr = ""
-
-        for j, sname in enumerate(self.listOfSpecies):
-            reacstr += "int " + sname + "=" + str(j) + ";\n\t"
-
-        reacstr += "\n\t"
-
-        for i, rname in enumerate(self.listOfReactions):
-            R = self.listOfReactions[rname]
-
-            reacstr += "reaction *" + rname + ";\n\t"
-            reacstr += rname + "=(reaction *)malloc(sizeof(reaction));\n\t"
-            reacstr += rname + "->order=" + str(len(R.reactants)) + ";\n\t"
-            reacstr += rname + "->nr_reactants=" + str(len(R.reactants)) + ";\n\t"
-            reacstr += rname + "->nr_products=" + str(len(R.products)) + ";\n\t"
-
-            #print reacstr
-
-            reacstr += rname+"->reactants=(int *)malloc(" + rname + "->nr_reactants*sizeof(int));\n\t"
-            for j, reactant in enumerate(R.reactants):
-                reacstr += rname + "->reactants[" + str(j) + "]=" + str(reactant)+";\n\t"
-
-            reacstr += "\n\t" + rname + "->products=(int *)malloc(" + rname + "->nr_products*sizeof(int));\n\t"
-            for j, product in enumerate(R.products):
-                reacstr += rname + "->products[" + str(j) + "]=" + str(product) + ";\n\t"
-
-            reacstr += "\n\t" + rname + "->nr=(int *)calloc(" + str(len(self.listOfSpecies)) + ",sizeof(int));\n\t"
-
-            for j, reactant in enumerate(R.reactants):
-                reacstr += rname + "->nr[" + reactant + "]=-" + str(R.reactants[reactant]) + ";\n\t"
-
-            for j, product in enumerate(R.products):
-                reacstr += rname + "->nr[" + product + "]=" + str(R.products[product]) + ";\n\t"
-
-            reacstr += rname + "->k=" + str(R.marate.value) + ";\n\t"
-
-            reacstr += "\n\tptr[" + str(i) + "] = " + rname + ";\n\n\t"
-
-
-        propfilestr = propfilestr.replace("__DEFINE_REACTIONS__", reacstr)
-
-        propfile.write(propfilestr)
-        propfile.close()
-
-
-    def createPropensityFile(self, file_name=None):
-        """ Generate the C propensity file that is used to compile the URDME solvers.
-            Only mass action propensities are supported. """
-
-        template = open(os.path.abspath(os.path.dirname(__file__)) + '/data/propensity_file_template.c', 'r')
-        propfile = open(file_name, "w")
-        propfilestr = template.read()
-
-        speciesdef = ""
-        i = 0
-        for S in self.listOfSpecies:
-            speciesdef += "#define " + S + " " + "x[" + str(i) + "]" + "\n"
-            i += 1
-
-        propfilestr = propfilestr.replace("__DEFINE_SPECIES__", speciesdef)
-
-        propfilestr = propfilestr.replace("__NUMBER_OF_REACTIONS__", str(self.getNumReactions()))
-
-        # Make sure all paramters are evaluated to scalars before we write them to the file.
-        self.resolveParameters()
-        parameters = ""
-        for p in self.listOfParameters:
-            parameters += "const double " + p + " = " + str(self.listOfParameters[p].value) + ";\n"
-        propfilestr = propfilestr.replace("__DEFINE_PARAMETERS__", str(parameters))
-
-        # Reactions
-        funheader = "double __NAME__(const int *x, double t, const double vol, const double *data, int sd)"
-
-        funcs = ""
-        funcinits = ""
-        i = 0
-        for R in self.listOfReactions:
-            func = ""
-            rname = self.listOfReactions[R].name
-            func += funheader.replace("__NAME__", rname) + "\n{\n"
-            if self.listOfReactions[R].restrict_to == None:
-                func += "    return " + self.listOfReactions[R].propensity_function
-                order = len(self.listOfReactions[R].reactants)
-                if order == 2:
-                    func += "/vol;"
-                elif order == 0:
-                    func += "*vol;"
-                else:
-                    func += ";"
-
-            else:
-                func += "if("
-                if isinstance(self.listOfReactions[R].restrict_to, list):
-                    for sd in self.listOfReactions[R].restrict_to:
-                        func += "sd == " + str(sd) + "||"
-                    func = func[:-2]
-                elif isinstance(self.listOfReactions[R].restrict_to, int):
-                    func += "sd == " +  str(self.listOfReactions[R].restrict_to)
-                else:
-                    raise URDMEError("When restricting reaction to subdomains, you must specify either a list or an int")
-                func += ")\n"
-                func += "\treturn " + self.listOfReactions[R].propensity_function
-                order = len(self.listOfReactions[R].reactants)
-                if order == 2:
-                    func += "/vol;"
-                elif order == 0:
-                    func += "*vol;"
-                else:
-                    func += ";"
-
-                func += "\nelse"
-                func += "\n\treturn 0.0;"
-
-
-            func += "\n}"
-            funcs += func + "\n\n"
-            funcinits += "    ptr[" + str(i) + "] = " + rname + ";\n"
-            i += 1
-
-        propfilestr = propfilestr.replace("__DEFINE_REACTIONS__", funcs)
-        propfilestr = propfilestr.replace("__DEFINE_PROPFUNS__", funcinits)
-
-        propfile.write(propfilestr)
-        propfile.close()
 
     def timespan(self, tspan):
         """ Set the time span of simulation. """
@@ -272,8 +123,8 @@ class URDMEModel(Model):
         # The unique elements of the subdomain MeshFunctions
         sds = []
         for dim, subdomain in self.subdomains.items():
-            sds = sds + list(np.unique(subdomain.array()).flatten())
-        sds = np.unique(sds)
+            sds = sds + list(numpy.unique(subdomain.array()).flatten())
+        sds = numpy.unique(sds)
         sds = list(sds)
 
         # This explicit typecast is necessary for UFL not to choke on the subdomain ids.
@@ -337,7 +188,7 @@ class URDMEModel(Model):
         """ Create all-zeros inital condition matrix. """
         ns = self.getNumSpecies()
         nv = self.mesh.getNumVoxels()
-        self.u0 = np.zeros((ns, nv))
+        self.u0 = numpy.zeros((ns, nv))
 
     def meshextend(self):
         """ Extend the primary mesh with information about the degrees of freedom.
@@ -404,7 +255,7 @@ class URDMEModel(Model):
                 raise ModelException("scatter: No voxel in the given subdomains "+str(subdomains)+", check subdomain marking.")
             
             for mol in range(num_spec):
-                vtx = np.random.randint(0, ltab)
+                vtx = numpy.random.randint(0, ltab)
                 ind = table[vtx]
                 self.u0[specindx,ind]+=1
                 
@@ -637,7 +488,7 @@ class URDMEModel(Model):
         urdme_solver_data['sd'] = self.subdomainVector(self.subdomains)
 
         # Data vector. If not present in model, it defaults to a vector with all elements zero.
-        data = np.zeros((1, self.mesh.getNumVoxels()))
+        data = numpy.zeros((1, self.mesh.getNumVoxels()))
         urdme_solver_data['data'] = data
 
         if not hasattr(self,'u0'):
@@ -645,7 +496,7 @@ class URDMEModel(Model):
 
         urdme_solver_data['u0'] = self.u0
 
-        tspan = np.asarray(self.tspan, dtype=np.float)
+        tspan = numpy.asarray(self.tspan, dtype=numpy.float)
         urdme_solver_data['tspan'] = tspan
 
         # Vertex coordinates
@@ -666,7 +517,7 @@ class URDMEModel(Model):
 
         urdme_solver_data = self.solverData()
         self.validate(urdme_solver_data)
-        spio.savemat(filename, urdme_solver_data, oned_as='column')
+        scipy.io.savemat(filename, urdme_solver_data, oned_as='column')
 
 
     def connectivityMatrix(self):
@@ -838,7 +689,7 @@ class Xmesh():
 class URDMEResult(dict):
     """ Result object for a URDME simulation, extendes the dict object. """
     
-    def __init__(self, model, filename=None):
+    def __init__(self, model=None, filename=None):
         self.model = model
         self.sol = None
         self.U = None
@@ -870,6 +721,8 @@ class URDMEResult(dict):
         sol = {}
         
         dims = self.U.shape
+        if self.model is None:
+          raise URDMEError("URDMEResult.model must be set before the sol attribute can be accessed.")
         numvox = self.model.mesh.getNumVoxels()
         # The result is loaded in dolfin Functions, one for each species and time point
         for i,spec in enumerate(self.model.listOfSpecies):
@@ -1008,119 +861,365 @@ class URDMEResult(dict):
         self.tspan = tspan
 
 
+class URDMESolver:
+    """ Abstract class for URDME solvers. """
+    
+    def __init__(self, model, solver_path=None, report_level=0, model_file=None):
+        """ Constructor. """
+        if not isinstance(model,URDMEModel):
+          raise URDMEError("URDMEsolver constructors must take a URDMEModel as an argument.")
+        if not issubclass(self.__class__, URDMESolver):
+          raise URDMEError("Solver classes must be a subclass of URDMESolver.")
+        if not hasattr(self, 'NAME'):
+            raise URDMEError("Solver classes must implement a NAME attribute.")
+
+        self.model = model
+        self.is_compiled = False
+        self.report_level = report_level
+        self.model_file = model_file
+        self.infile_name = None
+        self.delete_infile = False
+        self.model_name = self.model.name
+        self.solver_base_dir = None
+    
+        # For the remote execution
+        self.temp_urdme_root = None
+
+        # Set URDME_ROOT. This will fail if URDME is not installed on the system.
+        try:
+            urdme_init = subprocess.check_output(['which','urdme_init']).strip()
+            path = os.readlink(urdme_init)
+            if not path.endswith('/urdme/bin/urdme_init'):
+                raise Exception('path={0}\n'.format(path))
+            self.URDME_ROOT = path.replace('bin/urdme_init','')
+        except Exception as e:
+            raise URDMEError("Could not determine the location of URDME.")
+        #print "solver_path={0}".format(solver_path)
+        if solver_path is None or solver_path == "":
+            self.URDME_BUILD = self.URDME_ROOT + '/build/'
+        else:
+            self.URDME_BUILD = solver_path + '/build/'
+            os.environ['SOLVER_ROOT'] = solver_path
+
+    def __getstate__(self):
+        """ Save the state of the solver, saves all instance variables
+            and reads all the files necessary to compile the solver off
+            of the file system and stores it in a separate state variable.
+            If the solver model files is specified, it saves that too.
+            This is used by Pickle.
+        """
+        ret = {}
+        # Save the instance variables
+        ret['vars'] = self.__dict__.copy()
+        ret['vars']['model'] = None
+        ret['vars']['is_compiled'] = False
+        # Create temp root
+        tmproot = tempfile.mkdtemp()
+        # Get the propensity file
+        model_file = tmproot+'/'+self.model_name + '_pyurdme_generated_model'+ '.c'
+        ret['model_file'] = os.path.basename(model_file)
+        if self.model_file == None:
+            self.createPropensityFile(file_name=model_file)
+        else:
+            subprocess.call('cp '+self.model_file+' '+model_file, shell=True)            
+        # Get the solver source files
+        os.mkdir(tmproot+'/include')
+        os.mkdir(tmproot+'/src')
+        os.mkdir(tmproot+'/src/'+self.NAME)
+        #TODO: what if solverdir is not the same as URDME_ROOT ?
+        subprocess.call('cp '+self.URDME_ROOT+'src/*.c '+tmproot+'/src/', shell=True)
+        subprocess.call('cp '+self.URDME_ROOT+'src/'+self.NAME+'/*.* '+tmproot+'/src/'+self.NAME+'/', shell=True)
+        subprocess.call('cp '+self.URDME_ROOT+'include/*.h '+tmproot+'/include/', shell=True)
+        #TODO: get the include files from solvers not in the default path (none currently implement this).
+        # Get the Makefile
+        os.mkdir(tmproot+'/build')
+        subprocess.call('cp '+self.URDME_BUILD+'Makefile.'+self.NAME+' '+tmproot+'/build/Makefile'+self.NAME, shell=True)
+        # Get the input file
+        input_file = tmproot+'/model_input.mat'
+        ret['input_file'] = os.path.basename(input_file)
+        self.model.serialize(filename=input_file)
+        ##
+        origwd = os.getcwd()
+        os.chdir(tmproot)
+        tarname = tmproot+'/'+self.NAME+'.tar.gz'
+        subprocess.call('tar -czf '+tarname+' src include build '+os.path.basename(input_file)+' '+os.path.basename(model_file), shell=True)
+        with open(tarname, 'r') as f:
+            ret['SolverFiles'] = f.read()
+        os.chdir(origwd)
+        shutil.rmtree(tmproot)
+        # return the state
+        return ret
+
+    def __setstate__(self, state):
+        """ Set all instance variables for the object, and create a unique temporary
+            directory to store all the sovler files.  URDME_BUILD is set to this dir,
+            and is_compiled is always set to false.  This is used by Pickle.
+        """
+        # 0. restore the instance variables
+        for key, val in state['vars'].iteritems():
+          self.__dict__[key] = val
+        # 1. create temporary directory = URDME_ROOT
+        self.temp_urdme_root = tempfile.mkdtemp()
+        self.URDME_ROOT = self.temp_urdme_root
+        origwd = os.getcwd()
+        os.chdir(self.temp_urdme_root)
+        tarname = self.temp_urdme_root+'/'+self.NAME+'.tar.gz'
+        with open(tarname, 'wd') as f:
+            f.write(state['SolverFiles'])
+        subprocess.call('tar -zxf '+tarname, shell=True)
+        os.chdir(origwd)
+        # Model File
+        self.model_file = self.temp_urdme_root+'/'+state['model_file']
+        # Input File
+        self.infile_name = self.temp_urdme_root+'/'+state['input_file']
+
+        
+
+    def __del__(self):
+        """ Deconstructor.  Removes the compiled solver."""
+        if self.solver_base_dir is not None:
+            try:
+                shutil.rmtree(self.solver_base_dir)
+            except OSError as e:
+                print "Could not delete '{0}'".format(self.solver_base_dir)
+        if self.temp_urdme_root is not None:
+            try:
+                shutil.rmtree(self.temp_urdme_root)
+            except OSError as e:
+                print "Could not delete '{0}'".format(self.temp_urdme_root)
+   
+    
+    def compile(self):
+        """ Compile the model."""
+
+        # Create a unique directory each time call to compile.
+        self.solver_base_dir = tempfile.mkdtemp()
+        self.solver_dir = self.solver_base_dir + '/.urdme/'
+        #print "URDMESolver.compile()  self.solver_dir={0}".format(self.solver_dir)
+
+        if os.path.isdir(self.solver_dir):
+            try:
+                shutil.rmtree(self.solver_dir)
+            except OSError as e:
+                pass
+        try:
+            os.mkdir(self.solver_dir)
+        except Exception as e:
+            pass
+        
+        # Write the propensity file
+        self.propfilename = self.model_name + '_pyurdme_generated_model'
+        if self.model_file == None:
+            self.createPropensityFile(file_name=self.solver_dir + self.propfilename + '.c')
+        else:
+            subprocess.call(['cp', self.model_file, self.solver_dir + self.propfilename + '.c'])
+        
+        # Build the solver
+        makefile = 'Makefile.' + self.NAME
+        cmd = " ".join([ 'cd', self.solver_base_dir , ';', 'make', '-f', self.URDME_BUILD + makefile, 'URDME_ROOT=' + self.URDME_ROOT, 'URDME_MODEL=' + self.propfilename])
+        if self.report_level >= 1:
+            print "cmd: {0}\n".format(cmd)
+        try:
+            handle = subprocess.Popen(cmd, stdout = subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+            return_code = handle.wait()
+        except OSError as e:
+            print "Error, execution of compilation raised and exception: {0}".format(e)
+            print "cmd = {0}".format(cmd)
+            raise URDMEError("Compilation of solver failed")
+        
+        if return_code != 0:
+            print handle.stdout.read()
+            print handle.stderr.read()
+            raise URDMEError("Compilation of solver failed")
+        
+        if self.report_level >= 1:
+            print handle.stdout.read()
+            print handle.stderr.read()
+
+
+        self.is_compiled = True
+    
+    
+    def run(self, seed=None, input_file=None):
+        """ Run one simulation of the model.
+            
+        Returns:
+            URDMEResult object
+        """
+        # Check if compiled, call compile() if not.
+        if not self.is_compiled:
+          self.compile()
+
+        if input_file is None:
+            if self.infile_name is None:
+                # Get temporary input and output files
+                infile = tempfile.NamedTemporaryFile(delete=False)
+                
+                # Write the model to an input file in .mat format
+                self.model.serialize(filename=infile)
+                infile.close()
+                self.infile_name = infile.name
+                self.delete_infile = True
+        else:
+            self.infile_name = input_file
+            self.delete_infile = False
+        
+        outfile = tempfile.NamedTemporaryFile(delete=False)
+        outfile.close()
+        
+        # Execute the solver
+        urdme_solver_cmd = [self.solver_dir + self.propfilename + '.' + self.NAME , self.infile_name , outfile.name]
+        if seed is not None:
+            urdme_solver_cmd.append(str(seed))
+        if self.report_level >= 1:
+            print 'cmd: {0}\n'.format(urdme_solver_cmd)
+        try:
+            handle = subprocess.Popen(urdme_solver_cmd)
+            return_code = handle.wait()
+        except OSError as e:
+            print "Error, execution of solver raised and exception: {0}".format(e)
+            print "urdme_solver_cmd = {0}".format(urdme_solver_cmd)
+            raise URDMEError("Solver execution failed")
+
+        if return_code != 0:
+            raise URDMEError("Solver execution failed")
+        
+        #Load the result from the hdf5 output file.
+        try:
+            result = URDMEResult(self.model, outfile.name)
+            
+            # Clean up
+            if self.delete_infile:
+                os.remove(self.infile_name)
+            os.remove(outfile.name)
+            
+            result["Status"] = "Sucess"
+            return result
+        
+        except Exception as e:
+            exc_info = sys.exc_info()
+            # Clean up
+            if self.delete_infile:
+                os.remove(self.infile_name)
+            os.remove(outfile.name)
+            raise exc_info[1], None, exc_info[2]    
+
+    
+    
+    def createPropensityFile(self, file_name=None):
+        """ Generate the C propensity file that is used to compile the URDME solvers.
+            Only mass action propensities are supported. 
+            
+        """
+        
+        template = open(os.path.abspath(os.path.dirname(__file__)) + '/data/propensity_file_template.c', 'r')
+        propfile = open(file_name, "w")
+        propfilestr = template.read()
+        
+        speciesdef = ""
+        i = 0
+        for S in self.model.listOfSpecies:
+            speciesdef += "#define " + S + " " + "x[" + str(i) + "]" + "\n"
+            i += 1
+        
+        propfilestr = propfilestr.replace("__DEFINE_SPECIES__", speciesdef)
+        
+        propfilestr = propfilestr.replace("__NUMBER_OF_REACTIONS__", str(self.model.getNumReactions()))
+        
+        # Make sure all paramters are evaluated to scalars before we write them to the file.
+        self.model.resolveParameters()
+        parameters = ""
+        for p in self.model.listOfParameters:
+            parameters += "const double " + p + " = " + str(self.model.listOfParameters[p].value) + ";\n"
+        propfilestr = propfilestr.replace("__DEFINE_PARAMETERS__", str(parameters))
+        
+        # Reactions
+        funheader = "double __NAME__(const int *x, double t, const double vol, const double *data, int sd)"
+        
+        funcs = ""
+        funcinits = ""
+        i = 0
+        for R in self.model.listOfReactions:
+            func = ""
+            rname = self.model.listOfReactions[R].name
+            func += funheader.replace("__NAME__", rname) + "\n{\n"
+            if self.model.listOfReactions[R].restrict_to == None:
+                func += "    return " + self.model.listOfReactions[R].propensity_function
+                order = len(self.model.listOfReactions[R].reactants)
+                if order == 2:
+                    func += "/vol;"
+                elif order == 0:
+                    func += "*vol;"
+                else:
+                    func += ";"
+            
+            else:
+                func += "if("
+                if isinstance(self.model.listOfReactions[R].restrict_to, list):
+                    for sd in self.model.listOfReactions[R].restrict_to:
+                        func += "sd == " + str(sd) + "||"
+                    func = func[:-2]
+                elif isinstance(self.model.listOfReactions[R].restrict_to, int):
+                    func += "sd == " +  str(self.model.listOfReactions[R].restrict_to)
+                else:
+                    raise URDMEError("When restricting reaction to subdomains, you must specify either a list or an int")
+                func += ")\n"
+                func += "\treturn " + self.model.listOfReactions[R].propensity_function
+                order = len(self.model.listOfReactions[R].reactants)
+                if order == 2:
+                    func += "/vol;"
+                elif order == 0:
+                    func += "*vol;"
+                else:
+                    func += ";"
+                
+                func += "\nelse"
+                func += "\n\treturn 0.0;"
+            
+            
+            func += "\n}"
+            funcs += func + "\n\n"
+            funcinits += "    ptr[" + str(i) + "] = " + rname + ";\n"
+            i += 1
+        
+        propfilestr = propfilestr.replace("__DEFINE_REACTIONS__", funcs)
+        propfilestr = propfilestr.replace("__DEFINE_PROPFUNS__", funcinits)
+        
+        propfile.write(propfilestr)
+        propfile.close()
+
+
+
 def urdme(model=None, solver='nsm', solver_path="", model_file=None, input_file=None, seed=None, report_level=0):
     """ URDME solver interface.
-
+        
         TODO: Docs...
         
         After sucessful execution, urdme returns a dictionary, result, with the following members
-            U:         the raw copy number output in a matrix with dimension (Ndofs, num_time_points)
-            tspan:     the time span vector containing the time points that corresponds to the columns in U
-            status:    Sucess if the solver executed without error
-            stdout:    the standard ouput stream from the call to the core solver
-            stderr:    the standard error stream from the call to the core solver
-
-    """
-
-
-    # Set URDME_ROOT. This will fail if URDME is not installed on the system.
-    try:
-        #URDME_ROOT = subprocess.check_output(['urdme_init', '-r'])
-        urdme_init = subprocess.check_output(['which','urdme_init']).strip()
-        path = os.readlink(urdme_init)
-        if not path.endswith('/urdme/bin/urdme_init'):
-          raise Exception('path={0}\n'.format(path))
-        URDME_ROOT = path.replace('bin/urdme_init','')
-    except Exception as e:
-        raise URDMEError("Could not determine the location of URDME.")
-
-    if solver_path == "":
-        URDME_BUILD = URDME_ROOT + '/build/'
-    else:
-        URDME_BUILD = solver_path + '/build/'
-        os.environ['SOLVER_ROOT'] = solver_path
-
-    # Write the propensity file
-    if os.path.isdir('.urdme'):
-        shutil.rmtree('.urdme')
-
-    try:
-        os.mkdir('.urdme')
-    except Exception as e:
-        pass
-
-    propfilename = model.name + '_pyurdme_generated_model'
-    if model_file == None:
-        propfilename = model.name + '_pyurdme_generated_model'
-        if solver != "nem":
-            model.createPropensityFile(file_name='.urdme/' + propfilename + '.c')
+        U:         the raw copy number output in a matrix with dimension (Ndofs, num_time_points)
+        tspan:     the time span vector containing the time points that corresponds to the columns in U
+        status:    Sucess if the solver executed without error
+        stdout:    the standard ouput stream from the call to the core solver
+        stderr:    the standard error stream from the call to the core solver
+        
+        """
+    #If solver is a subclass of URDMESolver, use it directly.    
+    if isinstance(solver, (type, types.ClassType)) and  issubclass(solver, URDMESolver):
+        sol = solver(model, solver_path, report_level, model_file=model_file)
+    elif type(solver) is str:
+        if solver == 'nsm':
+            from nsmsolver import NSMSolver
+            sol = NSMSolver(model, solver_path, report_level, model_file=model_file)
+        elif solver == 'nem':
+            from nemsolver import NEMSolver
+            sol = NEMSolver(model, solver_path, report_level, model_file=model_file)
         else:
-            model.createNewPropensityFile(file_name='.urdme/' + propfilename + '.c')
+            raise URDMEError("Unknown solver: {0}".format(solver_name))
     else:
-        subprocess.call(['cp', model_file, '.urdme/' + propfilename + '.c'])
-
-    # Build the solver
-    makefile = 'Makefile.' + solver
-    cmd = ['make', '-f', URDME_BUILD + makefile, 'URDME_ROOT=' + URDME_ROOT, 'URDME_MODEL=' + propfilename]
-    if report_level >= 1:
-        print "cmd: {0}\n".format(cmd)
-    handle = subprocess.Popen(cmd, stdout = subprocess.PIPE, stderr=subprocess.PIPE)
-    return_code = handle.wait()
-
-    if return_code != 0:
-        print handle.stdout.read()
-        print handle.stderr.read()
-        raise URDMEError("Compilation of solver failed")
-
-    if report_level >= 1:
-        print handle.stdout.read()
-        print handle.stderr.read()
-
-    if input_file is None:
-        # Get temporary input and output files
-        infile = tempfile.NamedTemporaryFile(delete=False)
-
-        # Write the model to an input file in .mat format
-        model.serialize(filename=infile)
-        infile.close()
-        infile_name = infile.name
-    else:
-        infile_name = input_file
-
-
-    outfile = tempfile.NamedTemporaryFile(delete=False)
-    outfile.close()
-
-    # Execute the solver
-    urdme_solver_cmd = ['.urdme/' + propfilename + '.' + solver , infile_name , outfile.name]
-    if seed is not None:
-        urdme_solver_cmd.append(str(seed))
-    if report_level >= 1:
-        print 'cmd: {0}\n'.format(urdme_solver_cmd)
-    handle = subprocess.Popen(urdme_solver_cmd)
-    return_code = handle.wait()
-    if return_code != 0:
-        raise URDMEError("Solver execution failed")
-
-    #Load the result from the hdf5 output file.
-    try:
-        result = URDMEResult(model, outfile.name)
-
-        # Clean up
-        if input_file is None:
-            os.remove(infile.name)
-        os.remove(outfile.name)
-
-        result["Status"] = "Sucess"
-        return result
-
-    except Exception as e:
-        exc_info = sys.exc_info()
-        # Clean up
-        if input_file is None:
-            os.remove(infile.name)
-        os.remove(outfile.name)
-        raise exc_info[1], None, exc_info[2]
+        raise URDMEError("solver argument to urdme() must be a string or a URDMESolver class object.")
+            
+    sol.compile()
+    return sol.run(seed, input_file=input_file)
 
 
 

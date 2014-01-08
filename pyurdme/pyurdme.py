@@ -689,7 +689,7 @@ class Xmesh():
 class URDMEResult(dict):
     """ Result object for a URDME simulation, extendes the dict object. """
     
-    def __init__(self, model, filename=None):
+    def __init__(self, model=None, filename=None):
         self.model = model
         self.sol = None
         self.U = None
@@ -721,6 +721,8 @@ class URDMEResult(dict):
         sol = {}
         
         dims = self.U.shape
+        if self.model is None:
+          raise URDMEError("URDMEResult.model must be set before the sol attribute can be accessed.")
         numvox = self.model.mesh.getNumVoxels()
         # The result is loaded in dolfin Functions, one for each species and time point
         for i,spec in enumerate(self.model.listOfSpecies):
@@ -862,7 +864,7 @@ class URDMEResult(dict):
 class URDMESolver:
     """ Abstract class for URDME solvers. """
     
-    def __init__(self, model, solver_path=None, report_level=0):
+    def __init__(self, model, solver_path=None, report_level=0, model_file=None):
         """ Constructor. """
         if not isinstance(model,URDMEModel):
           raise URDMEError("URDMEsolver constructors must take a URDMEModel as an argument.")
@@ -874,6 +876,14 @@ class URDMESolver:
         self.model = model
         self.is_compiled = False
         self.report_level = report_level
+        self.model_file = model_file
+        self.infile_name = None
+        self.delete_infile = False
+        self.model_name = self.model.name
+        self.solver_base_dir = None
+    
+        # For the remote execution
+        self.temp_urdme_root = None
 
         # Set URDME_ROOT. This will fail if URDME is not installed on the system.
         try:
@@ -891,19 +901,79 @@ class URDMESolver:
             self.URDME_BUILD = solver_path + '/build/'
             os.environ['SOLVER_ROOT'] = solver_path
 
-   #def __getstate__():
-   #    """ Save the state of the solver, saves all instance variables
-   #        and reads all the files necessary to compile the solver off
-   #        of the file system and stores it in a separate state variable.
-   #        If the solver model files is specified, it saves that too.
-   #        This is used by Pickle.
-   #    """
+    def __getstate__(self):
+        """ Save the state of the solver, saves all instance variables
+            and reads all the files necessary to compile the solver off
+            of the file system and stores it in a separate state variable.
+            If the solver model files is specified, it saves that too.
+            This is used by Pickle.
+        """
+        ret = {}
+        # Save the instance variables
+        ret['vars'] = self.__dict__.copy()
+        ret['vars']['model'] = None
+        ret['vars']['is_compiled'] = False
+        # Create temp root
+        tmproot = tempfile.mkdtemp()
+        # Get the propensity file
+        model_file = tmproot+'/'+self.model_name + '_pyurdme_generated_model'+ '.c'
+        ret['model_file'] = os.path.basename(model_file)
+        if self.model_file == None:
+            self.createPropensityFile(file_name=model_file)
+        else:
+            subprocess.call('cp '+self.model_file+' '+model_file, shell=True)            
+        # Get the solver source files
+        os.mkdir(tmproot+'/include')
+        os.mkdir(tmproot+'/src')
+        os.mkdir(tmproot+'/src/'+self.NAME)
+        #TODO: what if solverdir is not the same as URDME_ROOT ?
+        subprocess.call('cp '+self.URDME_ROOT+'src/*.c '+tmproot+'/src/', shell=True)
+        subprocess.call('cp '+self.URDME_ROOT+'src/'+self.NAME+'/*.* '+tmproot+'/src/'+self.NAME+'/', shell=True)
+        subprocess.call('cp '+self.URDME_ROOT+'include/*.h '+tmproot+'/include/', shell=True)
+        #TODO: get the include files from solvers not in the default path (none currently implement this).
+        # Get the Makefile
+        os.mkdir(tmproot+'/build')
+        subprocess.call('cp '+self.URDME_BUILD+'Makefile.'+self.NAME+' '+tmproot+'/build/Makefile'+self.NAME, shell=True)
+        # Get the input file
+        input_file = tmproot+'/model_input.mat'
+        ret['input_file'] = os.path.basename(input_file)
+        self.model.serialize(filename=input_file)
+        ##
+        origwd = os.getcwd()
+        os.chdir(tmproot)
+        tarname = tmproot+'/'+self.NAME+'.tar.gz'
+        subprocess.call('tar -czf '+tarname+' src include build '+os.path.basename(input_file)+' '+os.path.basename(model_file), shell=True)
+        with open(tarname, 'r') as f:
+            ret['SolverFiles'] = f.read()
+        os.chdir(origwd)
+        shutil.rmtree(tmproot)
+        # return the state
+        return ret
 
-   #def __setstate__(state):
-   #    """ Set all instance variables for the object, and create a unique temporary
-   #        directory to store all the sovler files.  URDME_BUILD is set to this dir,
-   #        and is_compiled is always set to false.  This is used by Pickle.
-   #    """
+    def __setstate__(self, state):
+        """ Set all instance variables for the object, and create a unique temporary
+            directory to store all the sovler files.  URDME_BUILD is set to this dir,
+            and is_compiled is always set to false.  This is used by Pickle.
+        """
+        # 0. restore the instance variables
+        for key, val in state['vars'].iteritems():
+          self.__dict__[key] = val
+        # 1. create temporary directory = URDME_ROOT
+        self.temp_urdme_root = tempfile.mkdtemp()
+        self.URDME_ROOT = self.temp_urdme_root
+        origwd = os.getcwd()
+        os.chdir(self.temp_urdme_root)
+        tarname = self.temp_urdme_root+'/'+self.NAME+'.tar.gz'
+        with open(tarname, 'wd') as f:
+            f.write(state['SolverFiles'])
+        subprocess.call('tar -zxf '+tarname, shell=True)
+        os.chdir(origwd)
+        # Model File
+        self.model_file = self.temp_urdme_root+'/'+state['model_file']
+        # Input File
+        self.infile_name = self.temp_urdme_root+'/'+state['input_file']
+
+        
 
     def __del__(self):
         """ Deconstructor.  Removes the compiled solver."""
@@ -912,15 +982,17 @@ class URDMESolver:
                 shutil.rmtree(self.solver_base_dir)
             except OSError as e:
                 print "Could not delete '{0}'".format(self.solver_base_dir)
+        if self.temp_urdme_root is not None:
+            try:
+                shutil.rmtree(self.temp_urdme_root)
+            except OSError as e:
+                print "Could not delete '{0}'".format(self.temp_urdme_root)
    
     
-    #TODO: model_file should go to the constructor.
-    #TODO: input_file should go to the run method.
-    def compile(self, model_file=None, input_file=None):
+    def compile(self):
         """ Compile the model."""
 
-        #TODO: fix this, should be a unique directory each time call to compile.
-        #self.solver_dir = '.urdme/'
+        # Create a unique directory each time call to compile.
         self.solver_base_dir = tempfile.mkdtemp()
         self.solver_dir = self.solver_base_dir + '/.urdme/'
         #print "URDMESolver.compile()  self.solver_dir={0}".format(self.solver_dir)
@@ -936,12 +1008,11 @@ class URDMESolver:
             pass
         
         # Write the propensity file
-        self.propfilename = self.model.name + '_pyurdme_generated_model'
-        if model_file == None:
-            self.propfilename = self.model.name + '_pyurdme_generated_model'
+        self.propfilename = self.model_name + '_pyurdme_generated_model'
+        if self.model_file == None:
             self.createPropensityFile(file_name=self.solver_dir + self.propfilename + '.c')
         else:
-            subprocess.call(['cp', model_file, self.solver_dir + self.propfilename + '.c'])
+            subprocess.call(['cp', self.model_file, self.solver_dir + self.propfilename + '.c'])
         
         # Build the solver
         makefile = 'Makefile.' + self.NAME
@@ -965,31 +1036,33 @@ class URDMESolver:
             print handle.stdout.read()
             print handle.stderr.read()
 
-        if input_file is None:
-            # Get temporary input and output files
-            infile = tempfile.NamedTemporaryFile(delete=False)
-            
-            # Write the model to an input file in .mat format
-            self.model.serialize(filename=infile)
-            infile.close()
-            self.infile_name = infile.name
-            self.delete_infile = True
-        else:
-            self.infile_name = input_file
-            self.delete_infile = False
 
         self.is_compiled = True
     
     
-    def run(self, seed=None):
+    def run(self, seed=None, input_file=None):
         """ Run one simulation of the model.
             
         Returns:
             URDMEResult object
         """
-        #TODO: Check if compiled, call compile() if not.
+        # Check if compiled, call compile() if not.
         if not self.is_compiled:
           self.compile()
+
+        if input_file is None:
+            if self.infile_name is None:
+                # Get temporary input and output files
+                infile = tempfile.NamedTemporaryFile(delete=False)
+                
+                # Write the model to an input file in .mat format
+                self.model.serialize(filename=infile)
+                infile.close()
+                self.infile_name = infile.name
+                self.delete_infile = True
+        else:
+            self.infile_name = input_file
+            self.delete_infile = False
         
         outfile = tempfile.NamedTemporaryFile(delete=False)
         outfile.close()
@@ -1035,7 +1108,9 @@ class URDMESolver:
     
     def createPropensityFile(self, file_name=None):
         """ Generate the C propensity file that is used to compile the URDME solvers.
-            Only mass action propensities are supported. """
+            Only mass action propensities are supported. 
+            
+        """
         
         template = open(os.path.abspath(os.path.dirname(__file__)) + '/data/propensity_file_template.c', 'r')
         propfile = open(file_name, "w")
@@ -1130,21 +1205,21 @@ def urdme(model=None, solver='nsm', solver_path="", model_file=None, input_file=
         """
     #If solver is a subclass of URDMESolver, use it directly.    
     if isinstance(solver, (type, types.ClassType)) and  issubclass(solver, URDMESolver):
-        sol = solver(model,solver_path,report_level)
+        sol = solver(model, solver_path, report_level, model_file=model_file)
     elif type(solver) is str:
         if solver == 'nsm':
             from nsmsolver import NSMSolver
-            sol = NSMSolver(model,solver_path,report_level)
+            sol = NSMSolver(model, solver_path, report_level, model_file=model_file)
         elif solver == 'nem':
             from nemsolver import NEMSolver
-            sol = NEMSolver(model,solver_path,report_level)
+            sol = NEMSolver(model, solver_path, report_level, model_file=model_file)
         else:
             raise URDMEError("Unknown solver: {0}".format(solver_name))
     else:
-        raise URDMEError("solver argument to urdme() must be a string or a class object.")
+        raise URDMEError("solver argument to urdme() must be a string or a URDMESolver class object.")
             
-    sol.compile(model_file, input_file)
-    return sol.run(seed)
+    sol.compile()
+    return sol.run(seed, input_file=input_file)
 
 
 

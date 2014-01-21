@@ -933,7 +933,7 @@ class URDMESolver:
         #TODO: get the include files from solvers not in the default path (none currently implement this).
         # Get the Makefile
         os.mkdir(tmproot+'/build')
-        subprocess.call('cp '+self.URDME_BUILD+'Makefile.'+self.NAME+' '+tmproot+'/build/Makefile'+self.NAME, shell=True)
+        subprocess.call('cp '+self.URDME_BUILD+'Makefile.'+self.NAME+' '+tmproot+'/build/Makefile.'+self.NAME, shell=True)
         # Get the input file
         input_file = tmproot+'/model_input.mat'
         ret['input_file'] = os.path.basename(input_file)
@@ -961,6 +961,7 @@ class URDMESolver:
         # 1. create temporary directory = URDME_ROOT
         self.temp_urdme_root = tempfile.mkdtemp()
         self.URDME_ROOT = self.temp_urdme_root
+        self.URDME_BUILD = self.temp_urdme_root+'/build/'
         origwd = os.getcwd()
         os.chdir(self.temp_urdme_root)
         tarname = self.temp_urdme_root+'/'+self.NAME+'.tar.gz'

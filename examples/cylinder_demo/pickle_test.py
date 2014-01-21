@@ -7,7 +7,7 @@ import pickle
 # Create the model and solver
 model = cylinderDemo3D()
 sol = NSMSolver(model)
-#pickle.dumps(sol, open('cylinderDemo3D_NSM.pkl', 'wb'))
+#pickle.dump(sol, open('cylinderDemo3D_NSM.pkl', 'wb'))
 sol_str = pickle.dumps(sol)
 
 # This could be on a difference python instance

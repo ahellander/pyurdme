@@ -25,9 +25,7 @@ try:
     import dolfin
     dolfin.parameters["linear_algebra_backend"] = "uBLAS"
 except Exception:
-    print "Warning: Could not import dolphin. Only simple Cartesain examples will work."
-    ONLY_CARTESIAN = True
-
+    print "Warning: Could not import dolphin."
 
 
 class URDMEModel(Model):
@@ -108,18 +106,33 @@ class URDMEModel(Model):
 
         return G
 
-    
-
-
 
     def timespan(self, tspan):
         """ Set the time span of simulation. """
         self.tspan = tspan
 
+
+    def _initialize_default_subdomain(self):
+        """" Create a default subdomain function. The default is all voxels belong
+             to subdomain 1. 
+        """
+        
+        subdomain = dolfin.MeshFunction("size_t", self.mesh, self.mesh.topology().dim()-1)
+        subdomain.set_all(1)
+        self.addSubDomain(subdomain)
+
     def _initialize_species_to_subdomains(self):
         """ Initialize the species mapping to subdomains. The default
             is that a species is active in all the defined subdomains.
         """
+        
+        # If no subdomain function has been set by the user,
+        # we need to create a default subdomain here.
+        
+        if not self.subdomains:
+            self._initialize_default_subdomain()
+
+
         # The unique elements of the subdomain MeshFunctions
         sds = []
         for dim, subdomain in self.subdomains.items():
@@ -687,7 +700,7 @@ class Xmesh():
         self.dof_to_vertex_map = {}
 
 class URDMEResult(dict):
-    """ Result object for a URDME simulation, extendes the dict object. """
+    """ Result object for a URDME simulation, extends the dict object. """
     
     def __init__(self, model=None, filename=None):
         self.model = model

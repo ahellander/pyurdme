@@ -72,7 +72,6 @@ class URDMEModel(Model):
                     state[key] = mesh_str
                 elif key == "subdomains":
                     sddict = OrderedDict()
-                    print key,item
                     for sdkey, sd_func in item.items():
                         dolfin.File("tempsd.xml") << sd_func
                         func_str = open("tempsd.xml").read()
@@ -113,7 +112,6 @@ class URDMEModel(Model):
                 func = dolfin.MeshFunction("size_t", self.__dict__["mesh"])
                 file_in >> func
                 sddict[sdkey] = func
-                #sddict[sdkey] = dolfin.MeshFunction(self.__dict__["mesh"],"tempsd.xml")
                 os.remove("tempsd.xml")
             self.__dict__["subdomains"] = sddict
         except Exception,e:

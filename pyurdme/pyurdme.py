@@ -28,6 +28,7 @@ except Exception:
     print "Warning: Could not import dolphin."
 
 import pickle
+import uuid
 
 class URDMEModel(Model):
     """
@@ -66,16 +67,18 @@ class URDMEModel(Model):
                 pickle.dumps(item)
             except:
                 if key == "mesh":
-                    dolfin.File("tempmesh.xml") << item
-                    mesh_str = open("tempmesh.xml").read()
-                    os.remove("tempmesh.xml")
+                    filename = str(uuid.uuid1())+".xml"
+                    dolfin.File(filename) << item
+                    mesh_str = open(filename).read()
+                    os.remove(filename)
                     state[key] = mesh_str
                 elif key == "subdomains":
                     sddict = OrderedDict()
                     for sdkey, sd_func in item.items():
-                        dolfin.File("tempsd.xml") << sd_func
-                        func_str = open("tempsd.xml").read()
-                        os.remove("tempsd.xml")
+                        filename = str(uuid.uuid1())+".xml"
+                        dolfin.File(filename) << sd_func
+                        func_str = open(filename).read()
+                        os.remove(filename)
                         sddict[sdkey] = func_str
                     state[key] = sddict
                 else:
@@ -91,11 +94,12 @@ class URDMEModel(Model):
 
         # Recreate the mesh
         try:
-            file = open("tempmesh.xml","w")
+            filename = str(uuid.uuid1())+".xml"
+            file = open(filename,"w")
             file.write(state["mesh"])
             file.close()
-            mesh = Mesh.read_dolfin_mesh("tempmesh.xml")
-            os.remove("tempmesh.xml")
+            mesh = Mesh.read_dolfin_mesh(filename)
+            os.remove(filename)
             self.__dict__["mesh"] = mesh
         except Exception, e:
             print "Error unpickling model, could not recreate the mesh."
@@ -105,14 +109,15 @@ class URDMEModel(Model):
         try:
             sddict = OrderedDict()
             for sdkey,sd_func_str in state["subdomains"].items():
-                file = open("tempsd.xml","w")
+                filename = str(uuid.uuid1())+".xml"
+                file = open(filename,"w")
                 file.write(sd_func_str)
                 file.close()
-                file_in = dolfin.File("tempsd.xml")
+                file_in = dolfin.File(filename)
                 func = dolfin.MeshFunction("size_t", self.__dict__["mesh"])
                 file_in >> func
                 sddict[sdkey] = func
-                os.remove("tempsd.xml")
+                os.remove(filename)
             self.__dict__["subdomains"] = sddict
         except Exception,e:
             print "Error unpickling model, could not recreate the subdomain functions"

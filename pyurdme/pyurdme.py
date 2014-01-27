@@ -128,10 +128,8 @@ class URDMEModel(Model):
         
         # If no subdomain function has been set by the user,
         # we need to create a default subdomain here.
-        
         if not self.subdomains:
             self._initialize_default_subdomain()
-
 
         # The unique elements of the subdomain MeshFunctions
         sds = []
@@ -699,6 +697,7 @@ class Xmesh():
         self.vertex_to_dof_map = {}
         self.dof_to_vertex_map = {}
 
+
 class URDMEResult(dict):
     """ Result object for a URDME simulation, extends the dict object. """
     
@@ -929,6 +928,7 @@ class URDMESolver:
         ret = {}
         # Save the instance variables
         ret['vars'] = self.__dict__.copy()
+        # The model object is not picklabe due to the Swig-objects from Dolfin
         ret['vars']['model'] = None
         ret['vars']['is_compiled'] = False
         # Create temp root
@@ -970,7 +970,7 @@ class URDMESolver:
 
     def __setstate__(self, state):
         """ Set all instance variables for the object, and create a unique temporary
-            directory to store all the sovler files.  URDME_BUILD is set to this dir,
+            directory to store all the solver files.  URDME_BUILD is set to this dir,
             and is_compiled is always set to false.  This is used by Pickle.
         """
         # 0. restore the instance variables
@@ -1042,7 +1042,7 @@ class URDMESolver:
             handle = subprocess.Popen(cmd, stdout = subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
             return_code = handle.wait()
         except OSError as e:
-            print "Error, execution of compilation raised and exception: {0}".format(e)
+            print "Error, execution of compilation raised an exception: {0}".format(e)
             print "cmd = {0}".format(cmd)
             raise URDMEError("Compilation of solver failed")
         
@@ -1096,7 +1096,7 @@ class URDMESolver:
             handle = subprocess.Popen(urdme_solver_cmd)
             return_code = handle.wait()
         except OSError as e:
-            print "Error, execution of solver raised and exception: {0}".format(e)
+            print "Error, execution of solver raised an exception: {0}".format(e)
             print "urdme_solver_cmd = {0}".format(urdme_solver_cmd)
             raise URDMEError("Solver execution failed")
 

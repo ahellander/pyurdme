@@ -1,9 +1,7 @@
 """ pyURDME model file for the MinCDE example. """
 
-import os
-
+import os.path
 from pyurdme import pyurdme
-#from pyurdme.pyurdme import *
 import dolfin
 import numpy
 
@@ -31,21 +29,16 @@ class mincde(pyurdme.URDMEModel):
         MinDE      = pyurdme.Species(name="MinDE",diffusion_constant=1e-14,dimension=2)
         
         self.addSpecies([MinD_m,MinD_c_atp,MinD_c_adp,MinD_e,MinDE])
-        self.mesh = pyurdme.Mesh.read_dolfin_mesh("mesh/coli.xml")
         
-        # Read the facet and interior cell physical domain markers into Dolfin MeshFunctions
-        #file_in = dolfin.File("mesh/coli_facet_region.xml")
-        #boundary = dolfin.FacetFunction("size_t",self.mesh)
-        #file_in >> boundary
-        
-        #file_in = dolfin.File("mesh/coli_physical_region.xml")
-        #interior = dolfin.CellFunction("size_t",self.mesh)
-        #file_in >> interior
+        # Make sure that we have the correct path to the mesh file even if we are not executing from the basedir.
+        basedir = os.path.dirname(os.path.abspath(__file__))
+        self.mesh = pyurdme.Mesh.read_dolfin_mesh(basedir+"/mesh/coli.xml")
         
         interior = dolfin.CellFunction("size_t",self.mesh)
         interior.set_all(1)
         boundary = dolfin.FacetFunction("size_t",self.mesh)
         boundary.set_all(0)
+        
         # Mark the boundary points
         membrane = Membrane()
         membrane.mark(boundary,2)

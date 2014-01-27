@@ -27,6 +27,7 @@ try:
 except Exception:
     print "Warning: Could not import dolphin."
 
+import pickle
 
 class URDMEModel(Model):
     """
@@ -41,15 +42,85 @@ class URDMEModel(Model):
         self.geometry = None
 
         self.mesh = None
-
+        self.xmesh = None
+        
         # subdomins is a list of MeshFunctions with subdomain marker information
         self.subdomains = OrderedDict()
 
         # This dictionary hold information about the subdomains each species is active on
         self.species_to_subdomains = {}
+    
 
         self.tspan = None
         self.vol = None
+    
+    def __getstate__(self):
+        """ Used by pickle to get state when pickling. Because we 
+            have Swig wrappers to extension modules, we need to remove some instance variables 
+            for the object to pickle. """
+        
+        #  Filter out any instance variable that is not picklable...
+        state = self.__dict__
+        for key, item in state.items():
+            try:
+                pickle.dumps(item)
+            except:
+                if key == "mesh":
+                    dolfin.File("tempmesh.xml") << item
+                    mesh_str = open("tempmesh.xml").read()
+                    os.remove("tempmesh.xml")
+                    state[key] = mesh_str
+                elif key == "subdomains":
+                    sddict = OrderedDict()
+                    print key,item
+                    for sdkey, sd_func in item.items():
+                        dolfin.File("tempsd.xml") << sd_func
+                        func_str = open("tempsd.xml").read()
+                        os.remove("tempsd.xml")
+                        sddict[sdkey] = func_str
+                    state[key] = sddict
+                else:
+                    state[key] = None
+
+
+        return state
+    
+    def __setstate__(self,state):
+        """ Used by pickle to set state when unpickling. """
+        
+        self.__dict__ = state
+
+        # Recreate the mesh
+        try:
+            file = open("tempmesh.xml","w")
+            file.write(state["mesh"])
+            file.close()
+            mesh = Mesh.read_dolfin_mesh("tempmesh.xml")
+            os.remove("tempmesh.xml")
+            self.__dict__["mesh"] = mesh
+        except Exception, e:
+            print "Error unpickling model, could not recreate the mesh."
+            raise
+        
+        # Recreate the subdomain functions
+        try:
+            sddict = OrderedDict()
+            for sdkey,sd_func_str in state["subdomains"].items():
+                file = open("tempsd.xml","w")
+                file.write(sd_func_str)
+                file.close()
+                file_in = dolfin.File("tempsd.xml")
+                func = dolfin.MeshFunction("size_t", self.__dict__["mesh"])
+                file_in >> func
+                sddict[sdkey] = func
+                #sddict[sdkey] = dolfin.MeshFunction(self.__dict__["mesh"],"tempsd.xml")
+                os.remove("tempsd.xml")
+            self.__dict__["subdomains"] = sddict
+        except Exception,e:
+            print "Error unpickling model, could not recreate the subdomain functions"
+
+        self.meshextend()
+
 
     def __initializeSpeciesMap(self):
         i = 0

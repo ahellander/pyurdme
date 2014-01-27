@@ -19,13 +19,14 @@ from model import *
 try:
     import h5py
 except:
-    raise Exception("pyurdme requires h5py.")
+    raise Exception("PyURDME requires h5py.")
 
 try:
     import dolfin
     dolfin.parameters["linear_algebra_backend"] = "uBLAS"
-except Exception:
-    print "Warning: Could not import dolphin."
+except:
+    raise Exception("PyURDME requires FeniCS/dolfin.")
+
 
 import pickle
 import uuid
@@ -626,7 +627,7 @@ class URDMEModel(Model):
             the matrices are in CSR format.
             """
         
-        if not hasattr(self, 'xmesh'):
+        if self.xmesh == None:
             self.meshextend()
         
         self._initialize_species_to_subdomains()
@@ -1167,7 +1168,7 @@ class URDMESolver:
         if self.report_level >= 1:
             print 'cmd: {0}\n'.format(urdme_solver_cmd)
         try:
-            handle = subprocess.Popen(urdme_solver_cmd)
+            handle = subprocess.Popen(urdme_solver_cmd, stderr=subprocess.PIPE,stdout=subprocess.PIPE)
             return_code = handle.wait()
         except OSError as e:
             print "Error, execution of solver raised an exception: {0}".format(e)
@@ -1175,6 +1176,7 @@ class URDMESolver:
             raise URDMEError("Solver execution failed")
 
         if return_code != 0:
+            print handle.stderr.read(),handle.stdout.read()
             raise URDMEError("Solver execution failed")
         
         #Load the result from the hdf5 output file.

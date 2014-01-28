@@ -19,14 +19,18 @@ from model import *
 try:
     import h5py
 except:
-    raise Exception("pyurdme requires h5py.")
+    raise Exception("PyURDME requires h5py.")
 
 try:
     import dolfin
     dolfin.parameters["linear_algebra_backend"] = "uBLAS"
-except Exception:
-    print "Warning: Could not import dolphin."
+except:
+    raise Exception("PyURDME requires FeniCS/dolfin.")
 
+import pickle
+
+# Set log level to report only errors or worse
+#dolfin.set_log_level(dolfin.ERROR)
 
 class URDMEModel(Model):
     """
@@ -41,15 +45,84 @@ class URDMEModel(Model):
         self.geometry = None
 
         self.mesh = None
-
+        self.xmesh = None
+        
         # subdomins is a list of MeshFunctions with subdomain marker information
         self.subdomains = OrderedDict()
 
         # This dictionary hold information about the subdomains each species is active on
         self.species_to_subdomains = {}
-
+    
         self.tspan = None
         self.vol = None
+    
+    def __getstate__(self):
+        """ Used by pickle to get state when pickling. Because we 
+            have Swig wrappers to extension modules, we need to remove some instance variables 
+            for the object to pickle. """
+        
+        #  Filter out any instance variable that is not picklable...
+        state = self.__dict__
+        for key, item in state.items():
+            try:
+                pickle.dumps(item)
+            except:
+                if key == "mesh":
+                    tmpfile = tempfile.NamedTemporaryFile(suffix=".xml")
+                    dolfin.File(tmpfile.name) << item
+                    tmpfile.seek(0)
+                    state[key] = tmpfile.read()
+                elif key == "subdomains":
+                    sddict = OrderedDict()
+                    for sdkey, sd_func in item.items():
+                        tmpfile = tempfile.NamedTemporaryFile(suffix=".xml")
+                        dolfin.File(tmpfile.name) << sd_func
+                        tmpfile.seek(0)
+                        sddict[sdkey] = tmpfile.read()
+                    state[key] = sddict
+                else:
+                    state[key] = None
+
+
+        return state
+    
+    def __setstate__(self,state):
+        """ Used by pickle to set state when unpickling. """
+        
+        self.__dict__ = state
+
+        # Recreate the mesh
+        try:
+            file = tempfile.NamedTemporaryFile(suffix=".xml")
+            filename = file.name
+            file.write(state["mesh"])
+            file.seek(0)
+            mesh = Mesh.read_dolfin_mesh(filename)
+            file.close()
+            self.__dict__["mesh"] = mesh
+        except Exception, e:
+            print "Error unpickling model, could not recreate the mesh."
+            raise
+        
+        # Recreate the subdomain functions
+        try:
+            sddict = OrderedDict()
+            for sdkey,sd_func_str in state["subdomains"].items():
+                file = tempfile.NamedTemporaryFile(suffix=".xml")
+                filename = file.name
+                file.write(sd_func_str)
+                file.seek(0)
+                file_in = dolfin.File(filename)
+                func = dolfin.MeshFunction("size_t", self.__dict__["mesh"])
+                file_in >> func
+                sddict[sdkey] = func
+                file.close()
+            self.__dict__["subdomains"] = sddict
+        except Exception,e:
+            print "Error unpickling model, could not recreate the subdomain functions"
+
+        self.meshextend()
+
 
     def __initializeSpeciesMap(self):
         i = 0
@@ -552,7 +625,7 @@ class URDMEModel(Model):
             the matrices are in CSR format.
             """
         
-        if not hasattr(self, 'xmesh'):
+        if self.xmesh == None:
             self.meshextend()
         
         self._initialize_species_to_subdomains()
@@ -1093,7 +1166,7 @@ class URDMESolver:
         if self.report_level >= 1:
             print 'cmd: {0}\n'.format(urdme_solver_cmd)
         try:
-            handle = subprocess.Popen(urdme_solver_cmd)
+            handle = subprocess.Popen(urdme_solver_cmd, stderr=subprocess.PIPE,stdout=subprocess.PIPE)
             return_code = handle.wait()
         except OSError as e:
             print "Error, execution of solver raised an exception: {0}".format(e)
@@ -1101,6 +1174,9 @@ class URDMESolver:
             raise URDMEError("Solver execution failed")
 
         if return_code != 0:
+            print handle.stderr.read(),handle.stdout.read()
+            print "urdme_solver_cmd = {0}".format(urdme_solver_cmd)
+
             raise URDMEError("Solver execution failed")
         
         #Load the result from the hdf5 output file.

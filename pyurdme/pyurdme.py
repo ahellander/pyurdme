@@ -68,14 +68,14 @@ class URDMEModel(Model):
                 pickle.dumps(item)
             except:
                 if key == "mesh":
-                    tmpfile = tempfile.NamedTemporaryFile()
+                    tmpfile = tempfile.NamedTemporaryFile(suffix=".xml")
                     dolfin.File(tmpfile.name) << item
                     tmpfile.seek(0)
                     state[key] = tmpfile.read()
                 elif key == "subdomains":
                     sddict = OrderedDict()
                     for sdkey, sd_func in item.items():
-                        tmpfile = tempfile.NamedTemporaryFile()
+                        tmpfile = tempfile.NamedTemporaryFile(suffix=".xml")
                         dolfin.File(tmpfile.name) << sd_func
                         tmpfile.seek(0)
                         sddict[sdkey] = tmpfile.read()
@@ -93,12 +93,12 @@ class URDMEModel(Model):
 
         # Recreate the mesh
         try:
-            filename = str(uuid.uuid1())+".xml"
-            file = open(filename,"w")
+            file = tempfile.NamedTemporaryFile(suffix=".xml")
+            filename = file.name
             file.write(state["mesh"])
-            file.close()
+            file.seek(0)
             mesh = Mesh.read_dolfin_mesh(filename)
-            os.remove(filename)
+            file.close()
             self.__dict__["mesh"] = mesh
         except Exception, e:
             print "Error unpickling model, could not recreate the mesh."
@@ -108,15 +108,15 @@ class URDMEModel(Model):
         try:
             sddict = OrderedDict()
             for sdkey,sd_func_str in state["subdomains"].items():
-                filename = str(uuid.uuid1())+".xml"
-                file = open(filename,"w")
+                file = tempfile.NamedTemporaryFile(suffix=".xml")
+                filename = file.name
                 file.write(sd_func_str)
-                file.close()
+                file.seek(0)
                 file_in = dolfin.File(filename)
                 func = dolfin.MeshFunction("size_t", self.__dict__["mesh"])
                 file_in >> func
                 sddict[sdkey] = func
-                os.remove(filename)
+                file.close()
             self.__dict__["subdomains"] = sddict
         except Exception,e:
             print "Error unpickling model, could not recreate the subdomain functions"

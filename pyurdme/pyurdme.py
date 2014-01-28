@@ -27,9 +27,11 @@ try:
 except:
     raise Exception("PyURDME requires FeniCS/dolfin.")
 
-
 import pickle
 import uuid
+
+# Set log level to report only errors or worse
+dolfin.set_log_level(dolfin.ERROR)
 
 class URDMEModel(Model):
     """
@@ -52,7 +54,6 @@ class URDMEModel(Model):
         # This dictionary hold information about the subdomains each species is active on
         self.species_to_subdomains = {}
     
-
         self.tspan = None
         self.vol = None
     

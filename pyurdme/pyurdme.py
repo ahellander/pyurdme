@@ -1068,6 +1068,11 @@ class URDMESolver:
 
     def __del__(self):
         """ Deconstructor.  Removes the compiled solver."""
+        if self.delete_infile:
+            try:
+                os.remove(self.infile_name)
+            except OSError as e:
+                print "Could not delete '{0}'".format(self.infile_name)
         if self.solver_base_dir is not None:
             try:
                 shutil.rmtree(self.solver_base_dir)
@@ -1131,18 +1136,32 @@ class URDMESolver:
         self.is_compiled = True
     
     
+    def run_ensemble(self, number_of_trajectories, seed=None, input_file=None):
+        """ Run multiple simulations of the model.
+            
+        Returns:
+            A list of URDMEResult objects.
+        """
+        result = []
+        for ndx in range(number_of_trajectories)
+            if seed is None:
+                result.append(self.run(input_file=input_file))
+            else
+                result.append(self.run(seed=seed+ndx, input_file=input_file))
+        return result
+    
     def run(self, seed=None, input_file=None):
         """ Run one simulation of the model.
             
         Returns:
-            URDMEResult object
+            URDMEResult object.
         """
         # Check if compiled, call compile() if not.
         if not self.is_compiled:
           self.compile()
 
         if input_file is None:
-            if self.infile_name is None:
+            if self.infile_name is None or not os.path.exists(self.infile_name):
                 # Get temporary input and output files
                 infile = tempfile.NamedTemporaryFile(delete=False)
                 
@@ -1157,6 +1176,9 @@ class URDMESolver:
         
         outfile = tempfile.NamedTemporaryFile(delete=False)
         outfile.close()
+
+        if not os.path.exists(self.infile_name):
+            raise URDMEError("input file not found.")
         
         # Execute the solver
         urdme_solver_cmd = [self.solver_dir + self.propfilename + '.' + self.NAME , self.infile_name , outfile.name]
@@ -1181,8 +1203,6 @@ class URDMESolver:
             result = URDMEResult(self.model, outfile.name)
             
             # Clean up
-            if self.delete_infile:
-                os.remove(self.infile_name)
             os.remove(outfile.name)
             
             result["Status"] = "Sucess"

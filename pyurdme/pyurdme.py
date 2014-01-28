@@ -28,7 +28,6 @@ except:
     raise Exception("PyURDME requires FeniCS/dolfin.")
 
 import pickle
-import uuid
 
 # Set log level to report only errors or worse
 dolfin.set_log_level(dolfin.ERROR)
@@ -69,19 +68,17 @@ class URDMEModel(Model):
                 pickle.dumps(item)
             except:
                 if key == "mesh":
-                    filename = str(uuid.uuid1())+".xml"
-                    dolfin.File(filename) << item
-                    mesh_str = open(filename).read()
-                    os.remove(filename)
-                    state[key] = mesh_str
+                    tmpfile = tempfile.NamedTemporaryFile()
+                    dolfin.File(tmpfile.name) << item
+                    tmpfile.seek(0)
+                    state[key] = tmpfile.read()
                 elif key == "subdomains":
                     sddict = OrderedDict()
                     for sdkey, sd_func in item.items():
-                        filename = str(uuid.uuid1())+".xml"
-                        dolfin.File(filename) << sd_func
-                        func_str = open(filename).read()
-                        os.remove(filename)
-                        sddict[sdkey] = func_str
+                        tmpfile = tempfile.NamedTemporaryFile()
+                        dolfin.File(tmpfile.name) << sd_func
+                        tmpfile.seek(0)
+                        sddict[sdkey] = tmpfile.read()
                     state[key] = sddict
                 else:
                     state[key] = None

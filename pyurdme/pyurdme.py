@@ -31,7 +31,7 @@ import pickle
 import uuid
 
 # Set log level to report only errors or worse
-dolfin.set_log_level(dolfin.ERROR)
+#dolfin.set_log_level(dolfin.ERROR)
 
 class URDMEModel(Model):
     """
@@ -1178,6 +1178,8 @@ class URDMESolver:
 
         if return_code != 0:
             print handle.stderr.read(),handle.stdout.read()
+            print "urdme_solver_cmd = {0}".format(urdme_solver_cmd)
+
             raise URDMEError("Solver execution failed")
         
         #Load the result from the hdf5 output file.

@@ -1143,10 +1143,10 @@ class URDMESolver:
             A list of URDMEResult objects.
         """
         result = []
-        for ndx in range(number_of_trajectories)
+        for ndx in range(number_of_trajectories):
             if seed is None:
                 result.append(self.run(input_file=input_file))
-            else
+            else:
                 result.append(self.run(seed=seed+ndx, input_file=input_file))
         return result
     

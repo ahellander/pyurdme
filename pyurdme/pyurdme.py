@@ -717,9 +717,17 @@ class Mesh(dolfin.Mesh):
 
     @classmethod
     def unitCubeMesh(cls, nx, ny, nz):
-        """ Unit Square of with nx,ny points in the respective axes. """
+        """ Unit Cube of with nx,ny points in the respective axes. """
         mesh = dolfin.UnitCubeMesh(nx, ny, nz)
         return Mesh(mesh)
+
+    @classmethod
+    def CubeMesh(cls, L, nx, ny, nz):
+        """ Cube with nx,ny points in the respective axes. """
+        mesh = dolfin.BoxMesh(0,0,0,L,L,L,nx, ny, nz)
+        return Mesh(mesh)
+
+
 
     #@classmethod
     #def unitCircle(cls, nx,ny):

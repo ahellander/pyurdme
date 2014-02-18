@@ -5,4 +5,4 @@ setup(name="pyurdme",
       author="Andreas Hellander, Brian Drawert",
       author_email="andreas.hellander@gmail.com",
       packages=['pyurdme','examples','examples/mincde','examples/cylinder_demo'],
-      package_data={'examples/mincde':['mesh/*']})
+      package_data={'pyurdme':['data/*'],'examples/mincde':['mesh/*']})

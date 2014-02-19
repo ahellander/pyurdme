@@ -983,15 +983,8 @@ class URDMESolver:
         # For the remote execution
         self.temp_urdme_root = None
 
-        # Set URDME_ROOT. This will fail if URDME is not installed on the system.
-        try:
-            urdme_init = subprocess.check_output(['which','urdme_init']).strip()
-            path = os.readlink(urdme_init)
-            if not path.endswith('/urdme/bin/urdme_init'):
-                raise Exception('path={0}\n'.format(path))
-            self.URDME_ROOT = path.replace('bin/urdme_init','')
-        except Exception as e:
-            raise URDMEError("Could not determine the location of URDME.")
+        self.URDME_ROOT =  os.path.dirname(os.path.abspath(__file__))+"/urdme"
+        
         #print "solver_path={0}".format(solver_path)
         if solver_path is None or solver_path == "":
             self.URDME_BUILD = self.URDME_ROOT + '/build/'

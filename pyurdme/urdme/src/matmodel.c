@@ -7,6 +7,7 @@
 #include "hdf5.h"
 #include "hdf5_hl.h"
 #endif
+
 // This is necessary as 'parameters' is extern in "propensities.h" (where it is declared).
 // It must be defined (set to a value) in one and only one '.o' file
 #include "propensities.h"
@@ -269,11 +270,11 @@ void read_solution(urdme_model *model, char*file){
 /* Utility function. Initialize the solution field of the urdme_model struct. */
 void init_sol(urdme_model *model, int nsolmax)
 {
-	int i;
+	//int i;
 	model->nsolmax = nsolmax;
-	model->U = (int**)malloc(model->nsolmax*sizeof(int *));
-	for (i=0;i<nsolmax;i++)
-		model->U[i]=NULL;
+	//model->U = (int**)malloc(model->nsolmax*sizeof(int *));
+	//for (i=0;i<nsolmax;i++)
+	//	model->U[i]=NULL;
 	model->nsol = 0;
 	
 }
@@ -322,6 +323,7 @@ int destroy_model(urdme_model *model)
  The output trajectory will be stored in a variable/dataset named "U".
  */
 int dump_results(urdme_model* model, char *filename, char *type){
+    /* IN PYURDME, THIS IS NEVER CALLED. IT IS ALWAYS USING HDF5. */
     
     int Ndofs,tlen,nsol,i,j;
     int *U;

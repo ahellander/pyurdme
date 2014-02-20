@@ -72,17 +72,16 @@ class simple_diffusion2(URDMEModel):
         # Place the A molecules in the voxel nearest to the center of the square
         self.placeNear({A:10000},point=[0,0])
 
-
 if __name__ == '__main__':
     
     model = simple_diffusion2()
-    result = urdme(model,report_level=1)
+    result = urdme(model,report_level=0)
     model.serialize("debug_input.mat")
     U = result["U"]
     
+    print result["tspan"]
     print numpy.sum(U[1::2,:],axis=0)
     print numpy.sum(U[::2,:],axis=0)
-    
     # Dump timeseries in Paraview format
     result.dumps(species="B",folder_name="Bout")
     result.dumps(species="A",folder_name="Aout")

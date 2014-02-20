@@ -1,4 +1,4 @@
-/* nsmcore.c - Core NSM solver. */
+/* nsmcore.c - Core NSM solver. Generates one trajectory of the process.  */
 
 /* A. Hellander 2012-06-15 (Revision) */
 /* P. Bauer and S. Engblom 2012-04-10 (Revision) */
@@ -15,16 +15,18 @@
 #include "binheap.h"
 #include "report.h"
 
+#include "hdf5.h"
+#include "hdf5_hl.h"
+
 void nsm_core(const size_t *irD,const size_t *jcD,const double *prD,
               const int *u0,
               const size_t *irN,const size_t *jcN,const int *prN,
               const size_t *irG,const size_t *jcG,
               const double *tspan,const size_t tlen,
-              int *U,
               const double *vol,const double *data,const int *sd,
               const size_t Ncells,
               const size_t Mspecies,const size_t Mreactions,
-              const size_t dsize,int report_level)
+              const size_t dsize,int report_level, hid_t output_file)
 
 /* Specification of the inputs:
 
@@ -122,6 +124,7 @@ The output is a matrix U (Ndofs X length(tspan)).
   size_t i,j,it = 0;
   size_t to_node,to_vol = 0;
   const size_t Ndofs = Ncells*Mspecies;
+    
 
   PropensityFun *rfun;
   rfun = ALLOC_propensities();  
@@ -132,7 +135,49 @@ The output is a matrix U (Ndofs X length(tspan)).
   else
     report = NULL;
 
-  /* Set xx to the initial state. */
+    
+  /* Add some metadata to the output file and create datasets */
+  // Write tspan to the file
+  herr_t status;
+  hsize_t dataset_dims[2]; /* dataset dimensions */
+
+  dataset_dims[0] = 1;
+  dataset_dims[1] = tlen;
+  status = H5LTmake_dataset(output_file,"/tspan",2,dataset_dims,H5T_NATIVE_DOUBLE,tspan);
+  if (status != 0){
+    printf("Failed to write tspan vector HDF5 file.");
+    exit(-1);
+  }
+  
+    
+    
+  hid_t trajectory_dataset, datatype,trajectory_dataspace, file_dataspace;
+  datatype = H5Tcopy(H5T_NATIVE_INT);
+
+  dataset_dims[0] = Ndofs;
+  dataset_dims[1] = tlen;
+  trajectory_dataspace = H5Screate_simple(2, dataset_dims, NULL);
+  hid_t plist = H5Pcreate(H5P_DATASET_CREATE);
+  trajectory_dataset = H5Dcreate(output_file, "/U", datatype, trajectory_dataspace, H5P_DEFAULT,plist,H5P_DEFAULT);
+  hsize_t start[2];
+  hsize_t count[2];
+  hsize_t block[2];
+
+  /* Some parameters for the hyperslabs we need to select. */
+  start[0] = 0;
+  count[0] = 1;
+  count[1] = 1;
+  block[0] = Ndofs;
+  block[1] = 1;
+    
+    
+  /* A memory space to indicate the size of the buffer. */
+  hsize_t mem_dims[2];
+  mem_dims[0] = Ndofs;
+  mem_dims[1] = 1;
+  hid_t mem_space = H5Screate_simple(2, mem_dims, NULL);
+    
+  /* Set xx to the initial state. xx is the buffer we use to write to the datafile. */
   xx = (int *)malloc(Ndofs*sizeof(int));
   memcpy(xx,u0,Ndofs*sizeof(int));
 
@@ -199,9 +244,30 @@ The output is a matrix U (Ndofs X length(tspan)).
        next time is tspan. */
     if (tt >= tspan[it] || isinf(tt)) {
       for (; it < tlen && (tt >= tspan[it] || isinf(tt)); it++) {
-	    if (report)
-	      report(tspan[it],tspan[0],tspan[tlen-1],total_diffusion,total_reactions,0,report_level);
-          memcpy(&U[Ndofs*it],&xx[0],Ndofs*sizeof(int));
+          
+          if (report)
+            report(tspan[it],tspan[0],tspan[tlen-1],total_diffusion,total_reactions,0,report_level);
+          
+          /* This  is the column offset in the hdf5 datafile. */
+          start[1] = it;
+          
+          file_dataspace = H5Dget_space(trajectory_dataset);
+          if (file_dataspace == NULL){
+              printf("Failed to get the dataspace of the dataset.");
+            exit(-1);
+          }
+          status =H5Sselect_hyperslab(file_dataspace, H5S_SELECT_SET, start, NULL,count,block);
+          if (status){
+              printf("Failed to select hyperslab.");
+              exit(-1);
+          }
+          status = H5Dwrite(trajectory_dataset, datatype, mem_space,file_dataspace,H5P_DEFAULT,xx);
+          if (status){
+              printf("Failed to write to the dataset.");
+            exit(-1);
+          }
+          H5Sclose(file_dataspace);
+          
       }
 
       /* If the simulation has reached the final time, exit. */     
@@ -221,9 +287,8 @@ The output is a matrix U (Ndofs X length(tspan)).
 
       /* a) Determine the reaction re that did occur (direct SSA). */
       rand *= totrate;
-      for (re = 0, cum = rrate[subvol*Mreactions]; 
-	   re < Mreactions && rand > cum; 
-	   re++, cum += rrate[subvol*Mreactions+re]);
+      for (re = 0, cum = rrate[subvol*Mreactions]; re < Mreactions && rand > cum; re++, cum += rrate[subvol*Mreactions+re])
+        ;
 
         if (re >= Mreactions){
             printf("SHIT %i %i %i\n",re,subvol,sd[subvol]);
@@ -349,11 +414,15 @@ The output is a matrix U (Ndofs X length(tspan)).
       report_level);
 
       /* Cannot continue. Clear this solution and exit. */
-      memcpy(&U[Ndofs*it],&xx[0],Ndofs*sizeof(int));
-      memset(&U[Ndofs*(it+1)],0,Ndofs*(tlen-it-1)*sizeof(int));
+      //memcpy(&U[Ndofs*it],&xx[0],Ndofs*sizeof(int));
+      //memset(&U[Ndofs*(it+1)],0,Ndofs*(tlen-it-1)*sizeof(int));
       break;
     }
   }
+
+  /* Close the datasets */
+  H5Sclose(trajectory_dataspace);
+  H5Dclose(trajectory_dataset);
 
   FREE_propensities(rfun);
   free(heap);

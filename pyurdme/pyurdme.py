@@ -844,6 +844,7 @@ class URDMEResult(dict):
 
     def dumps(self,species,folder_name):
         """ Dump the trajectory of species to a collection of vtk files """
+        
         self._initialize_sol()
         subprocess.call(["mkdir","-p",folder_name])
         func = dolfin.Function(dolfin.FunctionSpace(self.model.mesh,"Lagrange",1))
@@ -942,15 +943,17 @@ class URDMEResult(dict):
 
 
     def read_solution(self, filename):
-
+        """ Load the result file. """
         resultfile = h5py.File(filename, 'r')
 
         U = resultfile['U']
         U = numpy.array(U)
+        
         # This little hack makes U have the same structure as in the Matlab interface...
-        dims = numpy.shape(U)
-        U = U.reshape((dims[1], dims[0]))
-        U = U.transpose()
+        #dims = numpy.shape(U)
+        #print dims
+        #U = U.reshape((dims[1], dims[0]))
+        #U = U.transpose()
 
         tspan = resultfile['tspan']
         tspan = numpy.array(tspan).flatten()
@@ -1199,13 +1202,12 @@ class URDMESolver:
         if return_code != 0:
             print handle.stderr.read(),handle.stdout.read()
             print "urdme_solver_cmd = {0}".format(urdme_solver_cmd)
-
             raise URDMEError("Solver execution failed")
         
-        #Load the result from the hdf5 output file.
+        # Create the URDMEResult object
         try:
             result = URDMEResult(self.model, outfile.name)
-            
+
             # Clean up
             os.remove(outfile.name)
             

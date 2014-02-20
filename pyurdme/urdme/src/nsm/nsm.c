@@ -14,6 +14,9 @@
 #include "matmodel.h"
 #include "time.h"
 
+#include "hdf5.h"
+#include "hdf5_hl.h"
+
 #ifndef URDME_LIBMAT
 #include "mat.h"
 #include "mex.h"
@@ -141,15 +144,24 @@ int main(int argc, char *argv[])
 
 	/* Allocate memory to hold nt solutions. */
 	init_sol(model,nt);
-	
-	/* Call nsm-solver: get a trajectory. */
-    nsm(model);
-	
-	/* Print result to file(s)*/
-    if (!dump_results(model,outfile,"single")) {
-        perror("Fatal error. Failed to print results to file.\n");
-        return -3;
+    //model->nsol=0
+    
+	/* Open a file handle to the output file. We will store output of the core solvers as hdf5 datasets. */
+    hid_t h5_output_file;
+    herr_t status;
+    h5_output_file = H5Fcreate(outfile,H5F_ACC_TRUNC, H5P_DEFAULT,H5P_DEFAULT);
+    if (h5_output_file == NULL){
+        printf("Fatal error. Failed to open file to store output.");
+        exit(-1);
     }
+    
+    
+	/* Call nsm-solver: get a trajectory and add it to the output file. . */
+    nsm(model, h5_output_file);
+    /* Add tspan to the output file. */
+    
+	H5Fclose(h5_output_file);
+	
     
     /* free memory allocated by mxGetVariable. */
     mxDestroyArray(mxreport);
@@ -166,12 +178,12 @@ int main(int argc, char *argv[])
 }
 
 /* Wrapper for the NSM solver. */
-void nsm(void *data){
+void nsm(void *data, hid_t output_file){
     
 	/* Unpack input */
 	urdme_model* model;
 	model = (urdme_model *)data;
-	int Ndofs, *U;
+	int Ndofs;
 	
 	/* nsm_core() uses a report function with optional report level. This is
 	 passed as the first extra argument. */ 
@@ -179,25 +191,14 @@ void nsm(void *data){
 	
 	/* Output array (to hold a single trajectory) */
 	Ndofs = model->Ncells*model->Mspecies;
-	U = (int *)malloc(model->tlen*Ndofs*sizeof(int));
 	
     /* Core simulation routine. */
 	nsm_core(model->irD, model->jcD, model->prD, model->u0,
 			 model->irN, model->jcN, model->prN, model->irG,
 			 model->jcG, model->tspan, model->tlen, 
-			 U, model->vol, model->data, model->sd, model->Ncells, 
-			 model->Mspecies, model->Mreactions, model->dsize, report_level);
+			 model->vol, model->data, model->sd, model->Ncells,
+			 model->Mspecies, model->Mreactions, model->dsize, report_level, output_file);
 	
-	/* Attach trajectory to model. */
-	if (model->nsol >= model->nsolmax){
-		printf("Warning, you are trying to add more trajectories to model struct\n" );
-	    printf("but it already contains its maximum number.");
-		model->nsol = 0;
-	}
-	
-	if ((model->U[model->nsol]) != NULL)
-		free(model->U[model->nsol]);
-	(model->U)[(model->nsol)++] = U;
 		
 }
 

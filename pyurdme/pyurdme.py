@@ -396,7 +396,9 @@ class URDMEModel(Model):
         try:
             stiffness_matrices = self.stiffness_matrices
             mass_matrices = self.mass_matrices
-        except:
+        except AttributeError:
+            if self.mesh is None:
+                raise ModelException("This model has no mesh, can not craete system matrix.")
             matrices = self.assemble()
             self.stiffness_matrices = matrices['K']
             self.mass_matrices = matrices['M']
@@ -407,6 +409,8 @@ class URDMEModel(Model):
         
         i=1;
         Mspecies = len(self.listOfSpecies)
+        if Mspecies == 0:
+            raise ModelException("The model has no species, can not create system matrix.")
         Nvoxels = self.mesh.getNumVoxels()
         Ndofs = Nvoxels*Mspecies
         S = scipy.sparse.dok_matrix((Ndofs,Ndofs))

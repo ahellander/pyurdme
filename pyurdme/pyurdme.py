@@ -786,13 +786,16 @@ class Xmesh():
 class URDMEResult(dict):
     """ Result object for a URDME simulation, extends the dict object. """
     
-    def __init__(self, model=None, filename=None):
+    def __init__(self, model=None, filename=None, loaddata=True):
         self.model = model
         self.sol = None
         self.U = None
         self.tspan = None
-        if filename is not None:
-            self.read_solution(filename)
+        self.data_is_loaded = False
+        self.filename = filename
+        if filename is not None and loaddata:
+            self.read_solution()
+                
     
     def __setattr__(self, k, v):
         if k in self.keys():
@@ -808,9 +811,15 @@ class URDMEResult(dict):
             if ret is None:
                 return self.initialize_sol()
             return ret
+        if (k == 'U' or k == 'tspan') and not self.data_is_loaded:
+            if self.filename is None:
+                raise AttributeError("This result object has no data file.")
+            self.read_solution()
+            return self[k]
         if k in self.keys():
             return self[k]
         raise AttributeError
+
     
     def _initialize_sol(self):
         """ Initialize the sol variable. """
@@ -945,9 +954,10 @@ class URDMEResult(dict):
             outfile.close()
 
 
-    def read_solution(self, filename):
+    def read_solution(self):
+        """ Read the datafile into memory and delete it. """
 
-        resultfile = h5py.File(filename, 'r')
+        resultfile = h5py.File(self.filename, 'r')
 
         U = resultfile['U']
         U = numpy.array(U)
@@ -961,6 +971,14 @@ class URDMEResult(dict):
         resultfile.close()
         self.U = U
         self.tspan = tspan
+            
+        try:
+            # Clean up data file
+            os.remove(self.filename)
+            # Mark the data as loaded
+            self.data_is_loaded = True
+        except OSError as e:
+            print "Could not delete '{0}'".format(self.filename)
 
 
 class URDMESolver:
@@ -1142,8 +1160,13 @@ class URDMESolver:
         self.is_compiled = True
     
     
-    def run_ensemble(self, number_of_trajectories, seed=None, input_file=None):
+    def run_ensemble(self, number_of_trajectories, seed=None, input_file=None, loaddata=True):
         """ Run multiple simulations of the model.
+        
+        number_of_trajectories: How many trajectories should be run.
+        seed: the random number seed.
+        input_file: the filename of the solver input data file .
+        loaddata: boolean, should the result object load the data into memory on creation.
             
         Returns:
             A list of URDMEResult objects.
@@ -1151,13 +1174,17 @@ class URDMESolver:
         result = []
         for ndx in range(number_of_trajectories):
             if seed is None:
-                result.append(self.run(input_file=input_file))
+                result.append(self.run(input_file=input_file, loaddata=loaddata))
             else:
-                result.append(self.run(seed=seed+ndx, input_file=input_file))
+                result.append(self.run(seed=seed+ndx, input_file=input_file, loaddata=loaddata))
         return result
     
-    def run(self, seed=None, input_file=None):
+    def run(self, seed=None, input_file=None, loaddata=True):
         """ Run one simulation of the model.
+
+        seed: the random number seed.
+        input_file: the filename of the solver input data file .
+        loaddata: boolean, should the result object load the data into memory on creation.
             
         Returns:
             URDMEResult object.
@@ -1208,14 +1235,9 @@ class URDMESolver:
         
         #Load the result from the hdf5 output file.
         try:
-            result = URDMEResult(self.model, outfile.name)
-            
-            # Clean up
-            os.remove(outfile.name)
-            
+            result = URDMEResult(self.model, outfile.name, loaddata=loaddata)
             result["Status"] = "Sucess"
             return result
-        
         except Exception as e:
             exc_info = sys.exc_info()
             # Clean up

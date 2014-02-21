@@ -9,50 +9,22 @@ URDME=$(URDME_ROOT)
 LIB = $(URDME)/lib
 BIN = $(URDME)/bin
 
-HDF5=$(URDME)/lib/hdf5-1.8.11/hdf5
-INCLUDE = -I$(URDME)/include -I$(HDF5)/include
+INCLUDE = -I$(URDME)/include 
 SRC = $(URDME)/src
 
 ###########################################################################
-MATLAB = $(shell $(URDME_ROOT)/bin/urdme_init -m)
-MATLAB_ARCH = $(shell $(URDME_ROOT)/bin/urdme_init -a)
-###########################################################################
-MATLAB_EXT = $(MATLAB)/extern
-MATLAB_INC=$(MATLAB_EXT)/include
-###########################################################################
-ARCHS=$(shell $(URDME_ROOT)/bin/urdme_init -s)
-ifneq ($(ARCHS),)
-SET_ARCH=-arch $(ARCHS)
-endif
 ###########################################################################
 
 URDME_LIBMAT=yes
-ifeq ($(URDME_LIBMAT),)
-LMAT = -lmx -lmat -lmex -lmwservices 
-MATLAB_LIB =-L$(MATLAB)/bin/$(MATLAB_ARCH)
-else
 DMAT = -DURDME_LIBMAT
-endif
 
-# Sparse output
-#DSPARSE = -DURDME_OUTPUT_SPARSE
-ifdef DSPARSE
-ifdef URDME_LIBMAT
-$(error URDME_LIBMAT does not support sparse output, please use Matlab libraries.)
-endif
-endif
- 
 CC	   = gcc
 LINKER = gcc 
 
-CFLAGS = -gdwarf-2 -m64 -c $(SET_ARCH) -O3 -std=gnu99 $(MEMOPTS) -Wall -Wlong-long -Wformat -Wpointer-arith -I$(MATLAB_INC) $(INCLUDE) $(DMAT) $(DSPARSE)
+CFLAGS = -gdwarf-2 -m64 -c  -O3 -std=gnu99 $(MEMOPTS) -Wall -Wlong-long -Wformat -Wpointer-arith  $(INCLUDE) $(DMAT)
 
-LFLAGS_BASE= -l hdf5 -l hdf5_hl -L$(HDF5)/lib
-ifeq ($(MATLAB_LIB),)
+LFLAGS_BASE= -l hdf5 -l hdf5_hl 
 LFLAGS = $(LFLAGS_BASE) -lm
-else
-LFLAGS = $(LFLAGS_BASE) $(MATLAB_LIB) -lm $(LMAT)
-endif
 
 ###########################################################################
 ifeq ($(URDME_MODEL),)

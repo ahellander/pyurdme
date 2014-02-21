@@ -11,6 +11,7 @@ sol = NSMSolver(model)
 sol_str = pickle.dumps(sol)
 
 # This could be on a difference python instance
+# sol2 = pickle.load(open('cylinderDemo3D_NSM.pkl'))
 sol2 = pickle.loads(sol_str)
 result2 = sol2.run()
 result_str = pickle.dumps(result2)

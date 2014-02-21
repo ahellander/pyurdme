@@ -1212,7 +1212,7 @@ class URDMESolver:
         # Create the URDMEResult object
         try:
             result = URDMEResult(self.model, outfile.name)
-            subprocess.call(['cp',outfile.name,'.'])
+            #subprocess.call(['cp',outfile.name,'.'])
             # Clean up
             os.remove(outfile.name)
             

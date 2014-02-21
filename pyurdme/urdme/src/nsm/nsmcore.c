@@ -201,8 +201,7 @@ The output is a matrix U (Ndofs X length(tspan)).
   datatype = H5Tcopy(H5T_NATIVE_INT);
 
   /* This is the maximal buffer size we use to store the solution before writing to file. */
-  size_t max_buffer_size = 1048576*10;
-  //size_t max_buffer_size = Ndofs*sizeof(int);
+  size_t max_buffer_size = 1048576*8;
     
     
   /* How many timepoints do we log before the buffer is full? */

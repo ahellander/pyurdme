@@ -786,7 +786,7 @@ class Xmesh():
 class URDMEResult(dict):
     """ Result object for a URDME simulation, extends the dict object. """
 
-    def __init__(self, model=None, filename=None, loaddata=True):
+    def __init__(self, model=None, filename=None, loaddata=False):
         self.model = model
         self.sol = None
         self.U = None
@@ -1178,7 +1178,7 @@ class URDMESolver:
         self.is_compiled = True
 
 
-    def run_ensemble(self, number_of_trajectories, seed=None, input_file=None, loaddata=True):
+    def run_ensemble(self, number_of_trajectories, seed=None, input_file=None, loaddata=False):
         """ Run multiple simulations of the model.
 
         number_of_trajectories: How many trajectories should be run.
@@ -1197,7 +1197,7 @@ class URDMESolver:
                 result.append(self.run(seed=seed+ndx, input_file=input_file, loaddata=loaddata))
         return result
 
-    def run(self, seed=None, input_file=None, loaddata=True):
+    def run(self, seed=None, input_file=None, loaddata=False):
         """ Run one simulation of the model.
 
         seed: the random number seed.

@@ -18,8 +18,8 @@ SRC = $(URDME)/src
 URDME_LIBMAT=yes
 DMAT = -DURDME_LIBMAT
 
-CC	   = gcc
-LINKER = gcc 
+CC	   = mpicc
+LINKER = mpicc 
 
 CFLAGS = -gdwarf-2 -m64 -c  -O3 -std=gnu99 $(MEMOPTS) -Wall -Wlong-long -Wformat -Wpointer-arith  $(INCLUDE) $(DMAT)
 

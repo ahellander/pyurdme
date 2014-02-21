@@ -18,6 +18,53 @@
 #include "hdf5.h"
 #include "hdf5_hl.h"
 
+
+int flush_solution_to_file(hid_t trajectory_dataset,int *buffer,int column_offset, int num_columns, int col_size)
+{
+    /* This  is the column offset in the hdf5 datafile. */
+    hsize_t start[2];
+    hsize_t count[2];
+    hsize_t block[2];
+    
+    /* Some parameters for the hyperslabs we need to select. */
+    start[0] = column_offset;
+    start[1] = 0;
+
+    count[0] = 1;
+    count[1] = 1;
+    
+    block[0] = num_columns;
+    block[1] = col_size;
+
+    herr_t status;
+    
+    /* A memory space to indicate the size of the buffer. */
+    hsize_t mem_dims[2];
+    mem_dims[0] = num_columns;
+    mem_dims[1] = col_size;
+    hid_t mem_space = H5Screate_simple(2, mem_dims, NULL);
+    
+    hid_t file_dataspace = H5Dget_space(trajectory_dataset);
+    if (file_dataspace == NULL){
+        printf("Failed to get the dataspace of the dataset.");
+        return(-1);
+    }
+    status =H5Sselect_hyperslab(file_dataspace, H5S_SELECT_SET, start, NULL,count,block);
+    if (status){
+        printf("Failed to select hyperslab.");
+        return(-1);
+    }
+    status = H5Dwrite(trajectory_dataset, H5T_NATIVE_INT, mem_space,file_dataspace,H5P_DEFAULT,buffer);
+    if (status){
+        printf("Failed to write to the dataset.");
+        return(-1);
+    }
+    
+    H5Sclose(mem_space);
+    H5Sclose(file_dataspace);
+    return(0);
+}
+
 void nsm_core(const size_t *irD,const size_t *jcD,const double *prD,
               const int *u0,
               const size_t *irN,const size_t *jcN,const int *prN,
@@ -148,36 +195,34 @@ The output is a matrix U (Ndofs X length(tspan)).
     printf("Failed to write tspan vector HDF5 file.");
     exit(-1);
   }
-  
-    
+
     
   hid_t trajectory_dataset, datatype,trajectory_dataspace, file_dataspace;
   datatype = H5Tcopy(H5T_NATIVE_INT);
 
-  dataset_dims[0] = Ndofs;
-  dataset_dims[1] = tlen;
+  /* This is the maximal buffer size we use to store the solution before writing to file. */
+  size_t max_buffer_size = 1048576*10;
+  //size_t max_buffer_size = Ndofs*sizeof(int);
+    
+    
+  /* How many timepoints do we log before the buffer is full? */
+  size_t column_size = Ndofs*sizeof(int);
+  int num_columns = max_buffer_size / column_size;
+  int remainder1 = max_buffer_size % column_size;
+  size_t buffer_size = num_columns*Ndofs;
+  int *buffer = (int *)calloc(buffer_size,sizeof(int));
+  int num_columns_since_flush = 0;
+  int chunk_indx=0;
+    
+  dataset_dims[0] = tlen;
+  dataset_dims[1] = Ndofs;
   trajectory_dataspace = H5Screate_simple(2, dataset_dims, NULL);
   hid_t plist = H5Pcreate(H5P_DATASET_CREATE);
   trajectory_dataset = H5Dcreate(output_file, "/U", datatype, trajectory_dataspace, H5P_DEFAULT,plist,H5P_DEFAULT);
-  hsize_t start[2];
-  hsize_t count[2];
-  hsize_t block[2];
-
-  /* Some parameters for the hyperslabs we need to select. */
-  start[0] = 0;
-  count[0] = 1;
-  count[1] = 1;
-  block[0] = Ndofs;
-  block[1] = 1;
     
+  //printf("num_cols_in_buffer: %i\n tlen: %i\n",num_columns,tlen);
     
-  /* A memory space to indicate the size of the buffer. */
-  hsize_t mem_dims[2];
-  mem_dims[0] = Ndofs;
-  mem_dims[1] = 1;
-  hid_t mem_space = H5Screate_simple(2, mem_dims, NULL);
-    
-  /* Set xx to the initial state. xx is the buffer we use to write to the datafile. */
+  /* Set xx to the initial state. xx will always hold the current solution. */
   xx = (int *)malloc(Ndofs*sizeof(int));
   memcpy(xx,u0,Ndofs*sizeof(int));
 
@@ -231,7 +276,7 @@ The output is a matrix U (Ndofs X length(tspan)).
     heap[i] = node[i] = i;
   }
   initialize_heap(rtimes,node,heap,Ncells);
-
+    int total_columns_written = 0;
   /* Main loop. */
   for (;;) {
     /* Get the subvolume in which the next event occurred.
@@ -248,30 +293,36 @@ The output is a matrix U (Ndofs X length(tspan)).
           if (report)
             report(tspan[it],tspan[0],tspan[tlen-1],total_diffusion,total_reactions,0,report_level);
           
-          /* This  is the column offset in the hdf5 datafile. */
-          start[1] = it;
           
-          file_dataspace = H5Dget_space(trajectory_dataset);
-          if (file_dataspace == NULL){
-              printf("Failed to get the dataspace of the dataset.");
-            exit(-1);
+          /* Write to the buffer */
+          memcpy(&buffer[Ndofs*num_columns_since_flush],xx,Ndofs*sizeof(int));
+          num_columns_since_flush++;
+        
+          if (num_columns_since_flush == num_columns){
+              
+              status = flush_solution_to_file(trajectory_dataset,buffer,chunk_indx*num_columns,num_columns_since_flush,Ndofs);
+              if (status){
+                  printf("Failed to flush buffer to file.");
+                  exit(-1);
+              }
+             // printf("Flushed buffer, wrote %i columns\n",num_columns_since_flush);
+              num_columns_since_flush = 0;
+              chunk_indx++;
+              total_columns_written += num_columns;
           }
-          status =H5Sselect_hyperslab(file_dataspace, H5S_SELECT_SET, start, NULL,count,block);
-          if (status){
-              printf("Failed to select hyperslab.");
-              exit(-1);
-          }
-          status = H5Dwrite(trajectory_dataset, datatype, mem_space,file_dataspace,H5P_DEFAULT,xx);
-          if (status){
-              printf("Failed to write to the dataset.");
-            exit(-1);
-          }
-          H5Sclose(file_dataspace);
           
       }
 
       /* If the simulation has reached the final time, exit. */     
-      if (it >= tlen){ 
+      if (it >= tlen){
+        /* Flush the buffer */
+        status = flush_solution_to_file(trajectory_dataset,buffer,chunk_indx*num_columns,num_columns_since_flush,Ndofs);
+        if (status){
+            printf("Failed to flush buffer to file.");
+            exit(-1);
+        }
+        total_columns_written += num_columns_since_flush;
+        //printf("Flushed buffer, wrote %i columns in total. Exiting\n",total_columns_written);
         break;
       }
         
@@ -425,6 +476,7 @@ The output is a matrix U (Ndofs X length(tspan)).
   H5Dclose(trajectory_dataset);
 
   FREE_propensities(rfun);
+  free(buffer);
   free(heap);
   free(node);
   free(rtimes);

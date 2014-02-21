@@ -52,6 +52,8 @@ class URDMEModel(Model):
 
         # This dictionary hold information about the subdomains each species is active on
         self.species_to_subdomains = {}
+        
+        self.report_level = 0
     
         self.tspan = None
         self.vol = None
@@ -589,6 +591,7 @@ class URDMEModel(Model):
         # Connectivity matrix
         urdme_solver_data['K'] = self.connectivityMatrix()
 
+        urdme_solver_data['report'] = self.report_level
         #rows,cols,vals = self.stiffness_matrices["MinD_m"].data()
         #SM = scipy.sparse.csr_matrix((vals,cols,rows))
         #urdme_solver_data["Kmindm"] = SM.tocsc()
@@ -1203,11 +1206,13 @@ class URDMESolver:
             print handle.stderr.read(),handle.stdout.read()
             print "urdme_solver_cmd = {0}".format(urdme_solver_cmd)
             raise URDMEError("Solver execution failed")
-        
+
+        print handle.stderr.read(),handle.stdout.read()
+
         # Create the URDMEResult object
         try:
             result = URDMEResult(self.model, outfile.name)
-
+            subprocess.call(['cp',outfile.name,'.'])
             # Clean up
             os.remove(outfile.name)
             

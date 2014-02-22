@@ -339,12 +339,14 @@ int matGetNextVariable_uint_array(int*outsz,unsigned int**out,int dsz,unsigned c
 //-----------------------------------------------------------------
 // take next data segment as a double "out", returns array size
 int matGetNextVariable_double_array(int*outsz,double**out,int dsz,unsigned char*data_ptr){
-    unsigned int dtype,dsize,nvals,utmp,tsize;
+    unsigned int dtype,dsize,nvals,utmp=0,tsize;
     //double dtmp;
-    int itmp,i,offset;
+    int itmp=0,i,offset;
+	long long int itmp64;
+	long long unsigned int utmp64;
     double *go_out;
     offset = matGetNextVariable__read_tag(&dtype,&dsize,data_ptr);
-    //printf("dtype=%i\n",dtype);
+    //printf("matGetNextVariable_double_array(): dtype=%i\n",dtype);
     if(dtype==9){ // direct copy
         nvals = dsize/8;
         *out = (double*)malloc(nvals*sizeof(double));
@@ -352,10 +354,12 @@ int matGetNextVariable_double_array(int*outsz,double**out,int dsz,unsigned char*
         memcpy(go_out,&data_ptr[offset],nvals*8*sizeof(char));
         *outsz=nvals;
         return offset+dsize;
-    }else if(dtype>=1&&dtype<=6){ // type convert (u)int->double
-        if(dtype==5 || dtype==6){ tsize=4;
+    }else if((dtype>=1&&dtype<=6)||dtype==12||dtype==13){ // type convert (u)int->double
+        if(dtype==12||dtype==13){		tsize=8;
+		}else if(dtype==5 || dtype==6){ tsize=4;
         }else if(dtype==3 || dtype==4){ tsize=2;
-        }else if(dtype==1 || dtype==2){ tsize=1; }else{ fprintf(stderr,"should not get here\n");exit(0); }
+        }else if(dtype==1 || dtype==2){ tsize=1; 
+		}else{ fprintf(stderr,"should not get here\n");exit(0); }
         nvals=dsize/tsize;
         *out = (double*)malloc(nvals*sizeof(double));
         go_out=*out;
@@ -371,7 +375,19 @@ int matGetNextVariable_double_array(int*outsz,double**out,int dsz,unsigned char*
                 memcpy(&utmp,&data_ptr[offset+i*tsize],tsize*sizeof(char));
                 go_out[i]=(double)utmp;
             }
-        }
+		}else if(dtype==12){
+            for(i=0;i<nvals;i++){
+                itmp64=0;
+                memcpy(&itmp64,&data_ptr[offset+i*tsize],tsize*sizeof(char));
+                go_out[i]=(double)itmp64;
+            }
+		}else if(dtype==13){
+            for(i=0;i<nvals;i++){
+                utmp64=0;
+                memcpy(&utmp64,&data_ptr[offset+i*tsize],tsize*sizeof(char));
+                go_out[i]=(double)utmp64;
+            }
+		}
         *outsz=nvals;
         return offset+dsize;
     }else{
@@ -381,16 +397,16 @@ int matGetNextVariable_double_array(int*outsz,double**out,int dsz,unsigned char*
 //-----------------------------------------------------------------
 void matGetNextVariable_array(mxArray*mat_var,int dsz,unsigned char*data_ptr){
     int offset=0;
-    //printf("matGetNextVariable_array()\n");
-    //Real Part data //////////////////////////////////////
-    offset=matGetNextVariable_double_array(&(mat_var->prsz),&(mat_var->pr),dsz,data_ptr);
-
-    //Complex Part data ////////////////////////////////
-    if(mat_var->is_complex){
-        while(offset%8 != 0){ offset+=1; }
-        if(offset>=dsz){printf("Error: array is complex, but no data left\n");exit(0);}
-        matGetNextVariable_double_array(&(mat_var->pisz),&(mat_var->pi),dsz,&data_ptr[offset]);
-    }
+    //printf("matGetNextVariable_array() mat_var->array_class=%i\n",mat_var->array_class);
+	
+	//Real Part data
+	offset=matGetNextVariable_double_array(&(mat_var->prsz),&(mat_var->pr),dsz,data_ptr);
+	//Complex Part data
+	if(mat_var->is_complex){
+		while(offset%8 != 0){ offset+=1; }
+		if(offset>=dsz){printf("Error: array is complex, but no data left\n");exit(0);}
+		matGetNextVariable_double_array(&(mat_var->pisz),&(mat_var->pi),dsz,&data_ptr[offset]);
+	}
 }
 //-----------------------------------------------------------------
 void matGetNextVariable_sparse_array(mxArray*mat_var,int dsz,unsigned char*data_ptr){
@@ -481,8 +497,11 @@ mxArray* matGetNextVariable(MATFile*matfile){
     while(offset%8 != 0){ offset+=1; }
     //printf("\tName: %s\n",mat_var->name);
     //------------------------------
-    if(mat_var->array_class==6){       matGetNextVariable_array(mat_var,dsize-offset,&data_ptr[offset]);  } //returns values of type double
-    else if(mat_var->array_class==5){  matGetNextVariable_sparse_array(mat_var,dsize-offset,&data_ptr[offset]);  } // not working!
+    if(mat_var->array_class==6 || mat_var->array_class==8 || mat_var->array_class==9
+	   || mat_var->array_class==10 || mat_var->array_class==11 || mat_var->array_class==12
+	   || mat_var->array_class==13 || mat_var->array_class==14 || mat_var->array_class==15)
+	{       matGetNextVariable_array(mat_var,dsize-offset,&data_ptr[offset]);  } //returns values of type double
+	else if(mat_var->array_class==5){  matGetNextVariable_sparse_array(mat_var,dsize-offset,&data_ptr[offset]);  } // not working!
     //else if(array_class==2){  print_structure(dsize-offset,&data_ptr[offset],ndims,dim_arr);  }
     //else if(array_class==1){  print_cell_array(dsize-offset,&data_ptr[offset],ndims,dim_arr);  }
     else{
@@ -660,4 +679,20 @@ void matPutVariable(MATFile*file,const char*name,mxArray*data){
     free(old_vars);
 }
 //**************************************************************************************
+void mxInfo(mxArray* var){
+	printf("mxInfo():\n");
+    printf("    name=%s\n",var->name);
+    printf("    array_class=%i\n",var->array_class);
+	printf("    array_flags=%i\n",var->array_flags);
+	printf("    type=%i\n",var->type);
+    printf("    size=%i\n",var->size);
+    printf("    is_complex=%i\n",var->is_complex);
+    printf("    ndims=%i\n",var->ndims);
+    printf("    nvals=%i\n",var->nvals);
+    printf("    nnz=%i\n",var->nnz);
+    printf("    irsz=%i\n",var->irsz);
+    printf("    jcsz=%i\n",var->jcsz);
+    printf("    prsz=%i\n",var->prsz);
+    printf("    pisz=%i\n",var->pisz);
+}
 //**************************************************************************************

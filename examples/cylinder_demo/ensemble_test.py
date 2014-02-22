@@ -6,15 +6,17 @@ import numpy
 
 # Create the model and solver
 model = cylinderDemo3D()
-sol = NSMSolver(model)
+sol = NSMSolver(model, report_level=2)
 print "Beginning simulation"
-results = sol.run_ensemble(5, loaddata=False)
+result = sol.run()
+results = [result]
+#results = sol.run_ensemble(5)
 
 # Plot of the time-average spatial concentration.
 x_vals = model.mesh.coordinates()[:, 0]
 l = x_vals.shape[0]
 for res in results:
-    print "result.filename={0} loaded={0}".format(res.filename, res.data_is_loaded)
+    print "result.filename={0} loaded={1}".format(res.filename, res.data_is_loaded)
     plt.clf()
     A_vals = numpy.sum(res['U'], axis=1)[0:2*l-1:2]
     B_vals = numpy.sum(res['U'], axis=1)[1:2*l:2]

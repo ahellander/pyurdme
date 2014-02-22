@@ -1237,7 +1237,10 @@ class URDMESolver:
         if self.report_level >= 1:
             print 'cmd: {0}\n'.format(urdme_solver_cmd)
         try:
-            handle = subprocess.Popen(urdme_solver_cmd, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+            if self.report_level >= 1:  #stderr & stdout to the terminal
+                handle = subprocess.Popen(urdme_solver_cmd)
+            else:
+                handle = subprocess.Popen(urdme_solver_cmd, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
             return_code = handle.wait()
         except OSError as e:
             print "Error, execution of solver raised an exception: {0}".format(e)
@@ -1245,14 +1248,15 @@ class URDMESolver:
             raise URDMEError("Solver execution failed")
 
         if return_code != 0:
-            print handle.stderr.read(), handle.stdout.read()
+            if self.report_level < 1:
+                print handle.stderr.read(), handle.stdout.read()
             print "urdme_solver_cmd = {0}".format(urdme_solver_cmd)
 
             raise URDMEError("Solver execution failed")
 
-        if self.report_level >= 1:
-            print handle.stdout.read()
-            print handle.stderr.read()
+        #if self.report_level >= 1:
+        #    print handle.stdout.read()
+        #   print handle.stderr.read()
 
         #Load the result from the hdf5 output file.
         try:

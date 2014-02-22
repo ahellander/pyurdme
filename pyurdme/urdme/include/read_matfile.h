@@ -116,5 +116,6 @@ mxArray* mxCreateDoubleMatrix(int rows,int cols,int complexity);
 // matPutVariable() Array to MAT-file
 void matPutVariable(MATFile*file,const char*name,mxArray*data);
 //**************************************************************************************
+void mxInfo(mxArray* var);
 //**************************************************************************************
 #endif

@@ -83,10 +83,14 @@ int main(int argc, char *argv[])
         return -2;
     }
 	mxreport = matGetVariable(input_file, "report");
-	if (mxreport != NULL) 
+    //mxInfo(mxreport);
+	if (mxreport != NULL) {
 		report_level = (int) mxGetScalar(mxreport);
-	else
+        //printf("mxreport is not NULL, report_level=%i\n",report_level);
+	}else{
         report_level=1;	
+        //printf("mxreport is NULL, report_level=%i\n",report_level);
+    }
 	model->num_extra_args=1;
     
 	/* Look for seed */

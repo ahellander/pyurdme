@@ -601,10 +601,10 @@ class URDMEModel(Model):
         return urdme_solver_data
 
 
-    def serialize(self, filename=None):
+    def serialize(self, filename=None, report_level=0):
         """ Write the datastructures needed by the the core URDME solvers to a .mat input file. """
-
         urdme_solver_data = self.solverData()
+        urdme_solver_data['report'] = report_level
         self.validate(urdme_solver_data)
         scipy.io.savemat(filename, urdme_solver_data, oned_as='column')
 
@@ -975,7 +975,6 @@ class URDMEResult(dict):
 
     def read_solution(self):
         """ Read the datafile into memory and delete it. """
-        print "URDMEResult.read_solution: {0}".format(self.filename)
 
         resultfile = h5py.File(self.filename, 'r')
 
@@ -1068,7 +1067,7 @@ class URDMESolver:
         # Get the input file
         input_file = tmproot+'/model_input.mat'
         ret['input_file'] = os.path.basename(input_file)
-        self.model.serialize(filename=input_file)
+        self.model.serialize(filename=input_file, report_level=self.report_level)
         ##
         origwd = os.getcwd()
         os.chdir(tmproot)
@@ -1216,10 +1215,10 @@ class URDMESolver:
                 infile = tempfile.NamedTemporaryFile(delete=False)
 
                 # Write the model to an input file in .mat format
-                self.model.serialize(filename=infile)
+                self.model.serialize(filename=infile, report_level=self.report_level)
                 infile.close()
                 self.infile_name = infile.name
-                self.delete_infile = True
+                #self.delete_infile = True
         else:
             self.infile_name = input_file
             self.delete_infile = False
@@ -1237,7 +1236,10 @@ class URDMESolver:
         if self.report_level >= 1:
             print 'cmd: {0}\n'.format(urdme_solver_cmd)
         try:
-            handle = subprocess.Popen(urdme_solver_cmd, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+            if self.report_level >= 1:  #stderr & stdout to the terminal
+                handle = subprocess.Popen(urdme_solver_cmd)
+            else:
+                handle = subprocess.Popen(urdme_solver_cmd, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
             return_code = handle.wait()
         except OSError as e:
             print "Error, execution of solver raised an exception: {0}".format(e)
@@ -1245,9 +1247,14 @@ class URDMESolver:
             raise URDMEError("Solver execution failed")
 
         if return_code != 0:
-            print handle.stderr.read(), handle.stdout.read()
+            if self.report_level < 1:
+                print handle.stderr.read(), handle.stdout.read()
             print "urdme_solver_cmd = {0}".format(urdme_solver_cmd)
             raise URDMEError("Solver execution failed")
+
+        #if self.report_level >= 1:
+        #    print handle.stdout.read()
+        #   print handle.stderr.read()
 
         #Load the result from the hdf5 output file.
         try:
@@ -1257,8 +1264,8 @@ class URDMESolver:
         except Exception as e:
             exc_info = sys.exc_info()
             # Clean up
-            if self.delete_infile:
-                os.remove(self.infile_name)
+            #if self.delete_infile:
+            #    os.remove(self.infile_name)
             os.remove(outfile.name)
             raise exc_info[1], None, exc_info[2]
 

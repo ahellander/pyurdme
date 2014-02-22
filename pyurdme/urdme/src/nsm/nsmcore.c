@@ -202,8 +202,7 @@ The output is a matrix U (Ndofs X length(tspan)).
 
   /* This is the maximal buffer size we use to store the solution before writing to file. */
   size_t max_buffer_size = 1048576*8;
-    
-    
+
   /* How many timepoints do we log before the buffer is full? */
   size_t column_size = Ndofs*sizeof(int);
   int num_columns = max_buffer_size / column_size;
@@ -215,11 +214,15 @@ The output is a matrix U (Ndofs X length(tspan)).
     
   dataset_dims[0] = tlen;
   dataset_dims[1] = Ndofs;
+  
+  hsize_t chunk_dims = {num_columns,Ndofs};
+    
   trajectory_dataspace = H5Screate_simple(2, dataset_dims, NULL);
   hid_t plist = H5Pcreate(H5P_DATASET_CREATE);
-  trajectory_dataset = H5Dcreate(output_file, "/U", datatype, trajectory_dataspace, H5P_DEFAULT,plist,H5P_DEFAULT);
+  H5Pset_chunk(plist,2,dataset_dims);
+  //status = H5Pset_deflate (plist, 4);
     
-  //printf("num_cols_in_buffer: %i\n tlen: %i\n",num_columns,tlen);
+  trajectory_dataset = H5Dcreate(output_file, "/U", datatype, trajectory_dataspace, H5P_DEFAULT,plist,H5P_DEFAULT);
     
   /* Set xx to the initial state. xx will always hold the current solution. */
   xx = (int *)malloc(Ndofs*sizeof(int));

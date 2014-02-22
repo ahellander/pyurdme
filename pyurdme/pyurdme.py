@@ -1021,7 +1021,7 @@ class URDMESolver:
 
         # For the remote execution
         self.temp_urdme_root = None
-
+        
         self.URDME_ROOT =  os.path.dirname(os.path.abspath(__file__))+"/urdme"
 
         #print "solver_path={0}".format(solver_path)

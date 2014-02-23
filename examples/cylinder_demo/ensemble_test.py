@@ -18,8 +18,8 @@ l = x_vals.shape[0]
 for res in results:
     print "result.filename={0} loaded={1}".format(res.filename, res.data_is_loaded)
     plt.clf()
-    A_vals = numpy.sum(res['U'], axis=1)[0:2*l-1:2]
-    B_vals = numpy.sum(res['U'], axis=1)[1:2*l:2]
+    A_vals = numpy.sum(res['U'], axis=0)[0:2*l-1:2]
+    B_vals = numpy.sum(res['U'], axis=0)[1:2*l:2]
     plt.plot(x_vals,A_vals/model.vol,'.r',x_vals,B_vals/model.vol,'.b')
     plt.legend(['A', 'B'])
     plt.show()

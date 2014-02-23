@@ -835,7 +835,8 @@ class URDMEResult(dict):
                 # Clean up data file
                 os.remove(self.filename)
             except OSError as e:
-                print "Could not delete '{0}'".format(self.filename)
+                #print "URDMEResult.__del__: Could not delete result file'{0}': {1}".format(self.filename, e)
+                pass
 
 
     def _initialize_sol(self):
@@ -1057,9 +1058,9 @@ class URDMESolver:
         os.mkdir(tmproot+'/src')
         os.mkdir(tmproot+'/src/'+self.NAME)
         #TODO: what if solverdir is not the same as URDME_ROOT ?
-        subprocess.call('cp '+self.URDME_ROOT+'src/*.c '+tmproot+'/src/', shell=True)
-        subprocess.call('cp '+self.URDME_ROOT+'src/'+self.NAME+'/*.* '+tmproot+'/src/'+self.NAME+'/', shell=True)
-        subprocess.call('cp '+self.URDME_ROOT+'include/*.h '+tmproot+'/include/', shell=True)
+        subprocess.call('cp '+self.URDME_ROOT+'/src/*.c '+tmproot+'/src/', shell=True)
+        subprocess.call('cp '+self.URDME_ROOT+'/src/'+self.NAME+'/*.* '+tmproot+'/src/'+self.NAME+'/', shell=True)
+        subprocess.call('cp '+self.URDME_ROOT+'/include/*.h '+tmproot+'/include/', shell=True)
         #TODO: get the include files from solvers not in the default path (none currently implement this).
         # Get the Makefile
         os.mkdir(tmproot+'/build')

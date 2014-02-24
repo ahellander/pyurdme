@@ -809,8 +809,7 @@ class URDMEResult(dict):
 
     def __setupitems__(self, k):
         if k == 'sol' and not self.sol_initialized:
-            self.initialize_sol()
-            self.sol_initialized = True
+            self._initialize_sol()
         elif (k == 'U' or k == 'tspan') and not self.data_is_loaded:
             if self.filename is None:
                 raise AttributeError("This result object has no data file.")
@@ -865,12 +864,13 @@ class URDMEResult(dict):
                     dof = voxel*len(self.model.listOfSpecies)+i
                     ix  = vertex_to_dof_map[voxel]
                     dolfvox = (ix-i)/len(self.model.listOfSpecies)
-                    func_vector[dolfvox] = float(self.U[dof, j]/self.model.vol[voxel])
+                    func_vector[dolfvox] = float(self.U[j, dof]/self.model.vol[voxel])
 
                 spec_sol[time] = func
 
             sol[spec] = spec_sol
         self.sol = sol
+        self.sol_initialized = True
         return sol
 
     def dumps(self, species, folder_name):

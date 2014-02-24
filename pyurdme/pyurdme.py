@@ -809,8 +809,7 @@ class URDMEResult(dict):
 
     def __setupitems__(self, k):
         if k == 'sol' and not self.sol_initialized:
-            self.initialize_sol()
-            self.sol_initialized = True
+            self._initialize_sol()
         elif (k == 'U' or k == 'tspan') and not self.data_is_loaded:
             if self.filename is None:
                 raise AttributeError("This result object has no data file.")
@@ -835,7 +834,8 @@ class URDMEResult(dict):
                 # Clean up data file
                 os.remove(self.filename)
             except OSError as e:
-                print "Could not delete '{0}'".format(self.filename)
+                #print "URDMEResult.__del__: Could not delete result file'{0}': {1}".format(self.filename, e)
+                pass
 
 
     def _initialize_sol(self):
@@ -864,12 +864,13 @@ class URDMEResult(dict):
                     dof = voxel*len(self.model.listOfSpecies)+i
                     ix  = vertex_to_dof_map[voxel]
                     dolfvox = (ix-i)/len(self.model.listOfSpecies)
-                    func_vector[dolfvox] = float(self.U[dof, j]/self.model.vol[voxel])
+                    func_vector[dolfvox] = float(self.U[j, dof]/self.model.vol[voxel])
 
                 spec_sol[time] = func
 
             sol[spec] = spec_sol
         self.sol = sol
+        self.sol_initialized = True
         return sol
 
     def dumps(self, species, folder_name):
@@ -1057,9 +1058,9 @@ class URDMESolver:
         os.mkdir(tmproot+'/src')
         os.mkdir(tmproot+'/src/'+self.NAME)
         #TODO: what if solverdir is not the same as URDME_ROOT ?
-        subprocess.call('cp '+self.URDME_ROOT+'src/*.c '+tmproot+'/src/', shell=True)
-        subprocess.call('cp '+self.URDME_ROOT+'src/'+self.NAME+'/*.* '+tmproot+'/src/'+self.NAME+'/', shell=True)
-        subprocess.call('cp '+self.URDME_ROOT+'include/*.h '+tmproot+'/include/', shell=True)
+        subprocess.call('cp '+self.URDME_ROOT+'/src/*.c '+tmproot+'/src/', shell=True)
+        subprocess.call('cp '+self.URDME_ROOT+'/src/'+self.NAME+'/*.* '+tmproot+'/src/'+self.NAME+'/', shell=True)
+        subprocess.call('cp '+self.URDME_ROOT+'/include/*.h '+tmproot+'/include/', shell=True)
         #TODO: get the include files from solvers not in the default path (none currently implement this).
         # Get the Makefile
         os.mkdir(tmproot+'/build')

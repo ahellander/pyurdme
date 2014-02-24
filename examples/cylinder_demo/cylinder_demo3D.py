@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """ pyURDME model file for the annihilation cylinder 3D example. """
 
 import os
@@ -74,8 +75,8 @@ if __name__ == "__main__":
     # Plot of the time-average spatial concentration.
     x_vals = model.mesh.coordinates()[:, 0]
     l = x_vals.shape[0]
-    A_vals = numpy.sum(result['U'], axis=1)[0:2*l-1:2]
-    B_vals = numpy.sum(result['U'], axis=1)[1:2*l:2]
+    A_vals = numpy.sum(result['U'], axis=0)[0:2*l-1:2]
+    B_vals = numpy.sum(result['U'], axis=0)[1:2*l:2]
     #plt.plot(x_vals,A_vals,'.r',x_vals,B_vals,'.b')
     plt.plot(x_vals,A_vals/model.vol,'.r',x_vals,B_vals/model.vol,'.b')
     plt.legend(['A', 'B'])

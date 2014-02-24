@@ -799,6 +799,18 @@ class URDMEResult(dict):
             self.read_solution()
 
 
+    def getSpecies(self, species):
+        
+        if isinstance(species, Species):
+            spec_name = species.name
+        else:
+            spec_name = species
+        species_map = self.model.speciesMap()
+        spec_indx = species_map[spec_name]
+        if not self.data_is_loaded:
+            self.read_solution()
+        return self.U[:,spec_indx::len(species_map)]
+
     def __setattr__(self, k, v):
         if k in self.keys():
             self[k] = v

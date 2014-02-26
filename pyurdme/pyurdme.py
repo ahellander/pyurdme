@@ -744,7 +744,7 @@ class Mesh(dolfin.Mesh):
     #def unitSphere(cls, nx,ny):
     #    """ Unit Square of with nx,ny points in the respective axes. """
     #    mesh = dolfin.UnitSquareMesh(nx,ny)
-    #    return Mesh(mesh)
+    #    return Mesh(mesh)'t
 
 
 
@@ -769,6 +769,41 @@ class Mesh(dolfin.Mesh):
             return mesh
         except Exception as e:
             raise MeshImportError("Failed to import mesh: " + filename+"\n" + str(e))
+
+    def toTHREEJs(self, filename):
+        """ Dump mesh in THREE Js Json format. """
+        import json
+        document = {}
+        document["metadata"] = {"formatVersion":3}
+        vtx = self.coordinates()
+
+        materials = [ {
+                     "DbgColor" : 15658734,
+                     "DbgIndex" : 0,
+                     "DbgName" : "dummy",
+                     "colorDiffuse" : [ 1, 0, 0 ],
+                     } ]
+        document["materials"] = materials
+        document["colors"] = [65280]
+        #   document["scale"] = 1.000000
+        
+        # Scale the verices so the max dimension is in the range (-1,1) to be compatible with the browser display
+        maxvtx = numpy.max(numpy.amax(vtx,axis=0))
+        factor = 1/maxvtx
+        document["vertices"] = list(factor*vtx.flatten())
+        self.init(2,0)
+        connectivity = self.topology()(2,0)
+        faces = []
+        for i in range(connectivity.size()):
+            face = connectivity(i)
+            f = []
+            for ind in face:
+                f.append(int(ind))
+            faces += ([63]+f+[0,0,0])
+        document["faces"] = list(faces)
+        
+        file = open(filename,"w")
+        file.write(json.dumps(document))
 
 
 class Xmesh():
@@ -884,9 +919,14 @@ class URDMEResult(dict):
         self.sol = sol
         self.sol_initialized = True
         return sol
-
-    def dumps(self, species, folder_name):
-        """ Dump the trajectory of species to a collection of vtk files """
+            
+    def writeTHREEJs(filename):
+        basestr = open("jstemplate.html").read()
+    
+    
+    
+    def toVTK(self, species, folder_name):
+        """ Dump the trajectory to a collection of vtk files in the folder folder_name (created if non-existant). """
         
         self._initialize_sol()
         subprocess.call(["mkdir", "-p", folder_name])
@@ -900,8 +940,6 @@ class URDMEResult(dict):
             for dof in range(numvox):
                 func_vector[dof] = solvector[dof]
             fd << func
-
-
 
     def toXYZ(self, filename, species=None, file_format="VMD"):
         """ Dump the solution attached to a model as a xyz file. This format can be

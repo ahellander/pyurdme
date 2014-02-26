@@ -90,9 +90,9 @@ if __name__=="__main__":
     """ Dump model to a file. """
                      
     model = mincde(model_name="mincde")
-    model.serialize("debug_input.mat")
-    result = pyurdme.urdme(model)
-    result.dumps("MinD_m","mindout")
-    result.toXYZ(filename="mindm.xyz",species=["MinD_m"])
+    model.mesh.toTHREEJs("testmesh.json")
+    #result = pyurdme.urdme(model)
+#result.toVTK("MinD_m","mindout")
+    #result.toXYZ(filename="mindm.xyz",species=["MinD_m"])
     #result.toXYZ('mindm.xyz',file_format="VMD")
     

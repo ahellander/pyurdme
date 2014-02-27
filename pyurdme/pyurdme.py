@@ -826,7 +826,7 @@ class Mesh(dolfin.Mesh):
         if hstr is None:
             raise Exception("could note open template mesh.html")
         hstr = hstr.replace('###PYURDME_MESH_JSON###',jstr)
-        IPython.display.HTML(hstr)
+        IPython.display.display(IPython.display.HTML(hstr))
 
 
 

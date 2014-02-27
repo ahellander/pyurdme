@@ -28,6 +28,7 @@ except:
     raise Exception("PyURDME requires FeniCS/dolfin.")
 
 import pickle
+import json
 
 # Set log level to report only errors or worse
 #dolfin.set_log_level(dolfin.ERROR)
@@ -760,7 +761,7 @@ class Mesh(dolfin.Mesh):
         return mesh
 
     @classmethod
-    def read_dolfin_mesh(cls, filename=None):
+    def read_dolfin_mesh(cls, filename=None, colors = []):
         """ Import a mesh in Dolfins native .xml format """
 
         try:
@@ -770,9 +771,12 @@ class Mesh(dolfin.Mesh):
         except Exception as e:
             raise MeshImportError("Failed to import mesh: " + filename+"\n" + str(e))
 
-    def toTHREEJs(self, filename):
-        """ Dump mesh in THREE Js Json format. """
-        import json
+    def toTHREEJs(self, colors = None):
+        """ Dump mesh in three.js Json format.
+            
+            If a colors list is specified, it should have the num_voxels entries
+            
+        """
         document = {}
         document["metadata"] = {"formatVersion":3}
         vtx = self.coordinates()
@@ -783,9 +787,14 @@ class Mesh(dolfin.Mesh):
                      "DbgName" : "dummy",
                      "colorDiffuse" : [ 1, 0, 0 ],
                      } ]
+                     
         document["materials"] = materials
-        document["colors"] = [65280]
-        #   document["scale"] = 1.000000
+        
+        if colors == None:
+            # Default color is blue
+            colors = [255]*self.num_voxels()
+        
+        document["colors"] = colors
         
         # Scale the verices so the max dimension is in the range (-1,1) to be compatible with the browser display
         maxvtx = numpy.max(numpy.amax(vtx,axis=0))
@@ -794,16 +803,17 @@ class Mesh(dolfin.Mesh):
         self.init(2,0)
         connectivity = self.topology()(2,0)
         faces = []
-        for i in range(connectivity.size()):
+        for i in range(self.num_faces()):
             face = connectivity(i)
             f = []
+            #c = []
             for ind in face:
                 f.append(int(ind))
-            faces += ([63]+f+[0,0,0])
-        document["faces"] = list(faces)
+            #c.append()
+            faces += ([128]+f+f)
+            document["faces"] = list(faces)
         
-        file = open(filename,"w")
-        file.write(json.dumps(document))
+        return json.dumps(document)
 
 
 class Xmesh():
@@ -920,10 +930,6 @@ class URDMEResult(dict):
         self.sol_initialized = True
         return sol
             
-    def writeTHREEJs(filename):
-        basestr = open("jstemplate.html").read()
-    
-    
     
     def toVTK(self, species, folder_name):
         """ Dump the trajectory to a collection of vtk files in the folder folder_name (created if non-existant). """
@@ -1008,6 +1014,7 @@ class URDMEResult(dict):
         coordinates = self.model.mesh.getVoxels()
         coordinatestr = coordinates.astype(str)
         subprocess.call(["mkdir", "-p", filename])
+        
         for i, time in enumerate(self.tspan):
             outfile = open(filename + '/' + filename + str(i) + ".csv", "w")
             number_of_atoms = numpy.sum(self.U[:, i])
@@ -1022,6 +1029,55 @@ class URDMEResult(dict):
             outfile.write(filestr)
             outfile.close()
 
+
+    def toTHREEJs(self, species, time_index):
+        """ Return a json serialized document that can 
+            be read and visualized by three.js.
+        """
+        
+        colors = self._compute_solution_colors(species,time_index)
+        return self.model.mesh.toTHREEJs(colors=colors)
+
+    def _copynumber_to_concentration(self,species, time_index):
+        """ Scale compy numbers to concentrations (in unit mol/volume),
+            where the volume unit is defined by the user input.
+        """
+                                     
+        SU = self.getSpecies(species)
+        timeslice = SU[time_index,:]
+        
+        scaled_sol = numpy.zeros(numpy.shape(timeslice))
+        for i,cn in enumerate(timeslice):
+            scaled_sol[i] = float(cn)/(6.022e23*self.model.vol[i])
+
+        return scaled_sol
+
+
+    def _compute_solution_colors(self,species, time_index):
+        """ Create a color list for species at time. """
+        
+       
+        timeslice = self._copynumber_to_concentration(species,time_index)
+        
+        import matplotlib.cm
+        
+        # Get RGB color map proportinal to the concentration.
+        cm = matplotlib.cm.ScalarMappable()
+        crgba= cm.to_rgba(timeslice, bytes = True)
+                                     
+        # Convert RGB to HEX
+        colors= []
+        for row in crgba:
+            colors.append(self._rgb_to_hex(tuple(list(row[1:]))))
+
+        # Convert Hex to Decimal
+        for i,c in enumerate(colors):
+            colors[i] = int(c,0)
+
+        return colors
+
+    def _rgb_to_hex(self, rgb):
+        return '0x%02x%02x%02x' % rgb
 
 
     def read_solution(self):

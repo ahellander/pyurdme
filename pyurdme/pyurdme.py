@@ -794,7 +794,7 @@ class Mesh(dolfin.Mesh):
         
         if colors == None:
             # Default color is blue
-            colors = [255]*self.num_voxels()
+            colors = [255]*self.getNumVoxels()
         
         document["colors"] = colors
         document["scale"] = 1.000000

@@ -400,7 +400,7 @@ class URDMEModel(Model):
             mass_matrices = self.mass_matrices
         except AttributeError:
             if self.mesh is None:
-                raise ModelException("This model has no mesh, can not craete system matrix.")
+                raise ModelException("This model has no mesh, can not create system matrix.")
             matrices = self.assemble()
             self.stiffness_matrices = matrices['K']
             self.mass_matrices = matrices['M']

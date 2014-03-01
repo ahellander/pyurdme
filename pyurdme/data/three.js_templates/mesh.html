@@ -1,0 +1,67 @@
+<!-- For these URLs to work with IPython, you have to put the files in $HOME/.ipython/profile_*/static/custom/ -->
+            <script src="/static/custom/three.js"></script>
+            <script src="/static/custom/OrbitControls.js"></script>
+
+            <script>
+                    var pyurdme_mesh_json = '###PYURDME_MESH_JSON###'
+                
+                    var scene = new THREE.Scene();
+                    var camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
+                    var renderer = new THREE.WebGLRenderer();
+                    renderer.setSize( window.innerWidth, window.innerHeight );
+                    document.body.appendChild( renderer.domElement );
+                    
+                    var loader = new THREE.JSONLoader();
+//                    loader.load( "testmesh.json", function(geometry){
+//                                var material = new THREE.MeshLambertMaterial({color: "white", wireframe:true});
+//                                //var material = new THREE.MeshLambertMaterial({color: "blue"});
+//                                //var material=new THREE.MeshBasicMaterial( { vertexColors: THREE.FaceColors } );
+//                                material.side = THREE.DoubleSide;
+//                                mesh = new THREE.Mesh(geometry,material);
+//                                mesh.rotation.x = 5
+//                                
+//                                scene.add(mesh);
+//                                });
+                    function load_geometry(geometry){
+                                var material = new THREE.MeshLambertMaterial({color: "white", wireframe:true});
+                                //var material = new THREE.MeshLambertMaterial({color: "blue"});
+                                //var material=new THREE.MeshBasicMaterial( { vertexColors: THREE.FaceColors } );
+                                material.side = THREE.DoubleSide;
+                                mesh = new THREE.Mesh(geometry,material);
+                                mesh.rotation.x = 5
+                                
+                                scene.add(mesh);
+                    }
+                    geo_obj = loader.parse(pyurdme_mesh_json);
+                    load_geometry(geo_obj);
+                    
+                    //var pointLight = new THREE.PointLight(0xFFFFFF);
+                    //scene.add(pointLight);
+                    
+                    camera.position.z = 1;
+                    
+                    controls = new THREE.OrbitControls( camera );
+                    controls.addEventListener( 'change', render )
+                    
+                    //camera.position.y = 0.2;
+                    //camera.position.x = -0.5;
+                    // add subtle blue ambient lighting
+                    var ambientLight = new THREE.AmbientLight(0x000044);
+                    scene.add(ambientLight);
+                    hemiLight = new THREE.HemisphereLight( 0x0000ff, 0x00ff00, 0.6 );
+                    scene.add(hemiLight);
+
+                    // directional lighting
+                    var directionalLight = new THREE.DirectionalLight(0xffffff);
+                    directionalLight.position.set(1, 1, 1).normalize();
+                    scene.add(directionalLight);
+
+
+                    function render() {
+                        requestAnimationFrame(render);
+                        renderer.render(scene, camera);
+                    }
+                    render();
+            
+            // Our Javascript will go here.
+                </script>

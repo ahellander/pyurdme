@@ -95,3 +95,9 @@ if __name__=="__main__":
     with open("testmesh.json",'w') as file:
         file.write(jsondoc)
 
+    particlestr = result.printParticlejs(["MinD_m", "MinDE"],49)
+    with open("particletest.html",'w') as file:
+        file.write(particlestr)
+
+
+

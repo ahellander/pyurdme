@@ -698,6 +698,40 @@ class Mesh(dolfin.Mesh):
         equivalent to Cartesian grids.
 
     """
+    
+    def meshSize(self):
+        """ Estimate of mesh size at each vertex. """
+        coordinates = self.coordinates()
+        
+        
+        # Compute the circumradius of the cells
+        cr = []
+        for i in range(self.num_cells()):
+            cell = dolfin.Cell(self, i)
+            cr.append(cell.diameter()/2.0)
+
+        # Compute the mean for each vertex based on all incident cells
+        vtx2cell = self.topology()(0,self.topology().dim())
+        vtxh = []
+        for i in range(self.num_vertices()):
+            v2c = vtx2cell(i)
+            h = 0.0
+            for indx in v2c:
+                h += cr[indx]
+            h = h/len(v2c)
+            vtxh.append(h)
+
+        return vtxh
+
+    
+    def scaledCoordinates(self):
+        """ Return vertex coordinates scaled to the interval (-1,1). """
+        # Scale the verices so the max dimension is in the range (-1,1) to be compatible with the browser display
+        vtx = self.coordinates()
+        maxvtx = numpy.max(numpy.amax(vtx,axis=0))
+        factor = 1/maxvtx
+        return factor, factor*vtx
+
 
     @classmethod
     def unitIntervalMesh(cls, nx):
@@ -779,7 +813,7 @@ class Mesh(dolfin.Mesh):
         """
         document = {}
         document["metadata"] = {"formatVersion":3}
-        vtx = self.coordinates()
+        vtx = self.scaledCoordinates()
 
         materials = [ {
                      "DbgColor" : 15658734,
@@ -796,10 +830,6 @@ class Mesh(dolfin.Mesh):
         
         document["colors"] = colors
         
-        # Scale the verices so the max dimension is in the range (-1,1) to be compatible with the browser display
-        maxvtx = numpy.max(numpy.amax(vtx,axis=0))
-        factor = 1/maxvtx
-        document["vertices"] = list(factor*vtx.flatten())
         self.init(2,0)
         connectivity = self.topology()(2,0)
         faces = []
@@ -1028,6 +1058,52 @@ class URDMEResult(dict):
                         filestr += linestr
             outfile.write(filestr)
             outfile.close()
+
+
+    def printParticlejs(self,species,time_index):
+    
+        import random
+        
+        template = open("particles.html",'r').read()
+        
+        #coordinates = self.model.mesh.scaledCoordinates()
+        coordinates = self.model.mesh.coordinates()
+        
+        h = self.model.mesh.meshSize()
+        
+        x=[];
+        y=[];
+        z=[];
+        c=[];
+        factor, cd = self.model.mesh.scaledCoordinates()
+
+
+        total_num_particles = 0
+        colors = ["blue","red","yellow", "green"]
+        
+        for j,spec in enumerate(species):
+            
+            US = self.getSpecies(spec)
+            timeslice = US[time_index,:]
+            ns = numpy.sum(timeslice)
+            total_num_particles += ns
+
+            for i, particles in enumerate(timeslice):
+                # "Radius" of voxel
+                hi = h[i]
+                for particle in range(particles):
+                    x.append((coordinates[i,0]+random.uniform(-1,1)*hi)*factor)
+                    y.append((coordinates[i,1]+random.uniform(-1,1)*hi)*factor)
+                    z.append((coordinates[i,2]+random.uniform(-1,1)*hi)*factor)
+                    c.append(colors[j])
+    
+        docstr = template.replace("__NUM__MOLECULES__", str(total_num_particles))
+        docstr = docstr.replace("__X__",str(x))
+        docstr = docstr.replace("__Y__",str(y))
+        docstr = docstr.replace("__Z__",str(z))
+        docstr = docstr.replace("__COLOR__",str(c))
+
+        return docstr
 
 
     def toTHREEJs(self, species, time_index):
@@ -1354,7 +1430,8 @@ class URDMESolver:
             raise URDMEError("Solver execution failed")
 
         if return_code != 0:
-            if self.report_level < 1:
+            print outfile.name
+            if self.report_level >= 1:
                 print handle.stderr.read(), handle.stdout.read()
             print "urdme_solver_cmd = {0}".format(urdme_solver_cmd)
             raise URDMEError("Solver execution failed")

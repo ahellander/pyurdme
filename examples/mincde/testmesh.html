@@ -16,9 +16,9 @@
                     document.body.appendChild( renderer.domElement );
                     
                     var loader = new THREE.JSONLoader();
-                    loader.load( "testmesh.json", function(geometry){
+                    loader.load( "test.json", function(geometry){
                                 // To plot it on mesh edges, set wireframe to true, to make transparent, change opacity to a value (0,1)
-                                var material=new THREE.MeshBasicMaterial( { vertexColors: THREE.VertexColors, wireframe:false,transparent:true,opacity: 1} );
+                                var material=new THREE.MeshBasicMaterial( { vertexColors: THREE.VertexColors, wireframe:true,transparent:true,opacity: 1} );
                                 material.side = THREE.DoubleSide;
                                 mesh = new THREE.Mesh(geometry,material);
                                 scene.add(mesh);

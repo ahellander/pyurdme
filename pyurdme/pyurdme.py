@@ -815,7 +815,23 @@ class Mesh(dolfin.Mesh):
         """
         document = {}
         document["metadata"] = {"formatVersion":3}
-        vtx = self.scaledCoordinates()
+        gfdg,vtx = self.scaledCoordinates()
+
+
+        if self.topology().dim() == 2:
+            # 2D
+            num_elements = self.num_cells()
+            # This is a fix for the built+in 2D meshes that only have x,y-coordinates.
+            dims = numpy.shape(vtx)
+            if dims[1] == 2:
+                vtxx = numpy.zeros((dims[0],3))
+                for i, v in enumerate(vtx):
+                    vtxx[i,:]=(list(v)+[0])
+                vtx = vtxx
+        else:
+            # 3D
+            num_elements = self.num_facets()
+
 
         materials = [ {
                      "DbgColor" : 15658734,
@@ -825,27 +841,43 @@ class Mesh(dolfin.Mesh):
                      } ]
                      
         document["materials"] = materials
+        document["vertices"] = list(vtx.flatten())
         
         if colors == None:
             # Default color is blue
-            colors = [255]*self.getNumVoxels()
+            colors = [255]*self.num_vertices()
         
         document["colors"] = colors
-        document["scale"] = 1.000000
+        #document["scale"] = 1.000000
         
         self.init(2,0)
         connectivity = self.topology()(2,0)
         faces = []
-        for i in range(self.num_faces()):
+        
+       
+        
+        for i in range(num_elements):
             face = connectivity(i)
             f = []
-            #c = []
             for ind in face:
+                if int(ind) >= self.num_vertices():
+                    raise Exception("Out of bounds")
+
                 f.append(int(ind))
-            #c.append()
             faces += ([128]+f+f)
             document["faces"] = list(faces)
         
+        #Test that we can index into vertices
+        vertices = document["vertices"]
+        
+        #for face in faces:
+            #for j in range(2):
+            #    if vertices[face[j+1]] >=  self.num_vertices():
+            #        raise Exception("Out of bounds")
+                
+        
+        with open("debugdata.js",'w') as file:
+            file.write(json.dumps(document))
         return json.dumps(document)
 
     def _ipython_display_(self):

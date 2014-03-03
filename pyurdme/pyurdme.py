@@ -725,6 +725,24 @@ class Mesh(dolfin.Mesh):
 
         return vtxh
 
+
+    def scaledNormalizedCoordinates(self):
+        """ Return vertex coordinates scaled to the interval (-1,1) and centered at origo. """
+        # Scale the verices so the max dimension is in the range (-1,1) to be compatible with the browser display
+        vtx = self.coordinates()
+        maxvtx = numpy.max(numpy.amax(vtx,axis=0))
+        factor = 1/maxvtx
+        vtx = factor*vtx
+        
+        # Compute mesh centroid
+        centroid = numpy.mean(vtx,axis=0)
+        # Shift so the centroid is now origo
+        normalized_vtx = numpy.zeros(numpy.shape(vtx))
+        for i,v in enumerate(vtx):
+            normalized_vtx[i,:] = v - centroid
+        
+        
+        return factor, normalized_vtx
     
     def scaledCoordinates(self):
         """ Return vertex coordinates scaled to the interval (-1,1). """
@@ -815,7 +833,8 @@ class Mesh(dolfin.Mesh):
         """
         document = {}
         document["metadata"] = {"formatVersion":3}
-        gfdg,vtx = self.scaledCoordinates()
+        gfdg,vtx = self.scaledNormalizedCoordinates()
+        
 
 
         if self.topology().dim() == 2:
@@ -880,12 +899,15 @@ class Mesh(dolfin.Mesh):
         if hstr is None:
             raise Exception("could note open template mesh.html")
         hstr = hstr.replace('###PYURDME_MESH_JSON###',jstr)
-        with open("debugdata2.html",'w') as file:
-            file.write(hstr)
-            #IPython.display.display(hstr)
-        IPython.display.display(IPython.display.HTML(hstr))
 
+        # Create a random id for the display div. This is to avioid multiple plots ending up in the same
+        # div in Ipython notebook
+        import uuid
+        displayareaid=str(uuid.uuid4())
+        hstr = hstr.replace('###DISPLAYAREAID###',displayareaid)
 
+        html = '<div id="'+displayareaid+'" class="cell"></div>'
+        IPython.display.display(IPython.display.HTML(html+hstr))
 
 class Xmesh():
     """ Extended mesh object.

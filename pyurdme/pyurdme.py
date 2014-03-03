@@ -1243,6 +1243,26 @@ class URDMEResult(dict):
             raise exc_info[1], None, exc_info[2]
 
 
+    def display(self,species,time_index):
+
+        jstr = self.toTHREEJs(species,time_index)
+        hstr = None
+        with open(os.path.dirname(os.path.abspath(__file__))+"/data/three.js_templates/solution.html",'r') as fd:
+            hstr = fd.read()
+        if hstr is None:
+            raise Exception("could note open template mesh.html")
+        hstr = hstr.replace('###PYURDME_MESH_JSON###',jstr)
+        
+        # Create a random id for the display div. This is to avioid multiple plots ending up in the same
+        # div in Ipython notebook
+        import uuid
+        displayareaid=str(uuid.uuid4())
+        hstr = hstr.replace('###DISPLAYAREAID###',displayareaid)
+        
+        html = '<div id="'+displayareaid+'" class="cell"></div>'
+        IPython.display.display(IPython.display.HTML(html+hstr))
+
+
 class URDMESolver:
     """ Abstract class for URDME solvers. """
 

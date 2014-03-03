@@ -114,15 +114,15 @@ class URDMEModel(Model):
                 fdname = fd.name
                 fd.write(sd_func_str)
                 fd.seek(0)
-                fd_in = dolfin.File(filename)
+                fd_in = dolfin.File(fdname)
                 func = dolfin.MeshFunction("size_t", self.__dict__["mesh"])
                 fd_in >> func
                 sddict[sdkey] = func
                 fd.close()
             self.__dict__["subdomains"] = sddict
         except Exception as e:
-            print "Error unpickling model, could not recreate the subdomain functions"
-
+            raise Exception("Error unpickling model, could not recreate the subdomain functions"+str(e))
+            
         self.meshextend()
 
 

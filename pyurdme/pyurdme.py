@@ -870,14 +870,6 @@ class Mesh(dolfin.Mesh):
         #Test that we can index into vertices
         vertices = document["vertices"]
         
-        #for face in faces:
-            #for j in range(2):
-            #    if vertices[face[j+1]] >=  self.num_vertices():
-            #        raise Exception("Out of bounds")
-                
-        
-        with open("debugdata.js",'w') as file:
-            file.write(json.dumps(document))
         return json.dumps(document)
 
     def _ipython_display_(self):
@@ -888,6 +880,9 @@ class Mesh(dolfin.Mesh):
         if hstr is None:
             raise Exception("could note open template mesh.html")
         hstr = hstr.replace('###PYURDME_MESH_JSON###',jstr)
+        with open("debugdata2.html",'w') as file:
+            file.write(hstr)
+            #IPython.display.display(hstr)
         IPython.display.display(IPython.display.HTML(hstr))
 
 

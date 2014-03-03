@@ -1,12 +1,10 @@
+<!--<html><body>-->
 <!-- For these URLs to work with IPython, you have to put the files in $HOME/.ipython/profile_*/static/custom/ -->
             <script src="/static/custom/three.js"></script>
             <script src="/static/custom/OrbitControls.js"></script>
-<script src="https://rawgithub.com/mrdoob/three.js/master/build/three.js"></script>
-<script src="https://rawgithub.com/mrdoob/three.js/master/examples/js/controls/OrbitControls.js"></script>
-
 
             <script>
-                    var pyurdme_mesh_json = '###PYURDME_MESH_JSON###'
+                var pyurdme_mesh_json = ###PYURDME_MESH_JSON###;
                 
                     var scene = new THREE.Scene();
                     var camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
@@ -25,26 +23,26 @@
 //                                
 //                                scene.add(mesh);
 //                                });
-                    function load_geometry(geometry){
+                    function load_geometry(model){
                                 var material = new THREE.MeshLambertMaterial({color: "white", wireframe:true});
                                 //var material = new THREE.MeshLambertMaterial({color: "blue"});
                                 //var material=new THREE.MeshBasicMaterial( { vertexColors: THREE.FaceColors } );
                                 material.side = THREE.DoubleSide;
-                                mesh = new THREE.Mesh(geometry,material);
+                                mesh = new THREE.Mesh(model.geometry,material);
                                 mesh.rotation.x = 5
                                 
                                 scene.add(mesh);
                     }
-                    geo_obj = loader.parse(pyurdme_mesh_json);
-                    load_geometry(geo_obj);
+                    model = loader.parse(pyurdme_mesh_json);
+                    load_geometry(model);
                     
                     //var pointLight = new THREE.PointLight(0xFFFFFF);
                     //scene.add(pointLight);
                     
                     camera.position.z = 1;
                     
-                    controls = new THREE.OrbitControls( camera );
-                    controls.addEventListener( 'change', render )
+                    //controls = new THREE.OrbitControls( camera );
+                    //controls.addEventListener( 'change', render )
                     
                     //camera.position.y = 0.2;
                     //camera.position.x = -0.5;
@@ -68,3 +66,4 @@
             
             // Our Javascript will go here.
                 </script>
+  <!-- </body></html> -->

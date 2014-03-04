@@ -114,15 +114,15 @@ class URDMEModel(Model):
                 fdname = fd.name
                 fd.write(sd_func_str)
                 fd.seek(0)
-                fd_in = dolfin.File(filename)
+                fd_in = dolfin.File(fdname)
                 func = dolfin.MeshFunction("size_t", self.__dict__["mesh"])
                 fd_in >> func
                 sddict[sdkey] = func
                 fd.close()
             self.__dict__["subdomains"] = sddict
         except Exception as e:
-            print "Error unpickling model, could not recreate the subdomain functions"
-
+            raise Exception("Error unpickling model, could not recreate the subdomain functions"+str(e))
+            
         self.meshextend()
 
 
@@ -937,6 +937,70 @@ class URDMEResult(dict):
             self.read_solution()
 
 
+
+    def __getstate__(self):
+        """ Used by pickle to get state when pickling. We need to read the contents of the
+        output file  since we can't picke file objects. """
+
+#  if not self.data_is_loaded:
+        try:
+            with open(self.filename,mode='rb') as fh:
+                filecontents = fh.read()
+        except Exception,e:
+            raise Exception(("Error pickling model. Failed to read result file:",str(e)))
+        
+        state = self.__dict__
+        state["filecontents"] = filecontents
+        for key, item in state.items():
+            try:
+                pickle.dumps(item)
+            except Exception as e:
+                raise Exception(("Failed to pickle URDMEResult:", str(e)))
+
+        return state
+
+
+    def __setstate__(self, state):
+        """ Used by pickle to set state when unpickling. """
+        
+        # If the object contains filecontents, write those to a new tmp file.
+        try:
+            filecontents = state.pop("filecontents",None)
+            fd = tempfile.NamedTemporaryFile(delete=False)
+            with open(fd.name, mode='wb') as fh:
+                fh.write(filecontents)
+            state["filename"] = fd.name
+    # state["data_is_loaded"] = False
+        except Exception, e:
+            print "Error unpickling model, could not recreate the solution file."
+            raise
+
+        for k,v in state.items():
+            self.__dict__[k] = v
+
+    def read_solution(self):
+        """ Read the tspan and U matrix into memory. """
+        
+        resultfile = h5py.File(self.filename, 'r')
+        U = resultfile['U']
+        U = numpy.array(U)
+        
+        tspan = resultfile['tspan']
+        tspan = numpy.array(tspan).flatten()
+        resultfile.close()
+        
+        self.U = U
+        self.tspan = tspan
+        self.data_is_loaded = True
+    #    try:
+        # Clean up data file
+        #os.remove(self.filename)
+        # Mark the data as loaded
+#self.data_is_loaded = True
+#    except OSError as e:
+#        print "Could not delete '{0}'".format(self.filename)
+#        raise exc_info[1], None, exc_info[2
+
     def getSpecies(self, species):
         
         if isinstance(species, Species):
@@ -948,6 +1012,7 @@ class URDMEResult(dict):
         if not self.data_is_loaded:
             self.read_solution()
         return self.U[:,spec_indx::len(species_map)]
+
 
     def __setattr__(self, k, v):
         if k in self.keys():
@@ -979,13 +1044,13 @@ class URDMEResult(dict):
 
     def __del__(self):
         """ Deconstructor. """
-        if not self.data_is_loaded:
-            try:
-                # Clean up data file
-                os.remove(self.filename)
-            except OSError as e:
-                #print "URDMEResult.__del__: Could not delete result file'{0}': {1}".format(self.filename, e)
-                pass
+            #   if not self.data_is_loaded:
+        try:
+            # Clean up data file
+            os.remove(self.filename)
+        except OSError as e:
+            #print "URDMEResult.__del__: Could not delete result file'{0}': {1}".format(self.filename, e)
+            pass
 
 
     def _initialize_sol(self):
@@ -1219,28 +1284,27 @@ class URDMEResult(dict):
         return '0x%02x%02x%02x' % rgb
 
 
-    def read_solution(self):
-        """ Read the datafile into memory and delete it. """
 
-        resultfile = h5py.File(self.filename, 'r')
 
-        U = resultfile['U']
-        U = numpy.array(U)
-       
-        tspan = resultfile['tspan']
-        tspan = numpy.array(tspan).flatten()
-        resultfile.close()
-        self.U = U
-        self.tspan = tspan
 
-        try:
-            # Clean up data file
-            os.remove(self.filename)
-            # Mark the data as loaded
-            self.data_is_loaded = True
-        except OSError as e:
-            print "Could not delete '{0}'".format(self.filename)
-            raise exc_info[1], None, exc_info[2]
+    def display(self,species,time_index):
+
+        jstr = self.toTHREEJs(species,time_index)
+        hstr = None
+        with open(os.path.dirname(os.path.abspath(__file__))+"/data/three.js_templates/solution.html",'r') as fd:
+            hstr = fd.read()
+        if hstr is None:
+            raise Exception("could note open template mesh.html")
+        hstr = hstr.replace('###PYURDME_MESH_JSON###',jstr)
+        
+        # Create a random id for the display div. This is to avioid multiple plots ending up in the same
+        # div in Ipython notebook
+        import uuid
+        displayareaid=str(uuid.uuid4())
+        hstr = hstr.replace('###DISPLAYAREAID###',displayareaid)
+        
+        html = '<div id="'+displayareaid+'" class="cell"></div>'
+        IPython.display.display(IPython.display.HTML(html+hstr))
 
 
 class URDMESolver:

@@ -797,7 +797,7 @@ class Mesh(dolfin.Mesh):
             colors = [255]*self.getNumVoxels()
         
         document["colors"] = colors
-        document["scale"] = 1.000000
+        #document["scale"] = 1.000000
         
         # Scale the verices so the max dimension is in the range (-1,1) to be compatible with the browser display
         maxvtx = numpy.max(numpy.amax(vtx,axis=0))
@@ -818,7 +818,7 @@ class Mesh(dolfin.Mesh):
         
         return json.dumps(document)
 
-    def _ipython_display_(self):
+    def _ipython_display_(self, filename=None):
         jstr = self.toTHREEJs()
         hstr = None
         with open(os.path.dirname(os.path.abspath(__file__))+"/data/three.js_templates/mesh.html",'r') as fd:
@@ -826,7 +826,22 @@ class Mesh(dolfin.Mesh):
         if hstr is None:
             raise Exception("could note open template mesh.html")
         hstr = hstr.replace('###PYURDME_MESH_JSON###',jstr)
-        IPython.display.display(IPython.display.HTML(hstr))
+        if filename != None:
+            with open(filename, 'w') as fd:
+                fd.write("""
+<html>
+    <head>
+        <title>PyURDME Result</title> <style>canvas { width: 100%; height: 100% }</style> </head>
+
+        <body>
+""")
+                fd.write(hstr)
+                fd.write("""
+        </body>
+
+</html>""")
+        else:
+            IPython.display.display(IPython.display.HTML(hstr))
 
 
 

@@ -89,9 +89,10 @@ if __name__=="__main__":
     """ Dump model to a file. """
                      
     model = mincde(model_name="mincde")
-    model.timespan(range(50))
-    result = pyurdme.urdme(model)
-    jsondoc = result.toTHREEJs("MinD_m",49)
-    with open("testmesh.json",'w') as file:
-        file.write(jsondoc)
+    model.mesh._ipython_display_('ipython_display.html')
+    #model.timespan(range(50))
+    #result = pyurdme.urdme(model)
+    #jsondoc = result.toTHREEJs("MinD_m",49)
+    #with open("testmesh.json",'w') as file:
+    #    file.write(jsondoc)
 

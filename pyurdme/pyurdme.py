@@ -700,6 +700,58 @@ class Mesh(dolfin.Mesh):
         equivalent to Cartesian grids.
 
     """
+    
+    def meshSize(self):
+        """ Estimate of mesh size at each vertex. """
+        coordinates = self.coordinates()
+        
+        
+        # Compute the circumradius of the cells
+        cr = []
+        for i in range(self.num_cells()):
+            cell = dolfin.Cell(self, i)
+            cr.append(cell.diameter()/2.0)
+
+        # Compute the mean for each vertex based on all incident cells
+        vtx2cell = self.topology()(0,self.topology().dim())
+        vtxh = []
+        for i in range(self.num_vertices()):
+            v2c = vtx2cell(i)
+            h = 0.0
+            for indx in v2c:
+                h += cr[indx]
+            h = h/len(v2c)
+            vtxh.append(h)
+
+        return vtxh
+
+
+    def scaledNormalizedCoordinates(self):
+        """ Return vertex coordinates scaled to the interval (-1,1) and centered at origo. """
+        # Scale the verices so the max dimension is in the range (-1,1) to be compatible with the browser display
+        vtx = self.coordinates()
+        maxvtx = numpy.max(numpy.amax(vtx,axis=0))
+        factor = 1/maxvtx
+        vtx = factor*vtx
+        
+        # Compute mesh centroid
+        centroid = numpy.mean(vtx,axis=0)
+        # Shift so the centroid is now origo
+        normalized_vtx = numpy.zeros(numpy.shape(vtx))
+        for i,v in enumerate(vtx):
+            normalized_vtx[i,:] = v - centroid
+        
+        
+        return factor, normalized_vtx
+    
+    def scaledCoordinates(self):
+        """ Return vertex coordinates scaled to the interval (-1,1). """
+        # Scale the verices so the max dimension is in the range (-1,1) to be compatible with the browser display
+        vtx = self.coordinates()
+        maxvtx = numpy.max(numpy.amax(vtx,axis=0))
+        factor = 1/maxvtx
+        return factor, factor*vtx
+
 
     @classmethod
     def unitIntervalMesh(cls, nx):
@@ -781,7 +833,24 @@ class Mesh(dolfin.Mesh):
         """
         document = {}
         document["metadata"] = {"formatVersion":3}
-        vtx = self.coordinates()
+        gfdg,vtx = self.scaledNormalizedCoordinates()
+        
+
+
+        if self.topology().dim() == 2:
+            # 2D
+            num_elements = self.num_cells()
+            # This is a fix for the built+in 2D meshes that only have x,y-coordinates.
+            dims = numpy.shape(vtx)
+            if dims[1] == 2:
+                vtxx = numpy.zeros((dims[0],3))
+                for i, v in enumerate(vtx):
+                    vtxx[i,:]=(list(v)+[0])
+                vtx = vtxx
+        else:
+            # 3D
+            num_elements = self.num_facets()
+
 
         materials = [ {
                      "DbgColor" : 15658734,
@@ -791,30 +860,34 @@ class Mesh(dolfin.Mesh):
                      } ]
                      
         document["materials"] = materials
+        document["vertices"] = list(vtx.flatten())
         
         if colors == None:
             # Default color is blue
-            colors = [255]*self.getNumVoxels()
+            colors = [255]*self.num_vertices()
         
         document["colors"] = colors
         #document["scale"] = 1.000000
         
-        # Scale the verices so the max dimension is in the range (-1,1) to be compatible with the browser display
-        maxvtx = numpy.max(numpy.amax(vtx,axis=0))
-        factor = 1/maxvtx
-        document["vertices"] = list(factor*vtx.flatten())
         self.init(2,0)
         connectivity = self.topology()(2,0)
         faces = []
-        for i in range(self.num_faces()):
+        
+       
+        
+        for i in range(num_elements):
             face = connectivity(i)
             f = []
-            #c = []
             for ind in face:
+                if int(ind) >= self.num_vertices():
+                    raise Exception("Out of bounds")
+
                 f.append(int(ind))
-            #c.append()
             faces += ([128]+f+f)
             document["faces"] = list(faces)
+        
+        #Test that we can index into vertices
+        vertices = document["vertices"]
         
         return json.dumps(document)
 
@@ -826,6 +899,13 @@ class Mesh(dolfin.Mesh):
         if hstr is None:
             raise Exception("could note open template mesh.html")
         hstr = hstr.replace('###PYURDME_MESH_JSON###',jstr)
+        # Create a random id for the display div. This is to avioid multiple plots ending up in the same
+        # div in Ipython notebook
+        import uuid
+        displayareaid=str(uuid.uuid4())
+        hstr = hstr.replace('###DISPLAYAREAID###',displayareaid)
+        html = '<div id="'+displayareaid+'" class="cell"></div>'
+
         if filename != None:
             with open(filename, 'w') as fd:
                 fd.write("""
@@ -835,15 +915,13 @@ class Mesh(dolfin.Mesh):
 
         <body>
 """)
-                fd.write(hstr)
+                fd.write(html+hstr)
                 fd.write("""
         </body>
 
 </html>""")
         else:
-            IPython.display.display(IPython.display.HTML(hstr))
-
-
+            IPython.display.display(IPython.display.HTML(html+hstr))
 
 class Xmesh():
     """ Extended mesh object.
@@ -1057,6 +1135,52 @@ class URDMEResult(dict):
                         filestr += linestr
             outfile.write(filestr)
             outfile.close()
+
+
+    def printParticlejs(self,species,time_index):
+    
+        import random
+        
+        template = open("particles.html",'r').read()
+        
+        #coordinates = self.model.mesh.scaledCoordinates()
+        coordinates = self.model.mesh.coordinates()
+        
+        h = self.model.mesh.meshSize()
+        
+        x=[];
+        y=[];
+        z=[];
+        c=[];
+        factor, cd = self.model.mesh.scaledCoordinates()
+
+
+        total_num_particles = 0
+        colors = ["blue","red","yellow", "green"]
+        
+        for j,spec in enumerate(species):
+            
+            US = self.getSpecies(spec)
+            timeslice = US[time_index,:]
+            ns = numpy.sum(timeslice)
+            total_num_particles += ns
+
+            for i, particles in enumerate(timeslice):
+                # "Radius" of voxel
+                hi = h[i]
+                for particle in range(particles):
+                    x.append((coordinates[i,0]+random.uniform(-1,1)*hi)*factor)
+                    y.append((coordinates[i,1]+random.uniform(-1,1)*hi)*factor)
+                    z.append((coordinates[i,2]+random.uniform(-1,1)*hi)*factor)
+                    c.append(colors[j])
+    
+        docstr = template.replace("__NUM__MOLECULES__", str(total_num_particles))
+        docstr = docstr.replace("__X__",str(x))
+        docstr = docstr.replace("__Y__",str(y))
+        docstr = docstr.replace("__Z__",str(z))
+        docstr = docstr.replace("__COLOR__",str(c))
+
+        return docstr
 
 
     def toTHREEJs(self, species, time_index):
@@ -1383,7 +1507,8 @@ class URDMESolver:
             raise URDMEError("Solver execution failed")
 
         if return_code != 0:
-            if self.report_level < 1:
+            print outfile.name
+            if self.report_level >= 1:
                 print handle.stderr.read(), handle.stdout.read()
             print "urdme_solver_cmd = {0}".format(urdme_solver_cmd)
             raise URDMEError("Solver execution failed")

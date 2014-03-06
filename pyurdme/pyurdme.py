@@ -992,27 +992,34 @@ class URDMEResult(dict):
         self.U = U
         self.tspan = tspan
         self.data_is_loaded = True
-    #    try:
-        # Clean up data file
-        #os.remove(self.filename)
-        # Mark the data as loaded
-#self.data_is_loaded = True
-#    except OSError as e:
-#        print "Could not delete '{0}'".format(self.filename)
-#        raise exc_info[1], None, exc_info[2
-
-    def getSpecies(self, species):
+ 
+    def getSpecies(self, species, timepoints="all"):
+        """ Returns a slice (view) of the output matrix U that contains one species for the timepoints
+            specified by the time index array. The default is to return all timepoints. 
+            
+            Data is loaded by slicing directly in the hdf5 dataset, i.e. it the entire
+            content of the file is not loaded in memory and the U matrix 
+            is never added to the object.
+            
+        """
+        
         
         if isinstance(species, Species):
             spec_name = species.name
         else:
             spec_name = species
+        
         species_map = self.model.speciesMap()
         spec_indx = species_map[spec_name]
-        if not self.data_is_loaded:
-            self.read_solution()
-        return self.U[:,spec_indx::len(species_map)]
-
+        
+        resultfile = h5py.File(self.filename, 'r')
+        Ncells = self.model.mesh.num_vertices()
+        U = resultfile['U']
+        
+        if timepoints  ==  "all":
+            return U[:,(spec_indx*Ncells):(spec_indx*Ncells+Ncells)]
+        else:
+            return U[timepoints,(spec_indx*Ncells):(spec_indx*Ncells+Ncells)]
 
     def __setattr__(self, k, v):
         if k in self.keys():
@@ -1282,9 +1289,6 @@ class URDMEResult(dict):
 
     def _rgb_to_hex(self, rgb):
         return '0x%02x%02x%02x' % rgb
-
-
-
 
 
     def display(self,species,time_index):

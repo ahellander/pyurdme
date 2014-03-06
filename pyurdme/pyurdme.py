@@ -1253,9 +1253,12 @@ class URDMEResult(dict):
         """ Scale compy numbers to concentrations (in unit mol/volume),
             where the volume unit is defined by the user input.
         """
-                                     
-        SU = self.getSpecies(species)
-        timeslice = SU[time_index,:]
+        if not isinstance(time_index, list):
+            tindx = [time_index]
+        
+        timeslice = self.getSpecies(species,tindx)
+        timeslice = timeslice.flatten()
+        
         
         scaled_sol = numpy.zeros(numpy.shape(timeslice))
         for i,cn in enumerate(timeslice):

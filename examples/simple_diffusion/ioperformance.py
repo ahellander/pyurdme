@@ -78,49 +78,79 @@ if __name__ == '__main__':
         we can measure the peroformace as we become IO/Memory bound. """
     
     model = simple_diffusion2()
-    print str(4*1620*500/1.048e6) + " MB"
+    print "Output data set size:", str(4*1620*500/1.048e6) + " MB"
     model.timespan(numpy.linspace(0,1,500))
 
     tic = time.time()
     result = urdme(model,report_level=0)
     print "\t pyurdme took "+str(time.time()-tic)+" s."
     tic = time.time()
-    U = result["U"]
-    Asum=numpy.sum(U[:,::2],axis=1)
-    print "\t and accessing the data and aggregating one species took "+str(time.time()-tic)+" s."
-    #print Asum
+    A = result.getSpecies("A")
 
-    print str(4*1620*5000/1.024e6) + " MB"
+    #U = result["U"]
+    Asum=numpy.sum(A,axis=1)
+    print "\t and accessing the data and aggregating one species took "+str(time.time()-tic)+" s."
+    # Get A at a selceted time point
+    tic  = time.time()
+    A = result.getSpecies("A",[300])
+    #print numpy.sum(A,axis=1)
+    print "\t Selecting a singe timepoint took "+str(time.time()-tic)+" s."
+
+
+    print "Output data set size:",str(4*1620*5000/1.024e6) + " MB"
     model.timespan(numpy.linspace(0,1,5000))
     tic = time.time()
     result = urdme(model,report_level=0)
     print "\t pyurdme took "+str(time.time()-tic)+" s."
     tic = time.time()
-    U = result["U"]
-    Asum=numpy.sum(U[:,::2],axis=1)
-    #print Asum
+    # U = result["U"]
+    A = result.getSpecies("A")
 
-    print "\t and accessing the data and aggregating one species took "+str(time.time()-tic)+" s."
+    Asum=numpy.sum(A,axis=1)
 
-    print str(4*1620*50000/1.024e6) + " MB"
+    print "\t and accessing all timepoints for one species took "+str(time.time()-tic)+" s."
+    # Get A at a selceted time point
+    tic  = time.time()
+    A = result.getSpecies("A",[4000])
+    #print numpy.sum(A,axis=1)
+    print "\t Selecting a singe timepoint took "+str(time.time()-tic)+" s."
+
+
+
+    print "Output data set size:", str(4*1620*50000/1.024e6) + " MB"
     model.timespan(numpy.linspace(0,1,50000))
     tic = time.time()
     result = urdme(model,report_level=0)
     print "\t pyurdme took "+str(time.time()-tic)+" s."
     tic = time.time()
-    U = result["U"]
-    Asum=numpy.sum(U[:,::2],axis=1)
-    print "\t and accessing the data and aggregating one species took "+str(time.time()-tic)+" s."
+    A = result.getSpecies("A")
+    
+    Asum=numpy.sum(A,axis=1)
+    print "\t and accessing all timepoints for one species took "+str(time.time()-tic)+" s."
+    # Get A at a seleceted time point
+    tic  = time.time()
+    A = result.getSpecies("A",[25000])
+    #print numpy.sum(A,axis=1)
+    print "\t Selecting a singe timepoint took "+str(time.time()-tic)+" s."
 
-    print str(4*1620*500000/1.024e6) + " MB"
+
+    print "Output data set size:", str(4*1620*500000/1.024e6) + " MB"
     model.timespan(numpy.linspace(0,1,500000))
     tic = time.time()
     result = urdme(model,report_level=0)
     print "\t pyurdme took "+str(time.time()-tic)+" s."
     tic = time.time()
-    U = result["U"]
-    Asum=numpy.sum(U[:,::2],axis=1)
-    print "\t and accessing the data and aggregating one species took "+str(time.time()-tic)+" s."
+    #U = result["U"]
+    A = result.getSpecies("A")
+    Asum=numpy.sum(A,axis=1)
+    print "\t and accessing all timepoints for one species took "+str(time.time()-tic)+" s."
+
+    # Get A at a selceted time point
+    tic  = time.time()
+    A = result.getSpecies("A",[100000])
+    #print numpy.sum(A,axis=1)
+    print "\t Selecting a singe timepoint took "+str(time.time()-tic)+" s."
+
 
 
 

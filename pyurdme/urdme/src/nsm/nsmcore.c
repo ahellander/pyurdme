@@ -195,7 +195,6 @@ The output is a matrix U (Ndofs X length(tspan)).
     printf("Failed to write tspan vector HDF5 file.");
     exit(-1);
   }
-
     
   hid_t trajectory_dataset, datatype,trajectory_dataspace, file_dataspace;
   datatype = H5Tcopy(H5T_NATIVE_INT);
@@ -297,7 +296,14 @@ The output is a matrix U (Ndofs X length(tspan)).
           
           
           /* Write to the buffer */
-          memcpy(&buffer[Ndofs*num_columns_since_flush],xx,Ndofs*sizeof(int));
+          for (i=0; i<Ncells;i++){
+              for (int s=0; s<Mspecies; s++){
+                  buffer[Ndofs*num_columns_since_flush+s*Ncells+i] = xx[i*Mspecies+s];
+              }
+          }
+          
+          //memcpy(&buffer[Ndofs*num_columns_since_flush],xx,Ndofs*sizeof(int));
+          
           num_columns_since_flush++;
         
           if (num_columns_since_flush == num_columns){
@@ -307,7 +313,7 @@ The output is a matrix U (Ndofs X length(tspan)).
                   printf("Failed to flush buffer to file.");
                   exit(-1);
               }
-             // printf("Flushed buffer, wrote %i columns\n",num_columns_since_flush);
+
               num_columns_since_flush = 0;
               chunk_indx++;
               total_columns_written += num_columns;

@@ -1,6 +1,9 @@
+#!/usr/bin/env python
 from dolfin import *
 import dolfin
+dolfin.parameters["linear_algebra_backend"] = "uBLAS"
 import matplotlib.pyplot as plt
+import scipy.sparse
 
 
 
@@ -29,9 +32,10 @@ class PeriodicBoundary2D(SubDomain):
 
 
 if __name__ == "__main__":
-    mesh = UnitSquareMesh(32, 32)
+    mesh = UnitSquareMesh(5, 5)
 
     fs = dolfin.FunctionSpace(mesh, "Lagrange", 1, constrained_domain=PeriodicBoundary2D())
+    #fs = dolfin.FunctionSpace(mesh, "Lagrange", 1)
     trial_function = dolfin.TrialFunction(fs)
     test_function = dolfin.TestFunction(fs)
     a_K = -1*dolfin.inner(dolfin.nabla_grad(trial_function), dolfin.nabla_grad(test_function)) * dolfin.dx
@@ -42,4 +46,5 @@ if __name__ == "__main__":
 
     print C
     plt.spy(C)
+    plt.show()
 

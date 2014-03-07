@@ -1,7 +1,8 @@
 """ pyURDME model file for the MinCDE example. """
 
 import os.path
-from pyurdme import pyurdme
+#from pyurdme import pyurdme
+import pyurdme
 import dolfin
 import numpy
 
@@ -89,16 +90,7 @@ if __name__=="__main__":
     """ Dump model to a file. """
                      
     model = mincde(model_name="mincde")
-    model.mesh._ipython_display_('ipython_display.html')
-    #model.timespan(range(50))
-    #result = pyurdme.urdme(model)
-    #jsondoc = result.toTHREEJs("MinD_m",49)
-    #with open("testmesh.json",'w') as file:
-    #    file.write(jsondoc)
-
-    particlestr = result.printParticlejs(["MinD_m", "MinDE"],49)
-    with open("particletest.html",'w') as file:
-        file.write(particlestr)
+    result = pyurdme.urdme(model)
 
 
 

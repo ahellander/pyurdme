@@ -715,6 +715,7 @@ class Mesh(dolfin.Mesh):
     """ A URDME mesh extends the Dolfin mesh class. """
 
     def __init__(self, mesh=None):
+        self.constrained_domain = None
         dolfin.Mesh.__init__(self, mesh)
 
     def getNumVoxels(self):

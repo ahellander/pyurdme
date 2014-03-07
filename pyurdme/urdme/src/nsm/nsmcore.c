@@ -222,7 +222,7 @@ The output is a matrix U (Ndofs X length(tspan)).
   H5Pset_chunk(plist,2,dataset_dims);
   //status = H5Pset_deflate (plist, 4);
     
-  trajectory_dataset = H5Dcreate(output_file, "/U", datatype, trajectory_dataspace, H5P_DEFAULT,plist,H5P_DEFAULT);
+  trajectory_dataset = H5Dcreate2(output_file, "/U", datatype, trajectory_dataspace, H5P_DEFAULT,plist,H5P_DEFAULT);
     
   /* Set xx to the initial state. xx will always hold the current solution. */
   xx = (int *)malloc(Ndofs*sizeof(int));

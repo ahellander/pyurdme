@@ -891,7 +891,7 @@ class Mesh(dolfin.Mesh):
         
         return json.dumps(document)
 
-    def _ipython_display_(self):
+    def _ipython_display_(self, filename=None):
         jstr = self.toTHREEJs()
         hstr = None
         with open(os.path.dirname(os.path.abspath(__file__))+"/data/three.js_templates/mesh.html",'r') as fd:
@@ -899,15 +899,29 @@ class Mesh(dolfin.Mesh):
         if hstr is None:
             raise Exception("could note open template mesh.html")
         hstr = hstr.replace('###PYURDME_MESH_JSON###',jstr)
-
         # Create a random id for the display div. This is to avioid multiple plots ending up in the same
         # div in Ipython notebook
         import uuid
         displayareaid=str(uuid.uuid4())
         hstr = hstr.replace('###DISPLAYAREAID###',displayareaid)
-
         html = '<div id="'+displayareaid+'" class="cell"></div>'
-        IPython.display.display(IPython.display.HTML(html+hstr))
+
+        if filename != None:
+            with open(filename, 'w') as fd:
+                fd.write("""
+<html>
+    <head>
+        <title>PyURDME Result</title> <style>canvas { width: 100%; height: 100% }</style> </head>
+
+        <body>
+""")
+                fd.write(html+hstr)
+                fd.write("""
+        </body>
+
+</html>""")
+        else:
+            IPython.display.display(IPython.display.HTML(html+hstr))
 
 class Xmesh():
     """ Extended mesh object.

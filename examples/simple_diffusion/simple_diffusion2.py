@@ -83,7 +83,7 @@ if __name__ == '__main__':
     print numpy.sum(U[1::2,:],axis=0)
     print numpy.sum(U[::2,:],axis=0)
     # Dump timeseries in Paraview format
-    result.dumps(species="B",folder_name="Bout")
-    result.dumps(species="A",folder_name="Aout")
+    result.toVTK(species="B",folder_name="Bout")
+    result.toVTK(species="A",folder_name="Aout")
 
 

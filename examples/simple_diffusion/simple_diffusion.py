@@ -32,9 +32,7 @@ if __name__ == '__main__':
     model = simple_diffusion()
     result = pyurdme.urdme(model)
     data = model.solverData()
-    result.toTHREEJs("A", 20)
-    # Dump a snapshot of the state in paraview format
-    result.toVTK("A", "output")
-    #file = dolfin.File("A.pvd")
-    #file << model.sol['A']
 
+    # Dump a snapshot of the state in paraview format. To visualize the solution,
+    # open output/trajectory.pvd in ParaView.
+    result.toVTK("A", "output")

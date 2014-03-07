@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 from pyurdme import pyurdme
 import numpy
 import dolfin

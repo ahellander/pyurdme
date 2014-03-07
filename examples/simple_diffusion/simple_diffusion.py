@@ -31,7 +31,6 @@ if __name__ == '__main__':
 
     model = simple_diffusion()
     result = pyurdme.urdme(model)
-    data = model.solverData()
 
     # Dump a snapshot of the state in paraview format. To visualize the solution,
     # open output/trajectory.pvd in ParaView.

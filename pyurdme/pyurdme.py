@@ -1007,13 +1007,16 @@ class URDMEResult(dict):
         self.tspan = tspan
         self.data_is_loaded = True
  
-    def getSpecies(self, species, timepoints="all"):
+    def getSpecies(self, species, timepoints="all", concentration=False):
         """ Returns a slice (view) of the output matrix U that contains one species for the timepoints
             specified by the time index array. The default is to return all timepoints. 
             
             Data is loaded by slicing directly in the hdf5 dataset, i.e. it the entire
             content of the file is not loaded in memory and the U matrix 
             is never added to the object.
+            
+            if concentration is False (default), the integer, raw, trajectory data is returned,
+            if set to True, the concentration (=copy_number/volume) is returned.
             
         """
         
@@ -1034,6 +1037,9 @@ class URDMEResult(dict):
             slice= U[:,(spec_indx*Ncells):(spec_indx*Ncells+Ncells)]
         else:
             slice = U[timepoints,(spec_indx*Ncells):(spec_indx*Ncells+Ncells)]
+        
+        if concentration:
+            slice = self._copynumber_to_concentration(slice)
         
         # Make sure we return 1D slices as flat arrays
         dims = numpy.shape(slice)
@@ -1244,20 +1250,23 @@ class URDMEResult(dict):
         colors = self._compute_solution_colors(species,time_index)
         return self.model.mesh.toTHREEJs(colors=colors)
 
-    def _copynumber_to_concentration(self,species, time_index):
+    def _copynumber_to_concentration(self,copy_number_data):
         """ Scale compy numbers to concentrations (in unit mol/volume),
             where the volume unit is defined by the user input.
         """
-        if not isinstance(time_index, list):
-            tindx = [time_index]
         
-        timeslice = self.getSpecies(species,tindx)
-        timeslice = timeslice.flatten()
+        shape = numpy.shape(copy_number_data)
+        if len(shape) == 1:
+            shape = (1,shape[0])
+
+        scaled_sol = numpy.zeros(shape)
+        scaled_sol[:,:] = copy_number_data
+        dims = numpy.shape(scaled_sol)
         
-        
-        scaled_sol = numpy.zeros(numpy.shape(timeslice))
-        for i,cn in enumerate(timeslice):
-            scaled_sol[i] = float(cn)/(6.022e23*self.model.vol[i])
+        for t in range(dims[0]):
+            timeslice = scaled_sol[t,:]
+            for i,cn in enumerate(timeslice):
+                scaled_sol[t, i] = float(cn)/(6.022e23*self.model.vol[i])
 
         return scaled_sol
 
@@ -1265,9 +1274,7 @@ class URDMEResult(dict):
     def _compute_solution_colors(self,species, time_index):
         """ Create a color list for species at time. """
         
-       
-        timeslice = self._copynumber_to_concentration(species,time_index)
-        
+        timeslice = self.getSpecies(species,time_index, concentration = True)
         import matplotlib.cm
         
         # Get RGB color map proportinal to the concentration.

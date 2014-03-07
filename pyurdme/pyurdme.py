@@ -568,9 +568,9 @@ class URDMEModel(Model):
         urdme_solver_data['dofvolumes'] = vol
 
         #TODO: Make use of all dofs values, requires modification of CORE URDME...
-        self.vol = vol[1::len(self.listOfSpecies)]
-
+        self.vol = vol[::len(self.listOfSpecies)]
         urdme_solver_data['vol'] = self.vol
+        
         D = result['D']
         urdme_solver_data['D'] = D
 
@@ -1007,13 +1007,16 @@ class URDMEResult(dict):
         self.tspan = tspan
         self.data_is_loaded = True
  
-    def getSpecies(self, species, timepoints="all"):
+    def getSpecies(self, species, timepoints="all", concentration=False):
         """ Returns a slice (view) of the output matrix U that contains one species for the timepoints
             specified by the time index array. The default is to return all timepoints. 
             
             Data is loaded by slicing directly in the hdf5 dataset, i.e. it the entire
             content of the file is not loaded in memory and the U matrix 
             is never added to the object.
+            
+            if concentration is False (default), the integer, raw, trajectory data is returned,
+            if set to True, the concentration (=copy_number/volume) is returned.
             
         """
         
@@ -1031,10 +1034,19 @@ class URDMEResult(dict):
         U = resultfile['U']
         
         if timepoints  ==  "all":
-            return U[:,(spec_indx*Ncells):(spec_indx*Ncells+Ncells)]
+            slice= U[:,(spec_indx*Ncells):(spec_indx*Ncells+Ncells)]
         else:
-            return U[timepoints,(spec_indx*Ncells):(spec_indx*Ncells+Ncells)]
-
+            slice = U[timepoints,(spec_indx*Ncells):(spec_indx*Ncells+Ncells)]
+        
+        if concentration:
+            slice = self._copynumber_to_concentration(slice)
+        
+        # Make sure we return 1D slices as flat arrays
+        dims = numpy.shape(slice)
+        if dims[0] == 1:
+            slice = slice.flatten()
+        return slice
+            
     def __setattr__(self, k, v):
         if k in self.keys():
             self[k] = v
@@ -1075,14 +1087,15 @@ class URDMEResult(dict):
 
 
     def _initialize_sol(self):
-        """ Initialize the sol variable. """
+        """ Initialize the sol variable. This is a helper function to toVTK. """
+        
         # Create Dolfin Functions for all the species
         sol = {}
 
-        dims = self.U.shape
         if self.model is None:
             raise URDMEError("URDMEResult.model must be set before the sol attribute can be accessed.")
-        numvox = self.model.mesh.getNumVoxels()
+        numvox = self.model.mesh.num_vertices()
+
         # The result is loaded in dolfin Functions, one for each species and time point
         for i, spec in enumerate(self.model.listOfSpecies):
 
@@ -1093,14 +1106,17 @@ class URDMEResult(dict):
 
             spec_sol = {}
             for j, time in enumerate(self.tspan):
+                
                 func = dolfin.Function(dolfin.FunctionSpace(self.model.mesh, "Lagrange", 1))
                 func_vector = func.vector()
+
+                S = self.getSpecies(spec, [j])
 
                 for voxel in range(numvox):
                     dof = voxel*len(self.model.listOfSpecies)+i
                     ix  = vertex_to_dof_map[voxel]
                     dolfvox = (ix-i)/len(self.model.listOfSpecies)
-                    func_vector[dolfvox] = float(self.U[j, dof]/self.model.vol[voxel])
+                    func_vector[dolfvox] = float(S[voxel]/self.model.vol[voxel])
 
                 spec_sol[time] = func
 
@@ -1178,35 +1194,6 @@ class URDMEResult(dict):
                 outfile.write(filestr)
                 outfile.close()
 
-    def toCSV(self, filename):
-        """ Dump the solution attached to a model as a .csv file. """
-        #TODO: Make this work for 2D meshes with only two coordinates.
-
-        if self.U is None:
-            raise URDMEError("No solution found in the model.")
-
-        dims = numpy.shape(self.U)
-        Ndofs = dims[0]
-        Mspecies = len(self.model.listOfSpecies)
-        Ncells = Ndofs/Mspecies
-
-        coordinates = self.model.mesh.getVoxels()
-        coordinatestr = coordinates.astype(str)
-        subprocess.call(["mkdir", "-p", filename])
-        
-        for i, time in enumerate(self.tspan):
-            outfile = open(filename + '/' + filename + str(i) + ".csv", "w")
-            number_of_atoms = numpy.sum(self.U[:, i])
-            filestr = "xcoord,ycoord,zcoord,radius,type\n"
-            for j, spec in enumerate(self.model.listOfSpecies):
-                for k in range(Ncells):
-                    for mol in range(self.U[k * Mspecies + j, i]):
-                        obj = self.model.listOfSpecies[spec]
-                        reaction_radius = obj.reaction_radius
-                        linestr = coordinatestr[k, 0] + "," + coordinatestr[k, 1] + "," + coordinatestr[k, 2] + "," + str(reaction_radius) + "," + str(j) + "\n"
-                        filestr += linestr
-            outfile.write(filestr)
-            outfile.close()
 
 
     def printParticlejs(self,species,time_index):
@@ -1263,20 +1250,23 @@ class URDMEResult(dict):
         colors = self._compute_solution_colors(species,time_index)
         return self.model.mesh.toTHREEJs(colors=colors)
 
-    def _copynumber_to_concentration(self,species, time_index):
+    def _copynumber_to_concentration(self,copy_number_data):
         """ Scale compy numbers to concentrations (in unit mol/volume),
             where the volume unit is defined by the user input.
         """
-        if not isinstance(time_index, list):
-            tindx = [time_index]
         
-        timeslice = self.getSpecies(species,tindx)
-        timeslice = timeslice.flatten()
+        shape = numpy.shape(copy_number_data)
+        if len(shape) == 1:
+            shape = (1,shape[0])
+
+        scaled_sol = numpy.zeros(shape)
+        scaled_sol[:,:] = copy_number_data
+        dims = numpy.shape(scaled_sol)
         
-        
-        scaled_sol = numpy.zeros(numpy.shape(timeslice))
-        for i,cn in enumerate(timeslice):
-            scaled_sol[i] = float(cn)/(6.022e23*self.model.vol[i])
+        for t in range(dims[0]):
+            timeslice = scaled_sol[t,:]
+            for i,cn in enumerate(timeslice):
+                scaled_sol[t, i] = float(cn)/(6.022e23*self.model.vol[i])
 
         return scaled_sol
 
@@ -1284,9 +1274,7 @@ class URDMEResult(dict):
     def _compute_solution_colors(self,species, time_index):
         """ Create a color list for species at time. """
         
-       
-        timeslice = self._copynumber_to_concentration(species,time_index)
-        
+        timeslice = self.getSpecies(species,time_index, concentration = True)
         import matplotlib.cm
         
         # Get RGB color map proportinal to the concentration.

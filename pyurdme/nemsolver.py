@@ -1,6 +1,6 @@
 """ NSM solver. """
-
-from pyurdme import pyurdme
+import pyurdme
+import os
 
 class NEMSolver(pyurdme.URDMESolver):
     """ NEM solver class. """
@@ -32,7 +32,7 @@ class NEMSolver(pyurdme.URDMESolver):
 
 
         # Make sure all paramters are evaluated to scalars before we write them to the file.
-        self.resolveParameters()
+        self.model.resolveParameters()
 
         reacstr = ""
 
@@ -50,7 +50,6 @@ class NEMSolver(pyurdme.URDMESolver):
             reacstr += rname + "->nr_reactants=" + str(len(R.reactants)) + ";\n\t"
             reacstr += rname + "->nr_products=" + str(len(R.products)) + ";\n\t"
 
-            #print reacstr
 
             reacstr += rname+"->reactants=(int *)malloc(" + rname + "->nr_reactants*sizeof(int));\n\t"
             for j, reactant in enumerate(R.reactants):

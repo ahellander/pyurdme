@@ -1,1 +1,2 @@
-__all__=['model','pyurdme']
+#__all__=['model','pyurdme']
+from .pyurdme import *

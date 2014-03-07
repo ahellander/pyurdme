@@ -80,7 +80,6 @@ class mincde(pyurdme.URDMEModel):
         self.restrict(MinDE,boundary)
         
         # Distribute molecules over the mesh according to their initial values
-        #self.scatter({MinD_m:1000},subdomains=boundary)
         self.scatter({MinD_c_adp:4500})
         self.scatter({MinD_e:1575})
 
@@ -90,9 +89,16 @@ if __name__=="__main__":
     """ Dump model to a file. """
                      
     model = mincde(model_name="mincde")
-    model.serialize("debug_input.mat")
-    result = pyurdme.urdme(model)
-    result.dumps("MinD_m","mindout")
-    result.toXYZ(filename="mindm.xyz",species=["MinD_m"])
-    #result.toXYZ('mindm.xyz',file_format="VMD")
-    
+    model.mesh._ipython_display_('ipython_display.html')
+    #model.timespan(range(50))
+    #result = pyurdme.urdme(model)
+    #jsondoc = result.toTHREEJs("MinD_m",49)
+    #with open("testmesh.json",'w') as file:
+    #    file.write(jsondoc)
+
+    particlestr = result.printParticlejs(["MinD_m", "MinDE"],49)
+    with open("particletest.html",'w') as file:
+        file.write(particlestr)
+
+
+

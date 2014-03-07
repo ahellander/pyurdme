@@ -16,6 +16,8 @@ import scipy.sparse
 import gmsh
 from model import *
 
+import IPython.display
+
 try:
     import h5py
 except:
@@ -28,6 +30,7 @@ except:
     raise Exception("PyURDME requires FeniCS/dolfin.")
 
 import pickle
+import json
 
 # Set log level to report only errors or worse
 #dolfin.set_log_level(dolfin.ERROR)
@@ -111,15 +114,15 @@ class URDMEModel(Model):
                 fdname = fd.name
                 fd.write(sd_func_str)
                 fd.seek(0)
-                fd_in = dolfin.File(filename)
+                fd_in = dolfin.File(fdname)
                 func = dolfin.MeshFunction("size_t", self.__dict__["mesh"])
                 fd_in >> func
                 sddict[sdkey] = func
                 fd.close()
             self.__dict__["subdomains"] = sddict
         except Exception as e:
-            print "Error unpickling model, could not recreate the subdomain functions"
-
+            raise Exception("Error unpickling model, could not recreate the subdomain functions"+str(e))
+            
         self.meshextend()
 
 
@@ -397,7 +400,7 @@ class URDMEModel(Model):
             mass_matrices = self.mass_matrices
         except AttributeError:
             if self.mesh is None:
-                raise ModelException("This model has no mesh, can not craete system matrix.")
+                raise ModelException("This model has no mesh, can not create system matrix.")
             matrices = self.assemble()
             self.stiffness_matrices = matrices['K']
             self.mass_matrices = matrices['M']
@@ -697,6 +700,58 @@ class Mesh(dolfin.Mesh):
         equivalent to Cartesian grids.
 
     """
+    
+    def meshSize(self):
+        """ Estimate of mesh size at each vertex. """
+        coordinates = self.coordinates()
+        
+        
+        # Compute the circumradius of the cells
+        cr = []
+        for i in range(self.num_cells()):
+            cell = dolfin.Cell(self, i)
+            cr.append(cell.diameter()/2.0)
+
+        # Compute the mean for each vertex based on all incident cells
+        vtx2cell = self.topology()(0,self.topology().dim())
+        vtxh = []
+        for i in range(self.num_vertices()):
+            v2c = vtx2cell(i)
+            h = 0.0
+            for indx in v2c:
+                h += cr[indx]
+            h = h/len(v2c)
+            vtxh.append(h)
+
+        return vtxh
+
+
+    def scaledNormalizedCoordinates(self):
+        """ Return vertex coordinates scaled to the interval (-1,1) and centered at origo. """
+        # Scale the verices so the max dimension is in the range (-1,1) to be compatible with the browser display
+        vtx = self.coordinates()
+        maxvtx = numpy.max(numpy.amax(vtx,axis=0))
+        factor = 1/maxvtx
+        vtx = factor*vtx
+        
+        # Compute mesh centroid
+        centroid = numpy.mean(vtx,axis=0)
+        # Shift so the centroid is now origo
+        normalized_vtx = numpy.zeros(numpy.shape(vtx))
+        for i,v in enumerate(vtx):
+            normalized_vtx[i,:] = v - centroid
+        
+        
+        return factor, normalized_vtx
+    
+    def scaledCoordinates(self):
+        """ Return vertex coordinates scaled to the interval (-1,1). """
+        # Scale the verices so the max dimension is in the range (-1,1) to be compatible with the browser display
+        vtx = self.coordinates()
+        maxvtx = numpy.max(numpy.amax(vtx,axis=0))
+        factor = 1/maxvtx
+        return factor, factor*vtx
+
 
     @classmethod
     def unitIntervalMesh(cls, nx):
@@ -744,7 +799,7 @@ class Mesh(dolfin.Mesh):
     #def unitSphere(cls, nx,ny):
     #    """ Unit Square of with nx,ny points in the respective axes. """
     #    mesh = dolfin.UnitSquareMesh(nx,ny)
-    #    return Mesh(mesh)
+    #    return Mesh(mesh)'t
 
 
 
@@ -760,7 +815,7 @@ class Mesh(dolfin.Mesh):
         return mesh
 
     @classmethod
-    def read_dolfin_mesh(cls, filename=None):
+    def read_dolfin_mesh(cls, filename=None, colors = []):
         """ Import a mesh in Dolfins native .xml format """
 
         try:
@@ -770,6 +825,103 @@ class Mesh(dolfin.Mesh):
         except Exception as e:
             raise MeshImportError("Failed to import mesh: " + filename+"\n" + str(e))
 
+    def toTHREEJs(self, colors = None):
+        """ return a Json string of the mesh in THREE Js format. 
+            
+            If a colors list is specified, it should have the num_voxels entries
+            
+        """
+        document = {}
+        document["metadata"] = {"formatVersion":3}
+        gfdg,vtx = self.scaledNormalizedCoordinates()
+        
+
+
+        if self.topology().dim() == 2:
+            # 2D
+            num_elements = self.num_cells()
+            # This is a fix for the built+in 2D meshes that only have x,y-coordinates.
+            dims = numpy.shape(vtx)
+            if dims[1] == 2:
+                vtxx = numpy.zeros((dims[0],3))
+                for i, v in enumerate(vtx):
+                    vtxx[i,:]=(list(v)+[0])
+                vtx = vtxx
+        else:
+            # 3D
+            num_elements = self.num_facets()
+
+
+        materials = [ {
+                     "DbgColor" : 15658734,
+                     "DbgIndex" : 0,
+                     "DbgName" : "dummy",
+                     "colorDiffuse" : [ 1, 0, 0 ],
+                     } ]
+                     
+        document["materials"] = materials
+        document["vertices"] = list(vtx.flatten())
+        
+        if colors == None:
+            # Default color is blue
+            colors = [255]*self.num_vertices()
+        
+        document["colors"] = colors
+        #document["scale"] = 1.000000
+        
+        self.init(2,0)
+        connectivity = self.topology()(2,0)
+        faces = []
+        
+       
+        
+        for i in range(num_elements):
+            face = connectivity(i)
+            f = []
+            for ind in face:
+                if int(ind) >= self.num_vertices():
+                    raise Exception("Out of bounds")
+
+                f.append(int(ind))
+            faces += ([128]+f+f)
+            document["faces"] = list(faces)
+        
+        #Test that we can index into vertices
+        vertices = document["vertices"]
+        
+        return json.dumps(document)
+
+    def _ipython_display_(self, filename=None):
+        jstr = self.toTHREEJs()
+        hstr = None
+        with open(os.path.dirname(os.path.abspath(__file__))+"/data/three.js_templates/mesh.html",'r') as fd:
+            hstr = fd.read()
+        if hstr is None:
+            raise Exception("could note open template mesh.html")
+        hstr = hstr.replace('###PYURDME_MESH_JSON###',jstr)
+        # Create a random id for the display div. This is to avioid multiple plots ending up in the same
+        # div in Ipython notebook
+        import uuid
+        displayareaid=str(uuid.uuid4())
+        hstr = hstr.replace('###DISPLAYAREAID###',displayareaid)
+        html = '<div id="'+displayareaid+'" class="cell"></div>'
+
+        if filename != None:
+            with open(filename, 'w') as fd:
+                fd.write("""
+<html>
+    <head>
+        <title>PyURDME Result</title> <style>canvas { width: 100%; height: 100% }</style> </head>
+
+        <body>
+""")
+                fd.write(html+hstr)
+                fd.write("""
+        </body>
+
+</html>""")
+        else:
+            IPython.display.display(IPython.display.HTML(html+hstr))
 
 class Xmesh():
     """ Extended mesh object.
@@ -799,17 +951,89 @@ class URDMEResult(dict):
             self.read_solution()
 
 
-    def getSpecies(self, species):
+
+    def __getstate__(self):
+        """ Used by pickle to get state when pickling. We need to read the contents of the
+        output file  since we can't picke file objects. """
+
+#  if not self.data_is_loaded:
+        try:
+            with open(self.filename,mode='rb') as fh:
+                filecontents = fh.read()
+        except Exception,e:
+            raise Exception(("Error pickling model. Failed to read result file:",str(e)))
+        
+        state = self.__dict__
+        state["filecontents"] = filecontents
+        for key, item in state.items():
+            try:
+                pickle.dumps(item)
+            except Exception as e:
+                raise Exception(("Failed to pickle URDMEResult:", str(e)))
+
+        return state
+
+
+    def __setstate__(self, state):
+        """ Used by pickle to set state when unpickling. """
+        
+        # If the object contains filecontents, write those to a new tmp file.
+        try:
+            filecontents = state.pop("filecontents",None)
+            fd = tempfile.NamedTemporaryFile(delete=False)
+            with open(fd.name, mode='wb') as fh:
+                fh.write(filecontents)
+            state["filename"] = fd.name
+    # state["data_is_loaded"] = False
+        except Exception, e:
+            print "Error unpickling model, could not recreate the solution file."
+            raise
+
+        for k,v in state.items():
+            self.__dict__[k] = v
+
+    def read_solution(self):
+        """ Read the tspan and U matrix into memory. """
+        
+        resultfile = h5py.File(self.filename, 'r')
+        U = resultfile['U']
+        U = numpy.array(U)
+        
+        tspan = resultfile['tspan']
+        tspan = numpy.array(tspan).flatten()
+        resultfile.close()
+        
+        self.U = U
+        self.tspan = tspan
+        self.data_is_loaded = True
+ 
+    def getSpecies(self, species, timepoints="all"):
+        """ Returns a slice (view) of the output matrix U that contains one species for the timepoints
+            specified by the time index array. The default is to return all timepoints. 
+            
+            Data is loaded by slicing directly in the hdf5 dataset, i.e. it the entire
+            content of the file is not loaded in memory and the U matrix 
+            is never added to the object.
+            
+        """
+        
         
         if isinstance(species, Species):
             spec_name = species.name
         else:
             spec_name = species
+        
         species_map = self.model.speciesMap()
         spec_indx = species_map[spec_name]
-        if not self.data_is_loaded:
-            self.read_solution()
-        return self.U[:,spec_indx::len(species_map)]
+        
+        resultfile = h5py.File(self.filename, 'r')
+        Ncells = self.model.mesh.num_vertices()
+        U = resultfile['U']
+        
+        if timepoints  ==  "all":
+            return U[:,(spec_indx*Ncells):(spec_indx*Ncells+Ncells)]
+        else:
+            return U[timepoints,(spec_indx*Ncells):(spec_indx*Ncells+Ncells)]
 
     def __setattr__(self, k, v):
         if k in self.keys():
@@ -841,13 +1065,13 @@ class URDMEResult(dict):
 
     def __del__(self):
         """ Deconstructor. """
-        if not self.data_is_loaded:
-            try:
-                # Clean up data file
-                os.remove(self.filename)
-            except OSError as e:
-                #print "URDMEResult.__del__: Could not delete result file'{0}': {1}".format(self.filename, e)
-                pass
+            #   if not self.data_is_loaded:
+        try:
+            # Clean up data file
+            os.remove(self.filename)
+        except OSError as e:
+            #print "URDMEResult.__del__: Could not delete result file'{0}': {1}".format(self.filename, e)
+            pass
 
 
     def _initialize_sol(self):
@@ -884,9 +1108,10 @@ class URDMEResult(dict):
         self.sol = sol
         self.sol_initialized = True
         return sol
-
-    def dumps(self, species, folder_name):
-        """ Dump the trajectory of species to a collection of vtk files """
+            
+    
+    def toVTK(self, species, folder_name):
+        """ Dump the trajectory to a collection of vtk files in the folder folder_name (created if non-existant). """
         
         self._initialize_sol()
         subprocess.call(["mkdir", "-p", folder_name])
@@ -900,8 +1125,6 @@ class URDMEResult(dict):
             for dof in range(numvox):
                 func_vector[dof] = solvector[dof]
             fd << func
-
-
 
     def toXYZ(self, filename, species=None, file_format="VMD"):
         """ Dump the solution attached to a model as a xyz file. This format can be
@@ -970,6 +1193,7 @@ class URDMEResult(dict):
         coordinates = self.model.mesh.getVoxels()
         coordinatestr = coordinates.astype(str)
         subprocess.call(["mkdir", "-p", filename])
+        
         for i, time in enumerate(self.tspan):
             outfile = open(filename + '/' + filename + str(i) + ".csv", "w")
             number_of_atoms = numpy.sum(self.U[:, i])
@@ -985,29 +1209,123 @@ class URDMEResult(dict):
             outfile.close()
 
 
+    def printParticlejs(self,species,time_index):
+    
+        import random
+        
+        template = open("particles.html",'r').read()
+        
+        #coordinates = self.model.mesh.scaledCoordinates()
+        coordinates = self.model.mesh.coordinates()
+        
+        h = self.model.mesh.meshSize()
+        
+        x=[];
+        y=[];
+        z=[];
+        c=[];
+        factor, cd = self.model.mesh.scaledCoordinates()
 
-    def read_solution(self):
-        """ Read the datafile into memory and delete it. """
 
-        resultfile = h5py.File(self.filename, 'r')
+        total_num_particles = 0
+        colors = ["blue","red","yellow", "green"]
+        
+        for j,spec in enumerate(species):
+            
+            US = self.getSpecies(spec)
+            timeslice = US[time_index,:]
+            ns = numpy.sum(timeslice)
+            total_num_particles += ns
 
-        U = resultfile['U']
-        U = numpy.array(U)
+            for i, particles in enumerate(timeslice):
+                # "Radius" of voxel
+                hi = h[i]
+                for particle in range(particles):
+                    x.append((coordinates[i,0]+random.uniform(-1,1)*hi)*factor)
+                    y.append((coordinates[i,1]+random.uniform(-1,1)*hi)*factor)
+                    z.append((coordinates[i,2]+random.uniform(-1,1)*hi)*factor)
+                    c.append(colors[j])
+    
+        docstr = template.replace("__NUM__MOLECULES__", str(total_num_particles))
+        docstr = docstr.replace("__X__",str(x))
+        docstr = docstr.replace("__Y__",str(y))
+        docstr = docstr.replace("__Z__",str(z))
+        docstr = docstr.replace("__COLOR__",str(c))
+
+        return docstr
+
+
+    def toTHREEJs(self, species, time_index):
+        """ Return a json serialized document that can 
+            be read and visualized by three.js.
+        """
+        
+        colors = self._compute_solution_colors(species,time_index)
+        return self.model.mesh.toTHREEJs(colors=colors)
+
+    def _copynumber_to_concentration(self,species, time_index):
+        """ Scale compy numbers to concentrations (in unit mol/volume),
+            where the volume unit is defined by the user input.
+        """
+        if not isinstance(time_index, list):
+            tindx = [time_index]
+        
+        timeslice = self.getSpecies(species,tindx)
+        timeslice = timeslice.flatten()
+        
+        
+        scaled_sol = numpy.zeros(numpy.shape(timeslice))
+        for i,cn in enumerate(timeslice):
+            scaled_sol[i] = float(cn)/(6.022e23*self.model.vol[i])
+
+        return scaled_sol
+
+
+    def _compute_solution_colors(self,species, time_index):
+        """ Create a color list for species at time. """
+        
        
-        tspan = resultfile['tspan']
-        tspan = numpy.array(tspan).flatten()
-        resultfile.close()
-        self.U = U
-        self.tspan = tspan
+        timeslice = self._copynumber_to_concentration(species,time_index)
+        
+        import matplotlib.cm
+        
+        # Get RGB color map proportinal to the concentration.
+        cm = matplotlib.cm.ScalarMappable()
+        crgba= cm.to_rgba(timeslice, bytes = True)
+                                     
+        # Convert RGB to HEX
+        colors= []
+        for row in crgba:
+            colors.append(self._rgb_to_hex(tuple(list(row[1:]))))
 
-        try:
-            # Clean up data file
-            os.remove(self.filename)
-            # Mark the data as loaded
-            self.data_is_loaded = True
-        except OSError as e:
-            print "Could not delete '{0}'".format(self.filename)
-            raise exc_info[1], None, exc_info[2]
+        # Convert Hex to Decimal
+        for i,c in enumerate(colors):
+            colors[i] = int(c,0)
+
+        return colors
+
+    def _rgb_to_hex(self, rgb):
+        return '0x%02x%02x%02x' % rgb
+
+
+    def display(self,species,time_index):
+
+        jstr = self.toTHREEJs(species,time_index)
+        hstr = None
+        with open(os.path.dirname(os.path.abspath(__file__))+"/data/three.js_templates/solution.html",'r') as fd:
+            hstr = fd.read()
+        if hstr is None:
+            raise Exception("could note open template mesh.html")
+        hstr = hstr.replace('###PYURDME_MESH_JSON###',jstr)
+        
+        # Create a random id for the display div. This is to avioid multiple plots ending up in the same
+        # div in Ipython notebook
+        import uuid
+        displayareaid=str(uuid.uuid4())
+        hstr = hstr.replace('###DISPLAYAREAID###',displayareaid)
+        
+        html = '<div id="'+displayareaid+'" class="cell"></div>'
+        IPython.display.display(IPython.display.HTML(html+hstr))
 
 
 class URDMESolver:
@@ -1260,7 +1578,8 @@ class URDMESolver:
             raise URDMEError("Solver execution failed")
 
         if return_code != 0:
-            if self.report_level < 1:
+            print outfile.name
+            if self.report_level >= 1:
                 print handle.stderr.read(), handle.stdout.read()
             print "urdme_solver_cmd = {0}".format(urdme_solver_cmd)
             raise URDMEError("Solver execution failed")

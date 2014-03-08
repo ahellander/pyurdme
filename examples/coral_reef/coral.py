@@ -1,5 +1,6 @@
 #!/usr/bin/env python
-from pyurdme import pyurdme
+import pyurdme
+from pyurdme.nsmsolver import NSMSolver
 import numpy
 import dolfin
 
@@ -52,3 +53,8 @@ class CoralReef(pyurdme.URDMEModel):
         self.placeNear({Coral:1000}, point=[0.,0.])
 
         self.timespan(numpy.linspace(0,1,50))        
+
+if __name__ == "__main__":
+    reef = CoralReef()
+    sol = NSMSolver(reef)
+    result = sol.run()

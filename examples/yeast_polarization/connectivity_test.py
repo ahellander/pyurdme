@@ -19,7 +19,8 @@ class PeriodicBoundary1D(SubDomain):
     def map(self, x, y):
         print "PeriodicBoundary1D.map(x={0}, y={0}) y={0}".format(x, y)
         if near(x[0], 0):
-            y[0] = x[0] + 1.
+            #y[0] = x[0] + 1.
+            y[0] = x[0]+1
             print "\tnew y = {0}".format(y)
         else:
             print "\tnew y = {0}".format(y)
@@ -40,7 +41,18 @@ if __name__ == "__main__":
     C = C.tocsc()
 
     print C
-    print mesh.coordinates()
+    p = mesh.coordinates()
+
+    # This gives you a mapping from dofs (rows in matrix) to vertices (points in mesh.coordinates)
+    dof2vtx =  fs.dofmap().vertex_to_dof_map(mesh)
+    # It seems like the number of dofs now is num_coordinates-1, and I guess this makes sense since x[0] = x[1]
+    
+    
+    print "coordinates\n", p
+
+    print "dof to vertex mapping\n", dof2vtx
+    print "mapped coordinates\n", p[dof2vtx]
+
     plt.spy(C)
     plt.title("1D connectivity, with periodic BCs")
     plt.show()

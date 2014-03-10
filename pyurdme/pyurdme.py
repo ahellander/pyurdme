@@ -1074,6 +1074,8 @@ class URDMEResult(dict):
         dims = numpy.shape(slice)
         if dims[0] == 1:
             slice = slice.flatten()
+        
+        resultfile.close()
         return slice
             
     def __setattr__(self, k, v):

@@ -531,6 +531,47 @@ class URDMEModel(Model):
             raise InvalidSystemMatrixException("Invalid diffusion matrix. The sum of the columns does not sum to zero. " + str(maxcolsum))
 
 
+    def connectivityMatrix(self):
+        """ Assemble a connectivity matrix in CCS format. """
+        
+        fs = dolfin.FunctionSpace(self.mesh, "Lagrange", 1)
+        trial_function = dolfin.TrialFunction(fs)
+        test_function = dolfin.TestFunction(fs)
+        a_K = -1*dolfin.inner(dolfin.nabla_grad(trial_function), dolfin.nabla_grad(test_function)) * dolfin.dx
+        K = dolfin.assemble(a_K)
+        rows, cols, vals = K.data()
+        Kcrs = scipy.sparse.csr_matrix((vals, cols, rows))
+        
+        # Permutation dolfin dof -> URDME dof
+        Kdok = Kcrs.todok()
+        
+        nv  = self.mesh.num_vertices()
+        S = scipy.sparse.dok_matrix((nv,nv))
+
+        dof2vtx = fs.dofmap().vertex_to_dof_map(self.mesh)
+
+
+        for entries in Kdok.items():
+            
+            ind = entries[0]
+            ir = ind[0]
+            ij = ind[1]
+            
+            # Permutation to make the matrix ordering match that of sd, u0. (Dolfin dof -> URDME dof)
+            ir = dof2vtx[ind[0]]
+            ij = dof2vtx[ind[1]]
+            
+            val = entries[1]
+            
+            
+            S[ir,ij] = val
+        
+        
+        
+        C = S.tocsc()
+        return C
+
+
     def solverData(self):
         """ Return the datastructures needed by the URDME solvers.
 
@@ -612,18 +653,6 @@ class URDMEModel(Model):
         scipy.io.savemat(filename, urdme_solver_data, oned_as='column')
 
 
-    def connectivityMatrix(self):
-        """ Assemble a connectivity matrix in CCS format. """
-
-        fs = dolfin.FunctionSpace(self.mesh, "Lagrange", 1)
-        trial_function = dolfin.TrialFunction(fs)
-        test_function = dolfin.TestFunction(fs)
-        a_K = -1*dolfin.inner(dolfin.nabla_grad(trial_function), dolfin.nabla_grad(test_function)) * dolfin.dx
-        C = dolfin.assemble(a_K)
-        rows, cols, vals = C.data()
-        C = scipy.sparse.csr_matrix((vals, cols, rows))
-        C = C.tocsc()
-        return C
 
     def assemble(self):
         """  Assemble the mass and stiffness matrices using Dolfin.

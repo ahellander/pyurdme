@@ -615,7 +615,11 @@ class URDMEModel(Model):
     def connectivityMatrix(self):
         """ Assemble a connectivity matrix in CCS format. """
 
-        fs = dolfin.FunctionSpace(self.mesh, "Lagrange", 1)
+        if self.mesh.constrained_domain is not None:
+            print "Using mesh.constrained_domain={0}".format(self.mesh.constrained_domain)
+            fs = dolfin.FunctionSpace(self.mesh, "Lagrange", 1, constrained_domain=self.mesh.constrained_domain)
+        else:
+            fs = dolfin.FunctionSpace(self.mesh, "Lagrange", 1)
         trial_function = dolfin.TrialFunction(fs)
         test_function = dolfin.TestFunction(fs)
         a_K = -1*dolfin.inner(dolfin.nabla_grad(trial_function), dolfin.nabla_grad(test_function)) * dolfin.dx
@@ -686,6 +690,7 @@ class Mesh(dolfin.Mesh):
     """ A URDME mesh extends the Dolfin mesh class. """
 
     def __init__(self, mesh=None):
+        self.constrained_domain = None
         dolfin.Mesh.__init__(self, mesh)
 
     def getNumVoxels(self):

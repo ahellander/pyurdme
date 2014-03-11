@@ -1598,6 +1598,7 @@ class URDMESolver:
 
         if return_code != 0:
             print outfile.name
+            print return_code
             if self.report_level >= 1:
                 print handle.stderr.read(), handle.stdout.read()
             print "urdme_solver_cmd = {0}".format(urdme_solver_cmd)

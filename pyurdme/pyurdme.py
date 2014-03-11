@@ -8,6 +8,7 @@ import subprocess
 import sys
 import tempfile
 import types
+import warnings
 
 import numpy
 import scipy.io
@@ -509,7 +510,8 @@ class URDMEModel(Model):
         D = S.tocsc()
 
         # Renormalize the columns (may not sum to zero since elements may have been filtered out
-        try:
+        with warnings.catch_warnings():
+	    warnings.simplefilter("ignore")
             sumcol = numpy.zeros((Ndofs, 1))
             for i in range(Ndofs):
                 col = D.getcol(i)
@@ -517,10 +519,7 @@ class URDMEModel(Model):
                     if val > 0.0:
                         sumcol[i] += val
 
-            D.setdiag(-sumcol.flatten())
-        except scipy.sparse.SparseEfficiencyWarning:
-            pass
-        
+            D.setdiag(-sumcol.flatten())        
 
         #print "Fraction of positive off-diagonal entries: " + str(numpy.abs(positive_mass/total_mass))
         return {'vol':vol, 'D':D, 'relative_positive_mass':positive_mass/total_mass}

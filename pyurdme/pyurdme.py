@@ -509,14 +509,18 @@ class URDMEModel(Model):
         D = S.tocsc()
 
         # Renormalize the columns (may not sum to zero since elements may have been filtered out
-        sumcol = numpy.zeros((Ndofs, 1))
-        for i in range(Ndofs):
-            col = D.getcol(i)
-            for val in col.data:
-                if val > 0.0:
-                    sumcol[i] += val
+        try:
+            sumcol = numpy.zeros((Ndofs, 1))
+            for i in range(Ndofs):
+                col = D.getcol(i)
+                for val in col.data:
+                    if val > 0.0:
+                        sumcol[i] += val
 
-        D.setdiag(-sumcol.flatten())
+            D.setdiag(-sumcol.flatten())
+        except scipy.sparse.SparseEfficiencyWarning:
+            pass
+        
 
         #print "Fraction of positive off-diagonal entries: " + str(numpy.abs(positive_mass/total_mass))
         return {'vol':vol, 'D':D, 'relative_positive_mass':positive_mass/total_mass}

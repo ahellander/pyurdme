@@ -34,6 +34,8 @@ if __name__ == "__main__":
     #fs = dolfin.FunctionSpace(mesh, "Lagrange", 1)
     trial_function = dolfin.TrialFunction(fs)
     test_function = dolfin.TestFunction(fs)
+    
+    
     a_K = -1*dolfin.inner(dolfin.nabla_grad(trial_function), dolfin.nabla_grad(test_function)) * dolfin.dx
     C = dolfin.assemble(a_K)
     rows, cols, vals = C.data()

@@ -40,7 +40,7 @@ if __name__ == "__main__":
     C = scipy.sparse.csr_matrix((vals, cols, rows))
     C = C.tocsc()
 
-    print C
+    print "C:\n", C
     p = mesh.coordinates()
 
     # This gives you a mapping from dofs (rows in matrix) to vertices (points in mesh.coordinates)

@@ -45,7 +45,7 @@ urdme_model *read_model(char *file)
 	
 	int i,Ndofs;
 	
-	mxArray *D,*N,*G,*vol,*u0,*tspan,*data,*sd;
+	mxArray *D,*N,*G,*vol,*u0,*tspan,*data,*sd,*K;
 	
 	urdme_model *model;
 	model = (urdme_model *)malloc(sizeof(urdme_model));
@@ -141,11 +141,37 @@ urdme_model *read_model(char *file)
             model->prN = (size_t *)malloc(0*sizeof(size_t));
         }
     }
-    
-	model->Mreactions = (int) mxGetN(N);
-	model->Ncells=Ndofs/model->Mspecies;
-    
+       model->Mreactions = (int) mxGetN(N);
+       model->Ncells=Ndofs/model->Mspecies;
+   
     mxDestroyArray(N);
+
+
+
+    /* Connectivity matrix */
+    K = matGetVariable(input_file, "K");
+    if (K == NULL){
+    	printf("The Connectivity matrix K is missing in the model file.\n");
+    	return NULL;
+    }
+
+    int nK = mxGetN(K);
+    size_t *mxirK;
+    size_t *mxjcK;
+    double *mxprK;
+    mxirK = mxGetIr(K);
+    mxjcK = mxGetJc(K);
+    mxprK = mxGetPr(K);
+    int nnzK = mxGetNzmax(K);
+    
+    model->jcK = (size_t *)malloc((nK+1)*sizeof(size_t));
+    memcpy(model->jcK,mxjcK,(nK+1)*sizeof(size_t));
+    model->irK = (size_t*)malloc(nnzK*sizeof(size_t));
+    memcpy(model->irK,mxirK,nnzK*sizeof(size_t));
+    model->prK = (double *)malloc(nnzK*sizeof(double));
+    memcpy(model->prK,mxprK,nnzK*sizeof(double));
+    mxDestroyArray(K);
+
 
     /* Volume vector */
 	vol = matGetVariable(input_file,"vol");
@@ -301,6 +327,11 @@ int destroy_model(urdme_model *model)
     free(model->irN);
     free(model->jcN);
     free(model->prN);
+	
+    /* Connectivity matrix */
+    free(model->irK);
+    free(model->jcK);
+    free(model->prK);
 	
     free(model->tspan);
     free(model->u0);

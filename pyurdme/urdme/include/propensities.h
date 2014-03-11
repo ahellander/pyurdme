@@ -13,7 +13,8 @@
 extern double *parameters;
 
 /* Definition of the propensity function. */
-typedef double (*PropensityFun)(const int *, double, double, const double *, int);
+// double rfun(const int *x, double t, const double vol, const double *data, int sd, int voxel, int *xx, const size_t *irK, const size_t *jcK, const double *prK)
+typedef double (*PropensityFun)(const int *, double, double, const double *, int, int, int *, const size_t *, const size_t *, const double *);
 
 /* Declaration of allocation and deallocation of propensity list. */
 PropensityFun *ALLOC_propensities(void);

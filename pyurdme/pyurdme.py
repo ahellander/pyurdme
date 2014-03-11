@@ -33,7 +33,7 @@ import pickle
 import json
 
 # Set log level to report only errors or worse
-#dolfin.set_log_level(dolfin.ERROR)
+dolfin.set_log_level(dolfin.ERROR)
 
 class URDMEModel(Model):
     """

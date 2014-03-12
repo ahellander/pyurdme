@@ -889,7 +889,7 @@ class Mesh(dolfin.Mesh):
         if self.topology().dim() == 2:
             # 2D
             num_elements = self.num_cells()
-            # This is a fix for the built+in 2D meshes that only have x,y-coordinates.
+            # This is a fix for the built-in 2D meshes that only have x,y-coordinates.
             dims = numpy.shape(vtx)
             if dims[1] == 2:
                 vtxx = numpy.zeros((dims[0],3))
@@ -1254,7 +1254,16 @@ class URDMEResult(dict):
         with open(os.path.dirname(os.path.abspath(__file__))+"/data/three.js_templates/particles.html",'r') as fd:
             template = fd.read()
         
-        coordinates = self.model.mesh.coordinates()
+        factor, coordinates = self.model.mesh.scaledNormalizedCoordinates()
+        dims = numpy.shape(coordinates)
+        if dims[1]==2:
+            is3d = 0
+            vtxx = numpy.zeros((dims[0],3))
+            for i, v in enumerate(coordinates):
+                vtxx[i,:]=(list(v)+[0])
+            coordinates = vtxx
+        else:
+            is3d = 1
         
         h = self.model.mesh.meshSize()
         
@@ -1264,8 +1273,9 @@ class URDMEResult(dict):
         c=[];
         radius = []
         
-        factor, cd = self.model.mesh.scaledNormalizedCoordinates()
-
+        # factor, cd = self.model.mesh.scaledNormalizedCoordinates()
+        
+        
 
         total_num_particles = 0
         colors = ["blue","red","yellow", "green"]
@@ -1279,11 +1289,14 @@ class URDMEResult(dict):
 
             for i, particles in enumerate(timeslice):
                 # "Radius" of voxel
-                hi = h[i]
+                hix = h[i]*factor
+                hiy = hix;
+                hiz = hix*is3d
+                
                 for particle in range(particles):
-                    x.append((coordinates[i,0]+random.uniform(-1,1)*hi)*factor)
-                    y.append((coordinates[i,1]+random.uniform(-1,1)*hi)*factor)
-                    z.append((coordinates[i,2]+random.uniform(-1,1)*hi)*factor)
+                    x.append((coordinates[i,0]+random.uniform(-1,1)*hix))
+                    y.append((coordinates[i,1]+random.uniform(-1,1)*hiy))
+                    z.append((coordinates[i,2]+random.uniform(-1,1)*hiz))
                     try:
                         radius.append(self.model.listOfSpecies[spec].reaction_radius)
                     except:

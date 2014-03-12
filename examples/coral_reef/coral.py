@@ -6,10 +6,10 @@ import numpy
 from dolfin import *
 import dolfin
 
-#class unitSquareMeshPeriodicBoundary(dolfin.SubDomain):
-class unitSquareMeshPeriodicBoundary(SubDomain):
+class unitSquareMeshPeriodicBoundary(dolfin.SubDomain):
     """ Sub domain for Periodic boundary condition """
     def __init__(self, Lx=1.0, Ly=1.0):
+        dolfin.SubDomain.__init__(self)
         self.Lx = Lx
         self.Ly = Ly
 

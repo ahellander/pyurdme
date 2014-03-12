@@ -1689,7 +1689,8 @@ class URDMESolver:
         propfilestr = propfilestr.replace("__DEFINE_PARAMETERS__", str(parameters))
 
         # Reactions
-        funheader = "double __NAME__(const int *x, double t, const double vol, const double *data, int sd)"
+        #funheader = "double __NAME__(const int *x, double t, const double vol, const double *data, int sd)"
+        funheader = "double __NAME__(const int *x, double t, const double vol, const double *data, int sd, int voxel, int *xx, const size_t *irK, const size_t *jcK, const double *prK)"
 
         funcs = ""
         funcinits = ""

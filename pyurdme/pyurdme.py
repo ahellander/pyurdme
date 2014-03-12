@@ -8,6 +8,7 @@ import subprocess
 import sys
 import tempfile
 import types
+import warnings
 
 import numpy
 import scipy.io
@@ -33,7 +34,7 @@ import pickle
 import json
 
 # Set log level to report only errors or worse
-#dolfin.set_log_level(dolfin.ERROR)
+dolfin.set_log_level(dolfin.ERROR)
 
 class URDMEModel(Model):
     """
@@ -295,11 +296,21 @@ class URDMEModel(Model):
             spec_name = species.name
             spec_index = species_map[spec_name]
 
-            xmesh.function_space[spec_name] = dolfin.FunctionSpace(self.mesh, "Lagrange", 1)
+            xmesh.function_space[spec_name] = self.mesh.FunctionSpace()
+            
             # vertex_to_dof_map provides a map between the vertex index and the dof.
-            xmesh.vertex_to_dof_map[spec_name] = xmesh.function_space[spec_name].dofmap().dof_to_vertex_map(self.mesh)
-            xmesh.vertex_to_dof_map[spec_name] = len(self.listOfSpecies) * xmesh.vertex_to_dof_map[spec_name] + spec_index
-            xmesh.dof_to_vertex_map[spec_name] = xmesh.function_space[spec_name].dofmap().vertex_to_dof_map(self.mesh)
+
+
+            try:
+            # For Dolfin 1.3.0 and above
+                xmesh.vertex_to_dof_map[spec_name] = dolfin.vertex_to_dof_map(xmesh.function_space[spec_name])
+                xmesh.vertex_to_dof_map[spec_name] = len(self.listOfSpecies) * xmesh.vertex_to_dof_map[spec_name] + spec_index
+                xmesh.dof_to_vertex_map[spec_name] = dolfin.dof_to_vertex_map(xmesh.function_space[spec_name])
+            except:
+                # Older versions of dolfin
+                xmesh.vertex_to_dof_map[spec_name] = xmesh.function_space[spec_name].dofmap().dof_to_vertex_map(self.mesh)
+                xmesh.vertex_to_dof_map[spec_name] = len(self.listOfSpecies) * xmesh.vertex_to_dof_map[spec_name] + spec_index
+                xmesh.dof_to_vertex_map[spec_name] = xmesh.function_space[spec_name].dofmap().vertex_to_dof_map(self.mesh)
 
         xmesh.vertex = self.mesh.coordinates()
         self.xmesh = xmesh
@@ -499,14 +510,16 @@ class URDMEModel(Model):
         D = S.tocsc()
 
         # Renormalize the columns (may not sum to zero since elements may have been filtered out
-        sumcol = numpy.zeros((Ndofs, 1))
-        for i in range(Ndofs):
-            col = D.getcol(i)
-            for val in col.data:
-                if val > 0.0:
-                    sumcol[i] += val
+        with warnings.catch_warnings():
+	    warnings.simplefilter("ignore")
+            sumcol = numpy.zeros((Ndofs, 1))
+            for i in range(Ndofs):
+                col = D.getcol(i)
+                for val in col.data:
+                    if val > 0.0:
+                        sumcol[i] += val
 
-        D.setdiag(-sumcol.flatten())
+            D.setdiag(-sumcol.flatten())        
 
         #print "Fraction of positive off-diagonal entries: " + str(numpy.abs(positive_mass/total_mass))
         return {'vol':vol, 'D':D, 'relative_positive_mass':positive_mass/total_mass}
@@ -534,7 +547,7 @@ class URDMEModel(Model):
     def connectivityMatrix(self):
         """ Assemble a connectivity matrix in CCS format. """
         
-        fs = dolfin.FunctionSpace(self.mesh, "Lagrange", 1)
+        fs = self.mesh.FunctionSpace()
         trial_function = dolfin.TrialFunction(fs)
         test_function = dolfin.TestFunction(fs)
         a_K = -1*dolfin.inner(dolfin.nabla_grad(trial_function), dolfin.nabla_grad(test_function)) * dolfin.dx
@@ -653,7 +666,6 @@ class URDMEModel(Model):
         scipy.io.savemat(filename, urdme_solver_data, oned_as='column')
 
 
-
     def assemble(self):
         """  Assemble the mass and stiffness matrices using Dolfin.
 
@@ -715,7 +727,15 @@ class Mesh(dolfin.Mesh):
     """ A URDME mesh extends the Dolfin mesh class. """
 
     def __init__(self, mesh=None):
+        self.constrained_domain = None
         dolfin.Mesh.__init__(self, mesh)
+
+    def FunctionSpace(self):
+        if self.constrained_domain is not None:
+            fs = dolfin.FunctionSpace(self, "Lagrange", 1, constrained_domain=self.constrained_domain)
+        else:
+            fs = dolfin.FunctionSpace(self, "Lagrange", 1)
+        return fs
 
     def getNumVoxels(self):
         return self.num_vertices()
@@ -1138,7 +1158,7 @@ class URDMEResult(dict):
             spec_sol = {}
             for j, time in enumerate(self.tspan):
                 
-                func = dolfin.Function(dolfin.FunctionSpace(self.model.mesh, "Lagrange", 1))
+                func = dolfin.Function(self.model.mesh.FunctionSpace())
                 func_vector = func.vector()
 
                 S = self.getSpecies(spec, [j])
@@ -1162,7 +1182,7 @@ class URDMEResult(dict):
         
         self._initialize_sol()
         subprocess.call(["mkdir", "-p", folder_name])
-        func = dolfin.Function(dolfin.FunctionSpace(self.model.mesh, "Lagrange", 1))
+        func = dolfin.Function(self.model.mesh.FunctionSpace())
         func_vector = func.vector()
         fd = dolfin.File(folder_name+"/trajectory.pvd")
         numvox = self.model.mesh.getNumVoxels()

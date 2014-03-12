@@ -1231,9 +1231,9 @@ class URDMEResult(dict):
     
         import random
         
-        template = open("particles.html",'r').read()
+        with open(os.path.dirname(os.path.abspath(__file__))+"/data/three.js_templates/particles.html",'r') as fd:
+            template = fd.read()
         
-        #coordinates = self.model.mesh.scaledCoordinates()
         coordinates = self.model.mesh.coordinates()
         
         h = self.model.mesh.meshSize()
@@ -1242,7 +1242,9 @@ class URDMEResult(dict):
         y=[];
         z=[];
         c=[];
-        factor, cd = self.model.mesh.scaledCoordinates()
+        radius = []
+        
+        factor, cd = self.model.mesh.scaledNormalizedCoordinates()
 
 
         total_num_particles = 0
@@ -1250,8 +1252,8 @@ class URDMEResult(dict):
         
         for j,spec in enumerate(species):
             
-            US = self.getSpecies(spec)
-            timeslice = US[time_index,:]
+            timeslice = self.getSpecies(spec, 0)
+            #timeslice = US[time_index,:]
             ns = numpy.sum(timeslice)
             total_num_particles += ns
 
@@ -1262,6 +1264,11 @@ class URDMEResult(dict):
                     x.append((coordinates[i,0]+random.uniform(-1,1)*hi)*factor)
                     y.append((coordinates[i,1]+random.uniform(-1,1)*hi)*factor)
                     z.append((coordinates[i,2]+random.uniform(-1,1)*hi)*factor)
+                    try:
+                        radius.append(self.model.listOfSpecies[spec].reaction_radius)
+                    except:
+                        radius.append(0.01)
+                    
                     c.append(colors[j])
     
         docstr = template.replace("__NUM__MOLECULES__", str(total_num_particles))
@@ -1269,6 +1276,8 @@ class URDMEResult(dict):
         docstr = docstr.replace("__Y__",str(y))
         docstr = docstr.replace("__Z__",str(z))
         docstr = docstr.replace("__COLOR__",str(c))
+        docstr = docstr.replace("__RADIUS__",str(radius))
+
 
         return docstr
 

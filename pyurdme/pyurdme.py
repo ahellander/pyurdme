@@ -1272,10 +1272,6 @@ class URDMEResult(dict):
         z=[];
         c=[];
         radius = []
-        
-        # factor, cd = self.model.mesh.scaledNormalizedCoordinates()
-        
-        
 
         total_num_particles = 0
         colors = ["blue","red","yellow", "green"]

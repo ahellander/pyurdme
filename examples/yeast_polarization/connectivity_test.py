@@ -4,6 +4,7 @@ import dolfin
 dolfin.parameters["linear_algebra_backend"] = "uBLAS"
 import matplotlib.pyplot as plt
 import scipy.sparse
+import numpy
 
 
 
@@ -43,10 +44,12 @@ if __name__ == "__main__":
     C = C.tocsc()
 
     print "C:\n", C
+    print numpy.shape(C)
     p = mesh.coordinates()
 
     # This gives you a mapping from dofs (rows in matrix) to vertices (points in mesh.coordinates)
     dof2vtx =  fs.dofmap().vertex_to_dof_map(mesh)
+    vtx2dof = fs.dofmap().dof_to_vertex_map(mesh)
     # It seems like the number of dofs now is num_coordinates-1, and I guess this makes sense since x[0] = x[1]
     
     
@@ -54,8 +57,10 @@ if __name__ == "__main__":
 
     print "dof to vertex mapping\n", dof2vtx
     print "mapped coordinates\n", p[dof2vtx]
+    print "vertex to dof mapping\n", vtx2dof
 
-    plt.spy(C)
-    plt.title("1D connectivity, with periodic BCs")
-    plt.show()
+
+#plt.spy(C)
+#   plt.title("1D connectivity, with periodic BCs")
+#   plt.show()
 

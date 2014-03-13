@@ -274,7 +274,13 @@ class URDMEModel(Model):
     def initializeInitialValue(self):
         """ Create all-zeros inital condition matrix. """
         ns = self.getNumSpecies()
+        if self.xmesh == None:
+            self.meshextend()
         nv = self.mesh.getNumVoxels()
+        #dims = numpy.shape(self.mesh.FunctionSpace().dofmap().dof_to_vertex_map(self.mesh))
+        #nv = dims[0]
+        #print nv
+
         self.u0 = numpy.zeros((ns, nv))
 
     def meshextend(self):

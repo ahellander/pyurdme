@@ -59,6 +59,9 @@ class URDMEModel(Model):
         self.tspan = None
         self.vol = None
 
+        # URDMEDataFunction object to construct the data vector.
+        self.data_function = None
+
     def __getstate__(self):
         """ Used by pickle to get state when pickling. Because we
             have Swig wrappers to extension modules, we need to remove some instance variables
@@ -126,6 +129,13 @@ class URDMEModel(Model):
             
         self.meshextend()
 
+
+    def addDataFunction(self, data_function):
+        """ Add a URDMEDataFunction object to this object. """
+        if isinstance(data_function, URDMEDataFunction):
+            self.self.data_function = self.data_function
+        else:
+            raise Exception("data_function not of type URDMEDataFunction")
 
     def __initializeSpeciesMap(self):
         i = 0
@@ -632,7 +642,24 @@ class URDMEModel(Model):
         urdme_solver_data['sd'] = self.subdomainVector(self.subdomains)
 
         # Data vector. If not present in model, it defaults to a vector with all elements zero.
-        data = numpy.zeros((1, self.mesh.getNumVoxels()))
+        data = None 
+        if self.data_function is not None:
+            coords = self.mesh.coordinates()
+            for ndx in range(len(coords)):
+                vox_coords = numpy.zeros(3)
+                for cndx in range(len(coords[ndx])):
+                    vox_coords[cndx] = coords[ndx][cdnx]
+                vox_data = self.data_function.map(vox_coords)
+                if isinstance(vox_data,list) or isinstance(vox_data, numpy.array):
+                    if data is None:
+                        data = numpy.zeros((len(vox_data), self.mesh.getNumVoxels()))
+                    for dndx in range(len(vox_data)):
+                        data[dndx][ndx] = vox_data[dndx]
+                else:
+                    data[ndx] = vox_data
+        else:
+            data = numpy.zeros((1, self.mesh.getNumVoxels()))
+            
         urdme_solver_data['data'] = data
 
         if not hasattr(self,'u0'):
@@ -1777,6 +1804,17 @@ def urdme(model=None, solver='nsm', solver_path="", model_file=None, input_file=
     sol.compile()
     return sol.run(seed, input_file=input_file)
 
+
+class URDMEDataFunction():
+    """ Abstract class used to constuct the URDME data vector. """
+    def map(self, x):
+        """ map() takes the coordinate 'x' and returns a list of doubles.
+        Args:
+            x: a list of 3 ints.
+        Returns:
+            a list of doubles.
+        """
+        raise Exception("URDMEDataFunction.map() not implemented.")
 
 
 class MeshImportError(Exception):

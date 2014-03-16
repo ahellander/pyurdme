@@ -27,18 +27,19 @@ class PeriodicBoundary1D(dolfin.SubDomain):
 
 
 class PheromoneGradient(pyurdme.URDMEDataFunction):
-    def __init__(self, a=0.0, b=1.0, L_min=0, L_max=4):
+    def __init__(self, a=0.0, b=1.0, L_min=0, L_max=4, MOLAR=1.0):
         """ 1D domain from a to b. """
         pyurdme.URDMEDataFunction.__init__(self, name="PheromoneGradient")
         self.a = a
         self.b = b
         self.L_min = L_min
         self.L_max = L_max
+        self.MOLAR = MOLAR
 
     def map(self, x):
         #ligand_c[i] = ( (L_max-L_min)*.5*(1+cos( .5*(i*l - 2*3.14159))) + L_min)*MOLAR ;
         #  x[0] == i*l
-        return (self.L_max - self.L_min) * 0.5 * (1 + math.cos( 0.5*(x[0] - self.a))) + self.L_min
+        return ((self.L_max - self.L_min) * 0.5 * (1 + math.cos( 0.5*(x[0] - self.a))) + self.L_min) * self.MOLAR
 
 
 class G_protein_cycle_1D(pyurdme.URDMEModel):
@@ -59,13 +60,13 @@ class G_protein_cycle_1D(pyurdme.URDMEModel):
     
         L = 4*3.14159
         NUM_VOXEL = 200
+        MOLAR=6.02e-01*((L/NUM_VOXEL)**3)
         self.mesh = pyurdme.Mesh.IntervalMesh(nx=NUM_VOXEL, a=-2*3.14159, b=2*3.14159)
         self.mesh.addPeriodicBoundaryCondition(PeriodicBoundary1D(a=-2*3.14159, b=2*3.14159))
         
-        MOLAR = pyurdme.Parameter(name="MOLAR",expression=6.02e-01*((L/NUM_VOXEL)**3))
         SA    = pyurdme.Parameter(name="SA" ,expression=201.056)
         V     = pyurdme.Parameter(name="V" ,expression=33.5)
-        k_RL  = pyurdme.Parameter(name="k_RL" ,expression="2e-03/MOLAR")
+        k_RL  = pyurdme.Parameter(name="k_RL" ,expression=2e-03/MOLAR)
         k_RLm = pyurdme.Parameter(name="k_RLm" ,expression=1e-02)
         k_Rs  = pyurdme.Parameter(name="k_Rs" ,expression="4.0/SA")
         k_Rd0 = pyurdme.Parameter(name="k_Rd0" ,expression=4e-04)
@@ -73,10 +74,10 @@ class G_protein_cycle_1D(pyurdme.URDMEModel):
         k_G1  = pyurdme.Parameter(name="k_G1" ,expression="1.0*SA")
         k_Ga  = pyurdme.Parameter(name="k_Ga" ,expression="1e-06*SA")
         k_Gd  = pyurdme.Parameter(name="k_Gd" ,expression=0.1)
-        self.addParameter([MOLAR,SA,V,k_RL,k_RLm,k_Rs,k_Rd0,k_Rd1,k_G1,k_Ga,k_Gd]) 
+        self.addParameter([SA,V,k_RL,k_RLm,k_Rs,k_Rd0,k_Rd1,k_G1,k_Ga,k_Gd]) 
 
         # Add Data Function to model the mating pheromone gradient.
-        self.addDataFunction(PheromoneGradient(a=-2*3.14159, b=2*3.14159))
+        self.addDataFunction(PheromoneGradient(a=-2*3.14159, b=2*3.14159, MOLAR=MOLAR))
 
         # Reactions
         R0 = pyurdme.Reaction(name="R0", reactants={}, products={R:1}, massaction=True, rate=k_Rs)

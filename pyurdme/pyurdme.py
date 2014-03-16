@@ -58,8 +58,8 @@ class URDMEModel(Model):
         self.tspan = None
         self.vol = None
 
-        # URDMEDataFunction object to construct the data vector.
-        self.data_function = None
+        # URDMEDataFunction objects to construct the data vector.
+        self.listOfDataFunctions = []
 
     def __getstate__(self):
         """ Used by pickle to get state when pickling. Because we
@@ -132,7 +132,7 @@ class URDMEModel(Model):
     def addDataFunction(self, data_function):
         """ Add a URDMEDataFunction object to this object. """
         if isinstance(data_function, URDMEDataFunction):
-            self.self.data_function = self.data_function
+            self.listOfDataFunctions.append(data_function)
         else:
             raise Exception("data_function not of type URDMEDataFunction")
 
@@ -629,23 +629,16 @@ class URDMEModel(Model):
         urdme_solver_data['sd'] = self.subdomainVector(self.subdomains)
 
         # Data vector. If not present in model, it defaults to a vector with all elements zero.
-        data = None 
-        if self.data_function is not None:
+        data = numpy.zeros((1, self.mesh.getNumVoxels()))
+        if len(self.listOfDataFunctions) > 0:
+            data = numpy.zeros((len(self.listOfDataFunctions), self.mesh.getNumVoxels()))
             coords = self.mesh.coordinates()
-            for ndx in range(len(coords)):
-                vox_coords = numpy.zeros(3)
-                for cndx in range(len(coords[ndx])):
-                    vox_coords[cndx] = coords[ndx][cdnx]
-                vox_data = self.data_function.map(vox_coords)
-                if isinstance(vox_data,list) or isinstance(vox_data, numpy.array):
-                    if data is None:
-                        data = numpy.zeros((len(vox_data), self.mesh.getNumVoxels()))
-                    for dndx in range(len(vox_data)):
-                        data[dndx][ndx] = vox_data[dndx]
-                else:
-                    data[ndx] = vox_data
-        else:
-            data = numpy.zeros((1, self.mesh.getNumVoxels()))
+            for ndf, df in enumerate(self.listOfDataFunctions):
+                for ndx in range(len(coords)):
+                    vox_coords = numpy.zeros(3)
+                    for cndx in range(len(coords[ndx])):
+                        vox_coords[cndx] = coords[ndx][cndx]
+                    data[ndf][ndx] = df.map(vox_coords)
             
         urdme_solver_data['data'] = data
 
@@ -743,6 +736,9 @@ class Mesh(dolfin.Mesh):
     def __init__(self, mesh=None):
         self.constrained_domain = None
         dolfin.Mesh.__init__(self, mesh)
+
+    def addPeriodicBoundaryCondition(self, domain):
+        self.constrained_domain = domain
 
     def FunctionSpace(self):
         if self.constrained_domain is not None:
@@ -1671,11 +1667,24 @@ class URDMESolver:
         i = 0
         for S in self.model.listOfSpecies:
             speciesdef += "#define " + S + " " + "x[" + str(i) + "]" + "\n"
+            speciesdef += "#define " + S + "_INDEX " +  str(i) + "\n"
             i += 1
 
         propfilestr = propfilestr.replace("__DEFINE_SPECIES__", speciesdef)
 
         propfilestr = propfilestr.replace("__NUMBER_OF_REACTIONS__", str(self.model.getNumReactions()))
+        propfilestr = propfilestr.replace("__NUMBER_OF_SPECIES__", str(self.model.getNumSpecies()))
+        propfilestr = propfilestr.replace("__NUMBER_OF_VOXELS__", str(self.model.mesh.getNumVoxels()))
+
+        # Create defines for the DataFunctions.
+        data_fn_str = ""
+        i = 0
+        for d in self.model.listOfDataFunctions:
+            if d.name is None:
+                raise URDMEError("DataFunction {0} does not have a name attributed defined.".format(i))
+            data_fn_str += "#define " + d.name + " data[" + str(i) + "]\n"
+            i += 1
+        propfilestr = propfilestr.replace("__DEFINE_DATA_FUNCTIONS__", str(data_fn_str))
 
         # Make sure all paramters are evaluated to scalars before we write them to the file.
         self.model.resolveParameters()
@@ -1683,6 +1692,7 @@ class URDMESolver:
         for p in self.model.listOfParameters:
             parameters += "const double " + p + " = " + str(self.model.listOfParameters[p].value) + ";\n"
         propfilestr = propfilestr.replace("__DEFINE_PARAMETERS__", str(parameters))
+
 
         # Reactions
         #funheader = "double __NAME__(const int *x, double t, const double vol, const double *data, int sd)"
@@ -1776,12 +1786,19 @@ def urdme(model=None, solver='nsm', solver_path="", model_file=None, input_file=
 
 class URDMEDataFunction():
     """ Abstract class used to constuct the URDME data vector. """
+    name = None
+    def __init__(self, name=None):
+        if name is not None:
+            self.name = name
+        if self.name is None:
+            raise Exception("URDMEDataFunction must have a 'name'")
+        
     def map(self, x):
         """ map() takes the coordinate 'x' and returns a list of doubles.
         Args:
             x: a list of 3 ints.
         Returns:
-            a list of doubles.
+            a doubles.
         """
         raise Exception("URDMEDataFunction.map() not implemented.")
 

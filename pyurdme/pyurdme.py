@@ -300,7 +300,7 @@ class URDMEModel(Model):
 
         # Initialize the function spaces and dof maps.
         for spec in self.listOfSpecies:
-
+            
             species = self.listOfSpecies[spec]
             spec_name = species.name
             spec_index = species_map[spec_name]

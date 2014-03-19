@@ -1161,7 +1161,6 @@ class URDMEResult(dict):
             
         """
         
-        
         if isinstance(species, Species):
             spec_name = species.name
         else:
@@ -1172,29 +1171,30 @@ class URDMEResult(dict):
         spec_indx = species_map[spec_name]
         
         resultfile = h5py.File(self.filename, 'r')
-        Ncells = self.model.mesh.num_vertices()
+        #Ncells = self.model.mesh.num_vertices()  # Need dof ordering numVoxels
         U = resultfile['U']
+        Ncells = U.shape[1]/num_species
         
         if timepoints  ==  "all":
-            slice= U[:,(spec_indx*Ncells):(spec_indx*Ncells+Ncells)]
-            #slice= U[:, spec_indx::num_species]
+            Uslice= U[:,(spec_indx*Ncells):(spec_indx*Ncells+Ncells)]
+            #Uslice= U[:, spec_indx::num_species]
         else:
-            slice = U[timepoints,(spec_indx*Ncells):(spec_indx*Ncells+Ncells)]
-            #slice= U[timepoints, spec_indx::num_species]
+            Uslice = U[timepoints,(spec_indx*Ncells):(spec_indx*Ncells+Ncells)]
+            #Uslice= U[timepoints, spec_indx::num_species]
         
         if concentration:
-            slice = self._copynumber_to_concentration(slice)
+            Uslice = self._copynumber_to_concentration(Uslice)
         
         # Reorder the dof from dof ordering to voxel ordering
-        slice = self.reorderDofToVoxel(slice, num_species=1)
+        Uslice = self.reorderDofToVoxel(Uslice, num_species=1)
         
         # Make sure we return 1D slices as flat arrays
-        dims = numpy.shape(slice)
+        dims = numpy.shape(Uslice)
         if dims[0] == 1:
-            slice = slice.flatten()
+            Uslice = Uslice.flatten()
         
         resultfile.close()
-        return slice
+        return Uslice
             
     def __setattr__(self, k, v):
         if k in self.keys():
@@ -1404,6 +1404,8 @@ class URDMEResult(dict):
             where the volume unit is defined by the user input.
         """
         
+        fs = self.model.mesh.FunctionSpace()
+        v2d = dolfin.vertex_to_dof_map(fs)
         shape = numpy.shape(copy_number_data)
         if len(shape) == 1:
             shape = (1,shape[0])
@@ -1415,7 +1417,7 @@ class URDMEResult(dict):
         for t in range(dims[0]):
             timeslice = scaled_sol[t,:]
             for i,cn in enumerate(timeslice):
-                scaled_sol[t, i] = float(cn)/(6.022e23*self.model.vol[i])
+                scaled_sol[t, i] = float(cn)/(6.022e23*self.model.vol[v2d[i]])
 
         return scaled_sol
 

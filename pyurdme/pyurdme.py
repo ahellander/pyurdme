@@ -355,7 +355,24 @@ class URDMEModel(Model):
                 ind = table[vtx]
                 self.u0[specindx, ind] += 1
 
+    def distributeUniformly(self, spec_init):
+        """ Place the same number of molecules of the species in each voxel. """
+        if not hasattr(self, "u0"):
+            self.initializeInitialValue()
 
+        if not hasattr(self, 'xmesh'):
+            self.meshextend()
+
+        species_map = self.speciesMap()
+        num_voxels = self.mesh.getNumVoxels()
+        for spec in spec_init:
+            spec_name = spec.name
+            num_spec = spec_init[spec]
+            specindx = species_map[spec_name]
+            for ndx in range(num_voxels):
+                self.u0[specindx, ndx] = num_spec
+    
+    
     def placeNear(self, spec_init, point=None):
         """ Place all molecules of kind species in the voxel nearest a given point. """
 
@@ -370,7 +387,6 @@ class URDMEModel(Model):
 
 
         for spec in spec_init:
-
             spec_name = spec.name
             num_spec = spec_init[spec]
 
@@ -392,9 +408,6 @@ class URDMEModel(Model):
             Create the system (diffusion) matrix for input to the URDME solvers. The matrix
             is built by concatenating the individually assembled matrices for each of the species,
             and multiplying with the lumped mass matrix (which define the volume of the voxels).
-
-            The dofs in the Dolfin-assembled matrices are reordered so that each column in the
-            result matrix corresponds to the vertex numbering in the mesh.
 
             Negative off-diagonal elements in the matrix are set to zero, and the diagonal is renormalized
             in order to assure that the returned matrix is a Markov transition matrix.
@@ -423,7 +436,8 @@ class URDMEModel(Model):
         Mspecies = len(self.listOfSpecies)
         if Mspecies == 0:
             raise ModelException("The model has no species, can not create system matrix.")
-        Nvoxels = self.mesh.getNumVoxels()
+        # Use dolfin 'dof' number of voxels, not the number of verticies
+        Nvoxels = self.mesh.getNumDofVoxels()
         Ndofs = Nvoxels*Mspecies
         S = scipy.sparse.dok_matrix((Ndofs, Ndofs))
 
@@ -435,18 +449,19 @@ class URDMEModel(Model):
 
         for species, M in mass_matrices.iteritems():
 
-            dof2vtx = xmesh.dof_to_vertex_map[species]
+            #dof2vtx = xmesh.dof_to_vertex_map[species]
 
             rows, cols, vals = M.data()
             SM = scipy.sparse.csr_matrix((vals, cols, rows))
             vols = SM.sum(axis=1)
-
+            
             spec = self.species_map[species]
             for j in range(len(vols)):
-                vx = dof2vtx[j]
+                #vx = dof2vtx[j]  # need to use dof ordering
+                vx = j
                 dof = Mspecies*vx+spec
                 vol[dof, 0] = vols[j]
-
+            
         # This is necessary in order for the array to have the right dimension (Ndofs,1)
         vol = vol.flatten()
 
@@ -467,7 +482,7 @@ class URDMEModel(Model):
             Kcrs = scipy.sparse.csr_matrix((vals, cols, rows))
             Kdok = Kcrs.todok()
 
-            dof2vtx = xmesh.dof_to_vertex_map[species]
+            #dof2vtx = xmesh.dof_to_vertex_map[species]
 
             for entries in Kdok.items():
 
@@ -475,9 +490,10 @@ class URDMEModel(Model):
                 ir = ind[0]
                 ij = ind[1]
 
-                # Permutation to make the matrix ordering match that of sd, u0. (Dolfin dof -> URDME dof)
-                ir = dof2vtx[ind[0]]
-                ij = dof2vtx[ind[1]]
+                # Use Dolfin dof ordering
+                # Depricated: Permutation to make the matrix ordering match that of sd, u0. (Dolfin dof -> URDME dof)
+                #ir = dof2vtx[ind[0]]
+                #ij = dof2vtx[ind[1]]
 
                 val = entries[1]
 
@@ -550,36 +566,36 @@ class URDMEModel(Model):
         a_K = -1*dolfin.inner(dolfin.nabla_grad(trial_function), dolfin.nabla_grad(test_function)) * dolfin.dx
         K = dolfin.assemble(a_K)
         rows, cols, vals = K.data()
-        Kcrs = scipy.sparse.csr_matrix((vals, cols, rows))
-        
-        # Permutation dolfin dof -> URDME dof
-        Kdok = Kcrs.todok()
-        
-        nv  = self.mesh.num_vertices()
-        S = scipy.sparse.dok_matrix((nv,nv))
-
-        dof2vtx = fs.dofmap().vertex_to_dof_map(self.mesh)
-
-
-        for entries in Kdok.items():
-            
-            ind = entries[0]
-            ir = ind[0]
-            ij = ind[1]
-            
-            # Permutation to make the matrix ordering match that of sd, u0. (Dolfin dof -> URDME dof)
-            ir = dof2vtx[ind[0]]
-            ij = dof2vtx[ind[1]]
-            
-            val = entries[1]
-            
-            
-            S[ir,ij] = val
-        
-        
-        
-        C = S.tocsc()
-        return C
+        Kcrs = scipy.sparse.csc_matrix((vals, cols, rows))
+        return Kcrs
+        #
+        ## Permutation dolfin dof -> URDME dof
+        #Kdok = Kcrs.todok()
+        #
+        #nv  = self.mesh.num_vertices()
+        #S = scipy.sparse.dok_matrix((nv,nv))
+        #
+        #dof2vtx = dolfin.vertex_to_dof_map(fs)
+        #
+        #for entries in Kdok.items():
+        #
+        #    ind = entries[0]
+        #    ir = ind[0]
+        #    ij = ind[1]
+        #
+        #    # Permutation to make the matrix ordering match that of sd, u0. (Dolfin dof -> URDME dof)
+        #    ir = dof2vtx[ind[0]]
+        #    ij = dof2vtx[ind[1]]
+        #
+        #    val = entries[1]
+        #
+        #
+        #    S[ir,ij] = val
+        #
+        #
+        #
+        #C = S.tocsc()
+        #return C
 
 
     def solverData(self):
@@ -605,6 +621,8 @@ class URDMEModel(Model):
 
 
         urdme_solver_data = {}
+        
+        num_species = self.getNumSpecies()
 
         # Stoichimetric matrix
         N = self.createStoichiometricMatrix()
@@ -624,34 +642,55 @@ class URDMEModel(Model):
         
         D = result['D']
         urdme_solver_data['D'] = D
+        
+        #
+        num_vox = D.shape[0]
 
+        # Get vertex to dof ordering
+        vertex_to_dof = dolfin.vertex_to_dof_map(self.mesh.FunctionSpace())
+        
         # Subdomain vector
-        urdme_solver_data['sd'] = self.subdomainVector(self.subdomains)
-
+        # convert to dof ordering
+        sd_vec_dof = numpy.zeros(num_vox)
+        for ndx, sd_val in enumerate(self.subdomainVector(self.subdomains)):
+            sd_vec_dof[vertex_to_dof[ndx]] = sd_val
+        urdme_solver_data['sd'] = sd_vec_dof
+        
         # Data vector. If not present in model, it defaults to a vector with all elements zero.
-        data = numpy.zeros((1, self.mesh.getNumVoxels()))
+        # convert to dof ordering
+        data = numpy.zeros((1, num_vox))
         if len(self.listOfDataFunctions) > 0:
-            data = numpy.zeros((len(self.listOfDataFunctions), self.mesh.getNumVoxels()))
+            data = numpy.zeros((len(self.listOfDataFunctions), num_vox))
             coords = self.mesh.coordinates()
             for ndf, df in enumerate(self.listOfDataFunctions):
                 for ndx in range(len(coords)):
                     vox_coords = numpy.zeros(3)
                     for cndx in range(len(coords[ndx])):
                         vox_coords[cndx] = coords[ndx][cndx]
-                    data[ndf][ndx] = df.map(vox_coords)
+                    data[ndf][vertex_to_dof[ndx]] = df.map(vox_coords)
             
         urdme_solver_data['data'] = data
 
         if not hasattr(self,'u0'):
             self.initializeInitialValue()
 
-        urdme_solver_data['u0'] = self.u0
+        # Initial Conditions, convert to dof ordering
+        u0_dof = numpy.zeros((num_species, num_vox))
+        for vox_ndx in range(self.mesh.getNumVoxels()):
+            dof_ndx = vertex_to_dof[vox_ndx]
+            for cndx in range(num_species):
+                u0_dof[cndx, dof_ndx] = self.u0[cndx, vox_ndx]
+        urdme_solver_data['u0'] = u0_dof
 
         tspan = numpy.asarray(self.tspan, dtype=numpy.float)
         urdme_solver_data['tspan'] = tspan
 
         # Vertex coordinates
-        urdme_solver_data['p'] = self.mesh.getVoxels()
+        # convert to dof ordering
+        p_dof = numpy.zeros((num_vox, 3))
+        for vox_ndx, row in enumerate(self.mesh.getVoxels()):
+            p_dof[vertex_to_dof[vox_ndx],:] = row
+        urdme_solver_data['p'] = p_dof
 
         # Connectivity matrix
         urdme_solver_data['K'] = self.connectivityMatrix()
@@ -706,18 +745,23 @@ class URDMEModel(Model):
 
         weak_form_K = {}
         weak_form_M = {}
+        
+        ndofs = None
 
         # Set up the forms
         for spec_name, species in self.listOfSpecies.items():
 
             # Find out what subdomains this species is active on
-            subdomain_list = self.species_to_subdomains[species]
+            #subdomain_list = self.species_to_subdomains[species]
             weak_form_K[spec_name] = dolfin.inner(dolfin.nabla_grad(trial_functions[spec_name]), dolfin.nabla_grad(test_functions[spec_name]))*dolfin.dx
             weak_form_M[spec_name] = trial_functions[spec_name]*test_functions[spec_name]*dolfin.dx
 
         # Assemble the matrices
         for spec_name, species in self.listOfSpecies.items():
             stiffness_matrices[spec_name] = dolfin.assemble(weak_form_K[spec_name])
+            if ndofs is None:
+                ndofs = stiffness_matrices[spec_name].size(0)
+                self.mesh.setNumDofVoxels(ndofs)
             # We cannot include the diffusion constant in the assembly, dolfin does not seem to deal well
             # with small diffusion constants (drops small elements)
             stiffness_matrices[spec_name] = species.diffusion_constant * stiffness_matrices[spec_name]
@@ -736,19 +780,33 @@ class Mesh(dolfin.Mesh):
     def __init__(self, mesh=None):
         self.constrained_domain = None
         dolfin.Mesh.__init__(self, mesh)
+        self.function_space = None
+        self.num_dof_voxels = None
 
     def addPeriodicBoundaryCondition(self, domain):
         self.constrained_domain = domain
 
     def FunctionSpace(self):
-        if self.constrained_domain is not None:
-            fs = dolfin.FunctionSpace(self, "Lagrange", 1, constrained_domain=self.constrained_domain)
+        if self.function_space is not None:
+            return self.function_space
         else:
-            fs = dolfin.FunctionSpace(self, "Lagrange", 1)
-        return fs
+            if self.constrained_domain is not None:
+                fs = dolfin.FunctionSpace(self, "Lagrange", 1, constrained_domain=self.constrained_domain)
+            else:
+                fs = dolfin.FunctionSpace(self, "Lagrange", 1)
+            self.function_space = fs
+            return fs
 
     def getNumVoxels(self):
         return self.num_vertices()
+
+    def setNumDofVoxels(self, num):
+        self.num_dof_voxels = num
+
+    def getNumDofVoxels(self):
+        if self.num_dof_voxels is None:
+            raise URDMEError('NumDofVoxels is not set')
+        return self.num_dof_voxels
 
     def getVoxels(self):
         return self.coordinates()
@@ -1043,13 +1101,34 @@ class URDMEResult(dict):
             with open(fd.name, mode='wb') as fh:
                 fh.write(filecontents)
             state["filename"] = fd.name
-    # state["data_is_loaded"] = False
         except Exception, e:
             print "Error unpickling model, could not recreate the solution file."
             raise
 
         for k,v in state.items():
             self.__dict__[k] = v
+
+    def reorderDofToVoxel(self, M, num_species=None):
+        """ Reorder the colums of M from dof ordering to vertex ordering. """
+        fs = self.model.mesh.FunctionSpace()
+        v2d = dolfin.vertex_to_dof_map(fs)
+        if len(M.shape) == 1:
+            num_timepoints = 1
+        else:
+            num_timepoints = M.shape[0]
+        num_vox = self.model.mesh.getNumVoxels()
+        if num_species is None:
+            num_species = self.model.getNumSpecies()
+        num_dofs = num_vox*num_species
+        C = numpy.zeros((num_timepoints, num_dofs), dtype=numpy.float64)
+        for t in range(num_timepoints):
+            for vox_ndx in range(num_vox):
+                for cndx in range(num_species):
+                    if num_timepoints == 1:
+                        C[t, vox_ndx*num_species+cndx] = M[v2d[vox_ndx]*num_species+cndx]
+                    else:
+                        C[t, vox_ndx*num_species+cndx] = M[t, v2d[vox_ndx]*num_species+cndx]
+        return C
 
     def read_solution(self):
         """ Read the tspan and U matrix into memory. """
@@ -1062,6 +1141,9 @@ class URDMEResult(dict):
         tspan = numpy.array(tspan).flatten()
         resultfile.close()
         
+        # Reorder the dof from dof ordering to voxel ordering
+        U = self.reorderDofToVoxel(U)
+
         self.U = U
         self.tspan = tspan
         self.data_is_loaded = True
@@ -1086,6 +1168,7 @@ class URDMEResult(dict):
             spec_name = species
         
         species_map = self.model.speciesMap()
+        num_species = self.model.getNumSpecies()
         spec_indx = species_map[spec_name]
         
         resultfile = h5py.File(self.filename, 'r')
@@ -1094,11 +1177,16 @@ class URDMEResult(dict):
         
         if timepoints  ==  "all":
             slice= U[:,(spec_indx*Ncells):(spec_indx*Ncells+Ncells)]
+            #slice= U[:, spec_indx::num_species]
         else:
             slice = U[timepoints,(spec_indx*Ncells):(spec_indx*Ncells+Ncells)]
+            #slice= U[timepoints, spec_indx::num_species]
         
         if concentration:
             slice = self._copynumber_to_concentration(slice)
+        
+        # Reorder the dof from dof ordering to voxel ordering
+        slice = self.reorderDofToVoxel(slice, num_species=1)
         
         # Make sure we return 1D slices as flat arrays
         dims = numpy.shape(slice)

@@ -1,7 +1,8 @@
 """ pyURDME model file for the MinCDE example. """
 
 import os.path
-from pyurdme import pyurdme
+#from pyurdme import pyurdme
+import pyurdme
 import dolfin
 import numpy
 
@@ -80,7 +81,6 @@ class mincde(pyurdme.URDMEModel):
         self.restrict(MinDE,boundary)
         
         # Distribute molecules over the mesh according to their initial values
-        #self.scatter({MinD_m:1000},subdomains=boundary)
         self.scatter({MinD_c_adp:4500})
         self.scatter({MinD_e:1575})
 
@@ -90,9 +90,7 @@ if __name__=="__main__":
     """ Dump model to a file. """
                      
     model = mincde(model_name="mincde")
-    model.serialize("debug_input.mat")
     result = pyurdme.urdme(model)
-    result.dumps("MinD_m","mindout")
-    result.toXYZ(filename="mindm.xyz",species=["MinD_m"])
-    #result.toXYZ('mindm.xyz',file_format="VMD")
-    
+
+
+

@@ -871,38 +871,146 @@ class Mesh(dolfin.Mesh):
 
 
     @classmethod
-    def unitIntervalMesh(cls, nx):
-        mesh = dolfin.IntervalMesh(nx, 0, 1)
-        return Mesh(mesh)
-
+    def unitIntervalMesh(cls, nx, periodic=False):
+        return cls.IntervalMesh(nx=nx, a=0, b=1, periodic=periodic)
+    
     @classmethod
-    def IntervalMesh(cls, nx, a, b):
-        mesh = dolfin.IntervalMesh(nx, a, b)
-        return Mesh(mesh)
-
-    @classmethod
-    def unitSquareMesh(cls, nx, ny):
+    def unitSquareMesh(cls, nx, ny, periodic=False):
         """ Unit Square of with nx,ny points in the respective axes. """
-        mesh = dolfin.UnitSquareMesh(nx, ny)
-        return Mesh(mesh)
+        return cls.SquareMesh(L=1, nx=nx, ny=ny, periodic=periodic)
 
     @classmethod
-    def SquareMesh(cls, L, nx, ny):
+    def unitCubeMesh(cls, nx, ny, nz, periodic=False):
+        """ Unit Cube of with nx,ny points in the respective axes. """
+        return cls.CubeMesh(nx=nx, ny=ny, nz=nz, periodic=periodic)
+
+    @classmethod
+    def IntervalMesh(cls, nx, a, b, periodic=False):
+        mesh = dolfin.IntervalMesh(nx, a, b)
+        ret = Mesh(mesh)
+        if isinstance(periodic, bool) and periodic:
+            ret.addPeriodicBoundaryCondition(cls.IntervalMeshPeriodicBoundary(a=a, b=b))
+        elif isinstance(periodic, dolfin.SubDomain):
+            ret.addPeriodicBoundaryCondition(periodic)
+        return ret
+
+    @classmethod
+    def SquareMesh(cls, L, nx, ny, periodic=False):
         """ Regular mesh of a square with side length L. """
         mesh = dolfin.RectangleMesh(0, 0, L, L, nx, ny)
-        return Mesh(mesh)
+        ret = Mesh(mesh)
+        if isinstance(periodic, bool) and periodic:
+            ret.addPeriodicBoundaryCondition(cls.SquareMeshPeriodicBoundary(Lx=L, Ly=L))
+        elif isinstance(periodic, dolfin.SubDomain):
+            ret.addPeriodicBoundaryCondition(periodic)
+        return ret
 
     @classmethod
-    def unitCubeMesh(cls, nx, ny, nz):
-        """ Unit Cube of with nx,ny points in the respective axes. """
-        mesh = dolfin.UnitCubeMesh(nx, ny, nz)
-        return Mesh(mesh)
-
-    @classmethod
-    def CubeMesh(cls, L, nx, ny, nz):
+    def CubeMesh(cls, L, nx, ny, nz, periodic=False):
         """ Cube with nx,ny points in the respective axes. """
         mesh = dolfin.BoxMesh(0, 0, 0, L, L, L, nx, ny, nz)
-        return Mesh(mesh)
+        ret = Mesh(mesh)
+        if isinstance(periodic, bool) and periodic:
+            ret.addPeriodicBoundaryCondition(cls.CubeMeshPeriodicBoundary(Lx=L, Ly=L, Lz=L))
+        elif isinstance(periodic, dolfin.SubDomain):
+            ret.addPeriodicBoundaryCondition(periodic)
+        return ret
+
+    class IntervalMeshPeriodicBoundary(dolfin.SubDomain):
+        def __init__(self, a=0.0, b=1.0):
+            """ 1D domain from a to b. """
+            dolfin.SubDomain.__init__(self)
+            self.a = a
+            self.b = b
+
+        def inside(self, x, on_boundary):
+            return not bool((dolfin.near(x[0], self.b)) and on_boundary)
+
+        def map(self, x, y):
+            if dolfin.near(x[0], self.b):
+                y[0] = self.a + (x[0] - self.b)
+
+    class SquareMeshPeriodicBoundary(dolfin.SubDomain):
+        """ Sub domain for Periodic boundary condition """
+        def __init__(self, Lx=1.0, Ly=1.0):
+            dolfin.SubDomain.__init__(self)
+            self.Lx = Lx
+            self.Ly = Ly
+
+        def inside(self, x, on_boundary):
+            """ Left boundary is "target domain" G """
+            # return True if on left or bottom boundary AND NOT on one of the two corners (0, 1) and (1, 0)
+            return bool((dolfin.near(x[0], 0) or dolfin.near(x[1], 0)) and
+                    (not ((dolfin.near(x[0], 0) and dolfin.near(x[1], 1)) or
+                            (dolfin.near(x[0], 1) and dolfin.near(x[1], 0)))) and on_boundary)
+
+        def map(self, x, y):
+            ''' # Map right boundary G (x) to left boundary H (y) '''
+            if dolfin.near(x[0], self.Lx) and dolfin.near(x[1], self.Ly):
+                y[0] = x[0] - self.Lx
+                y[1] = x[1] - self.Ly
+            elif dolfin.near(x[0], self.Lx):
+                y[0] = x[0] - self.Lx
+                y[1] = x[1]
+            else:   # near(x[1], 1)
+                y[0] = x[0]
+                y[1] = x[1] - self.Ly
+
+    class CubeMeshPeriodicBoundary(dolfin.SubDomain):
+        """ Sub domain for Periodic boundary condition """
+        def __init__(self, Lx=1.0, Ly=1.0, Lz=1.0):
+            dolfin.SubDomain.__init__(self)
+            self.Lx = Lx
+            self.Ly = Ly
+            self.Lz = Lz
+
+        def inside(self, x, on_boundary):
+            """ Left boundary is "target domain" G """
+            # return True if on left or bottom boundary AND NOT on one of the two corners (0, 1) and (1, 0)
+            return bool(
+                    (dolfin.near(x[0], 0) or dolfin.near(x[1], 0) or dolfin.near(x[3], 0))
+                    and (not (
+                            (dolfin.near(x[0], 1) and dolfin.near(x[1], 0) and dolfin.near(x[1], 0)) or
+                            (dolfin.near(x[0], 0) and dolfin.near(x[1], 1) and dolfin.near(x[1], 0)) or
+                            (dolfin.near(x[0], 0) and dolfin.near(x[1], 0) and dolfin.near(x[1], 1))
+                        ))
+                    and on_boundary
+                   )
+
+        def map(self, x, y):
+            ''' # Map right boundary G (x) to left boundary H (y) '''
+            if dolfin.near(x[0], self.Lx) and dolfin.near(x[1], self.Ly) and dolfin.near(x[2], self.Lz):
+                y[0] = x[0] - self.Lx
+                y[1] = x[1] - self.Ly
+                y[2] = x[2] - self.Lz
+            elif dolfin.near(x[0], self.Lx) and dolfin.near(x[1], self.Ly):
+                y[0] = x[0] - self.Lx
+                y[1] = x[1] - self.Ly
+                y[2] = x[2]
+            elif dolfin.near(x[0], self.Lx) and dolfin.near(x[2], self.Lz):
+                y[0] = x[0] - self.Lx
+                y[1] = x[1]
+                y[2] = x[2] - self.Lz
+            elif dolfin.near(x[1], self.Ly) and dolfin.near(x[2], self.Lz):
+                y[0] = x[0]
+                y[1] = x[1] - self.Ly
+                y[2] = x[2] - self.Lz
+            elif dolfin.near(x[0], self.Lx):
+                y[0] = x[0] - self.Lx
+                y[1] = x[1]
+                y[2] = x[2]
+            elif dolfin.near(x[1], self.Ly):
+                y[0] = x[0]
+                y[1] = x[1] - self.Ly
+                y[2] = x[2]
+            elif dolfin.near(x[2], self.Lz):
+                y[0] = x[0]
+                y[1] = x[1]
+                y[2] = x[2] - self.Lz
+            else:
+                y[0] = x[0]
+                y[1] = x[1]
+                y[2] = x[2]
 
 
 

@@ -61,8 +61,9 @@ class G_protein_cycle_1D(pyurdme.URDMEModel):
         L = 4*3.14159
         NUM_VOXEL = 200
         MOLAR=6.02e-01*((L/NUM_VOXEL)**3)
-        self.mesh = pyurdme.Mesh.IntervalMesh(nx=NUM_VOXEL, a=-2*3.14159, b=2*3.14159)
-        self.mesh.addPeriodicBoundaryCondition(PeriodicBoundary1D(a=-2*3.14159, b=2*3.14159))
+        #self.mesh = pyurdme.Mesh.IntervalMesh(nx=NUM_VOXEL, a=-2*3.14159, b=2*3.14159)
+        self.mesh = pyurdme.Mesh.IntervalMesh(nx=NUM_VOXEL, a=-2*3.14159, b=2*3.14159, periodic=True)
+        #self.mesh.addPeriodicBoundaryCondition(PeriodicBoundary1D(a=-2*3.14159, b=2*3.14159))
         
         SA    = pyurdme.Parameter(name="SA" ,expression=201.056)
         V     = pyurdme.Parameter(name="V" ,expression=33.5)

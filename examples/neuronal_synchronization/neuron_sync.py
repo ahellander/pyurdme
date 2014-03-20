@@ -42,7 +42,7 @@ class neuron_sync_1D(pyurdme.URDMEModel):
    
         # Create Mesh
         self.mesh = pyurdme.Mesh.IntervalMesh(nx=5, a=0, b=5)
-        self.mesh.addPeriodicBoundaryCondition(PeriodicBoundary1D(a=0, b=5))
+        #self.mesh.addPeriodicBoundaryCondition(PeriodicBoundary1D(a=0, b=5))
 
         v1 = pyurdme.Parameter(name="v1" ,expression=6.8355) #nM/h
         K1 = pyurdme.Parameter(name="K1" ,expression=2.7266) #nM
@@ -93,13 +93,13 @@ class neuron_sync_1D(pyurdme.URDMEModel):
         self.addReaction([R1c, R1d, R2c, R2d, R3c, R3d, R4c, R4d])
         
         # Set the Stochasticty
-        NANO_MOLAR = 100.0
+        NANO_MOLAR = 10000.0
         if nano_molar is not None:
             NANO_MOLAR = nano_molar
         # Initial Conditions 
-        #self.distributeUniformly({X:numpy.floor(2.5*NANO_MOLAR)})
-        #self.distributeUniformly({Y:numpy.floor(2.5*NANO_MOLAR)})
-        #self.distributeUniformly({Z:numpy.floor(2.5*NANO_MOLAR)})
+        self.distributeUniformly({X:numpy.floor(2.5*NANO_MOLAR)})
+        self.distributeUniformly({Y:numpy.floor(2.5*NANO_MOLAR)})
+        self.distributeUniformly({Z:numpy.floor(2.5*NANO_MOLAR)})
         self.distributeUniformly({V:numpy.floor(1.0*NANO_MOLAR)})
 
         # Set time range and sample points

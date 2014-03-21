@@ -26,11 +26,22 @@ class PeriodicBoundary1D(SubDomain):
         else:
             print "\tnew y = {0}".format(y)
 
+def reorder_dofmatrix(mesh, fs, C):
+    dof2vtx =  fs.dofmap().vertex_to_dof_map(mesh)
 
+def convert_dofmatrix_to_vertexmatrix(mesh, fs, C):
+    v2d = dolfin.vertex_to_dof_map(fs)
+    l = len(mesh.coordinates())
+    M = scipy.sparse.csc_matrix((l, l), dtype=numpy.float64)
+    for ndx1 in range(l):
+        for ndx2 in range(l):
+            val = C[v2d[ndx1],v2d[ndx2]]
+            if val is not None and val != 0.0:
+                M[ndx1, ndx2] = val
+    return M
 
-if __name__ == "__main__":
+def run():
     mesh = UnitIntervalMesh(6)
-
     fs = dolfin.FunctionSpace(mesh, "Lagrange", 1, constrained_domain=PeriodicBoundary1D())
     #fs = dolfin.FunctionSpace(mesh, "Lagrange", 1)
     trial_function = dolfin.TrialFunction(fs)
@@ -42,6 +53,11 @@ if __name__ == "__main__":
     rows, cols, vals = C.data()
     C = scipy.sparse.csr_matrix((vals, cols, rows))
     C = C.tocsc()
+    return (mesh, fs, C)
+
+
+if __name__ == "__main__":
+    (mesh, fs, C) = run()
 
     print "C:\n", C
     print numpy.shape(C)
@@ -57,10 +73,8 @@ if __name__ == "__main__":
 
     print "dof to vertex mapping\n", dof2vtx
     print "mapped coordinates\n", p[dof2vtx]
-    print "vertex to dof mapping\n", vtx2dof
-
-
-#plt.spy(C)
-#   plt.title("1D connectivity, with periodic BCs")
-#   plt.show()
-
+    M = convert_dofmatrix_to_vertexmatrix(mesh,fs,C)
+    print "M:\n", M
+    plt.spy(M)
+    plt.title("1D connectivity, with periodic BCs")
+    plt.show()

@@ -667,6 +667,9 @@ class URDMEModel(Model):
 
         # Get vertex to dof ordering
         vertex_to_dof = dolfin.vertex_to_dof_map(self.mesh.FunctionSpace())
+        dof_to_vertex = dolfin.dof_to_vertex_map(self.mesh.FunctionSpace())
+        
+        vertex_to_dof_to_vertex = dof_to_vertex[vertex_to_dof]
         
         # Subdomain vector
         # convert to dof ordering
@@ -697,8 +700,22 @@ class URDMEModel(Model):
         u0_dof = numpy.zeros((num_species, num_vox))
         for vox_ndx in range(self.mesh.getNumVoxels()):
             dof_ndx = vertex_to_dof[vox_ndx]
-            for cndx in range(num_species):
-                u0_dof[cndx, dof_ndx] = self.u0[cndx, vox_ndx]
+            # With periodic BCs the same dof_ndx voxel will get written to twice
+            # which may overwrite the value.  We need to check for this case.
+            if vertex_to_dof_to_vertex[vox_ndx] != vox_ndx:
+                vox_ndx2 = vertex_to_dof_to_vertex[vox_ndx]
+                for cndx in range(num_species):
+                    if self.u0[cndx, vox_ndx] == 0 or self.u0[cndx, vox_ndx] == self.u0[cndx, vox_ndx2]:
+                        u0_dof[cndx, dof_ndx] = self.u0[cndx, vox_ndx]
+                    elif self.u0[cndx, vox_ndx2] == 0 and vox_ndx < vox_ndx2:
+                        self.u0[cndx, vox_ndx2] = self.u0[cndx, vox_ndx]
+                    elif self.u0[cndx, vox_ndx2] == 0 and vox_ndx > vox_ndx2:
+                        u0_dof[cndx, dof_ndx] = self.u0[cndx, vox_ndx]
+                    else:
+                        sys.stderr.write("Warning: the initial condition for species {0} in voxel {1} will be discarded due to periodic boundary conditions.")
+            else:
+                for cndx in range(num_species):
+                    u0_dof[cndx, dof_ndx] = self.u0[cndx, vox_ndx]
         urdme_solver_data['u0'] = u0_dof
 
         tspan = numpy.asarray(self.tspan, dtype=numpy.float)
@@ -715,10 +732,6 @@ class URDMEModel(Model):
         urdme_solver_data['K'] = self.connectivityMatrix()
 
         urdme_solver_data['report']=0
-
-        #rows,cols,vals = self.stiffness_matrices["MinD_m"].data()
-        #SM = scipy.sparse.csr_matrix((vals,cols,rows))
-        #urdme_solver_data["Kmindm"] = SM.tocsc()
 
         return urdme_solver_data
 
@@ -890,38 +903,146 @@ class Mesh(dolfin.Mesh):
 
 
     @classmethod
-    def unitIntervalMesh(cls, nx):
-        mesh = dolfin.IntervalMesh(nx, 0, 1)
-        return Mesh(mesh)
-
+    def unitIntervalMesh(cls, nx, periodic=False):
+        return cls.IntervalMesh(nx=nx, a=0, b=1, periodic=periodic)
+    
     @classmethod
-    def IntervalMesh(cls, nx, a, b):
-        mesh = dolfin.IntervalMesh(nx, a, b)
-        return Mesh(mesh)
-
-    @classmethod
-    def unitSquareMesh(cls, nx, ny):
+    def unitSquareMesh(cls, nx, ny, periodic=False):
         """ Unit Square of with nx,ny points in the respective axes. """
-        mesh = dolfin.UnitSquareMesh(nx, ny)
-        return Mesh(mesh)
+        return cls.SquareMesh(L=1, nx=nx, ny=ny, periodic=periodic)
 
     @classmethod
-    def SquareMesh(cls, L, nx, ny):
+    def unitCubeMesh(cls, nx, ny, nz, periodic=False):
+        """ Unit Cube of with nx,ny points in the respective axes. """
+        return cls.CubeMesh(nx=nx, ny=ny, nz=nz, periodic=periodic)
+
+    @classmethod
+    def IntervalMesh(cls, nx, a, b, periodic=False):
+        mesh = dolfin.IntervalMesh(nx, a, b)
+        ret = Mesh(mesh)
+        if isinstance(periodic, bool) and periodic:
+            ret.addPeriodicBoundaryCondition(cls.IntervalMeshPeriodicBoundary(a=a, b=b))
+        elif isinstance(periodic, dolfin.SubDomain):
+            ret.addPeriodicBoundaryCondition(periodic)
+        return ret
+
+    @classmethod
+    def SquareMesh(cls, L, nx, ny, periodic=False):
         """ Regular mesh of a square with side length L. """
         mesh = dolfin.RectangleMesh(0, 0, L, L, nx, ny)
-        return Mesh(mesh)
+        ret = Mesh(mesh)
+        if isinstance(periodic, bool) and periodic:
+            ret.addPeriodicBoundaryCondition(cls.SquareMeshPeriodicBoundary(Lx=L, Ly=L))
+        elif isinstance(periodic, dolfin.SubDomain):
+            ret.addPeriodicBoundaryCondition(periodic)
+        return ret
 
     @classmethod
-    def unitCubeMesh(cls, nx, ny, nz):
-        """ Unit Cube of with nx,ny points in the respective axes. """
-        mesh = dolfin.UnitCubeMesh(nx, ny, nz)
-        return Mesh(mesh)
-
-    @classmethod
-    def CubeMesh(cls, L, nx, ny, nz):
+    def CubeMesh(cls, L, nx, ny, nz, periodic=False):
         """ Cube with nx,ny points in the respective axes. """
         mesh = dolfin.BoxMesh(0, 0, 0, L, L, L, nx, ny, nz)
-        return Mesh(mesh)
+        ret = Mesh(mesh)
+        if isinstance(periodic, bool) and periodic:
+            ret.addPeriodicBoundaryCondition(cls.CubeMeshPeriodicBoundary(Lx=L, Ly=L, Lz=L))
+        elif isinstance(periodic, dolfin.SubDomain):
+            ret.addPeriodicBoundaryCondition(periodic)
+        return ret
+
+    class IntervalMeshPeriodicBoundary(dolfin.SubDomain):
+        def __init__(self, a=0.0, b=1.0):
+            """ 1D domain from a to b. """
+            dolfin.SubDomain.__init__(self)
+            self.a = a
+            self.b = b
+
+        def inside(self, x, on_boundary):
+            return not bool((dolfin.near(x[0], self.b)) and on_boundary)
+
+        def map(self, x, y):
+            if dolfin.near(x[0], self.b):
+                y[0] = self.a + (x[0] - self.b)
+
+    class SquareMeshPeriodicBoundary(dolfin.SubDomain):
+        """ Sub domain for Periodic boundary condition """
+        def __init__(self, Lx=1.0, Ly=1.0):
+            dolfin.SubDomain.__init__(self)
+            self.Lx = Lx
+            self.Ly = Ly
+
+        def inside(self, x, on_boundary):
+            """ Left boundary is "target domain" G """
+            # return True if on left or bottom boundary AND NOT on one of the two corners (0, 1) and (1, 0)
+            return bool((dolfin.near(x[0], 0) or dolfin.near(x[1], 0)) and
+                    (not ((dolfin.near(x[0], 0) and dolfin.near(x[1], 1)) or
+                            (dolfin.near(x[0], 1) and dolfin.near(x[1], 0)))) and on_boundary)
+
+        def map(self, x, y):
+            ''' # Map right boundary G (x) to left boundary H (y) '''
+            if dolfin.near(x[0], self.Lx) and dolfin.near(x[1], self.Ly):
+                y[0] = x[0] - self.Lx
+                y[1] = x[1] - self.Ly
+            elif dolfin.near(x[0], self.Lx):
+                y[0] = x[0] - self.Lx
+                y[1] = x[1]
+            else:   # near(x[1], 1)
+                y[0] = x[0]
+                y[1] = x[1] - self.Ly
+
+    class CubeMeshPeriodicBoundary(dolfin.SubDomain):
+        """ Sub domain for Periodic boundary condition """
+        def __init__(self, Lx=1.0, Ly=1.0, Lz=1.0):
+            dolfin.SubDomain.__init__(self)
+            self.Lx = Lx
+            self.Ly = Ly
+            self.Lz = Lz
+
+        def inside(self, x, on_boundary):
+            """ Left boundary is "target domain" G """
+            # return True if on left or bottom boundary AND NOT on one of the two corners (0, 1) and (1, 0)
+            return bool(
+                    (dolfin.near(x[0], 0) or dolfin.near(x[1], 0) or dolfin.near(x[3], 0))
+                    and (not (
+                            (dolfin.near(x[0], 1) and dolfin.near(x[1], 0) and dolfin.near(x[1], 0)) or
+                            (dolfin.near(x[0], 0) and dolfin.near(x[1], 1) and dolfin.near(x[1], 0)) or
+                            (dolfin.near(x[0], 0) and dolfin.near(x[1], 0) and dolfin.near(x[1], 1))
+                        ))
+                    and on_boundary
+                   )
+
+        def map(self, x, y):
+            ''' # Map right boundary G (x) to left boundary H (y) '''
+            if dolfin.near(x[0], self.Lx) and dolfin.near(x[1], self.Ly) and dolfin.near(x[2], self.Lz):
+                y[0] = x[0] - self.Lx
+                y[1] = x[1] - self.Ly
+                y[2] = x[2] - self.Lz
+            elif dolfin.near(x[0], self.Lx) and dolfin.near(x[1], self.Ly):
+                y[0] = x[0] - self.Lx
+                y[1] = x[1] - self.Ly
+                y[2] = x[2]
+            elif dolfin.near(x[0], self.Lx) and dolfin.near(x[2], self.Lz):
+                y[0] = x[0] - self.Lx
+                y[1] = x[1]
+                y[2] = x[2] - self.Lz
+            elif dolfin.near(x[1], self.Ly) and dolfin.near(x[2], self.Lz):
+                y[0] = x[0]
+                y[1] = x[1] - self.Ly
+                y[2] = x[2] - self.Lz
+            elif dolfin.near(x[0], self.Lx):
+                y[0] = x[0] - self.Lx
+                y[1] = x[1]
+                y[2] = x[2]
+            elif dolfin.near(x[1], self.Ly):
+                y[0] = x[0]
+                y[1] = x[1] - self.Ly
+                y[2] = x[2]
+            elif dolfin.near(x[2], self.Lz):
+                y[0] = x[0]
+                y[1] = x[1]
+                y[2] = x[2] - self.Lz
+            else:
+                y[0] = x[0]
+                y[1] = x[1]
+                y[2] = x[2]
 
 
 
@@ -1180,7 +1301,6 @@ class URDMEResult(dict):
             
         """
         
-        
         if isinstance(species, Species):
             spec_name = species.name
         else:
@@ -1191,29 +1311,30 @@ class URDMEResult(dict):
         spec_indx = species_map[spec_name]
         
         resultfile = h5py.File(self.filename, 'r')
-        Ncells = self.model.mesh.num_vertices()
+        #Ncells = self.model.mesh.num_vertices()  # Need dof ordering numVoxels
         U = resultfile['U']
+        Ncells = U.shape[1]/num_species
         
         if timepoints  ==  "all":
-            slice= U[:,(spec_indx*Ncells):(spec_indx*Ncells+Ncells)]
-            #slice= U[:, spec_indx::num_species]
+            Uslice= U[:,(spec_indx*Ncells):(spec_indx*Ncells+Ncells)]
+            #Uslice= U[:, spec_indx::num_species]
         else:
-            slice = U[timepoints,(spec_indx*Ncells):(spec_indx*Ncells+Ncells)]
-            #slice= U[timepoints, spec_indx::num_species]
+            Uslice = U[timepoints,(spec_indx*Ncells):(spec_indx*Ncells+Ncells)]
+            #Uslice= U[timepoints, spec_indx::num_species]
         
         if concentration:
-            slice = self._copynumber_to_concentration(slice)
+            Uslice = self._copynumber_to_concentration(Uslice)
         
         # Reorder the dof from dof ordering to voxel ordering
-        slice = self.reorderDofToVoxel(slice, num_species=1)
+        Uslice = self.reorderDofToVoxel(Uslice, num_species=1)
         
         # Make sure we return 1D slices as flat arrays
-        dims = numpy.shape(slice)
+        dims = numpy.shape(Uslice)
         if dims[0] == 1:
-            slice = slice.flatten()
+            Uslice = Uslice.flatten()
         
         resultfile.close()
-        return slice
+        return Uslice
             
     def __setattr__(self, k, v):
         if k in self.keys():
@@ -1441,6 +1562,8 @@ class URDMEResult(dict):
             where the volume unit is defined by the user input.
         """
         
+        fs = self.model.mesh.FunctionSpace()
+        v2d = dolfin.vertex_to_dof_map(fs)
         shape = numpy.shape(copy_number_data)
         if len(shape) == 1:
             shape = (1,shape[0])
@@ -1452,7 +1575,7 @@ class URDMEResult(dict):
         for t in range(dims[0]):
             timeslice = scaled_sol[t,:]
             for i,cn in enumerate(timeslice):
-                scaled_sol[t, i] = float(cn)/(6.022e23*self.model.vol[i])
+                scaled_sol[t, i] = float(cn)/(6.022e23*self.model.vol[v2d[i]])
 
         return scaled_sol
 

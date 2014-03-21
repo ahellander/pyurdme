@@ -54,10 +54,11 @@ class CoralReef(pyurdme.URDMEModel):
         # A unit square
         # each grid point is 10cm x 10cm, domain is 5m x 5m
         self.mesh = pyurdme.Mesh.SquareMesh(L=500, nx=50, ny=50)
-        self.mesh.constrained_domain =  unitSquareMeshPeriodicBoundary()
+        self.mesh.addPeriodicBoundaryCondition(unitSquareMeshPeriodicBoundary())
 
         # Place the A molecules in the voxel nearest the center of the square
-        self.placeNear({Coral:1000}, point=[500,0])
+
+        self.placeNear({Coral:1000}, point=[0,0])
 
         self.timespan(numpy.linspace(0,500,500))
 
@@ -65,4 +66,4 @@ if __name__ == "__main__":
     reef = CoralReef()
     sol = NSMSolver(reef)
     result = sol.run()
-    result.toVTK("Coral","testoutput")
+    result.toVTK(species='Coral',folder_name="output_coral")

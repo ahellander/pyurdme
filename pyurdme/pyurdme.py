@@ -648,6 +648,9 @@ class URDMEModel(Model):
 
         # Get vertex to dof ordering
         vertex_to_dof = dolfin.vertex_to_dof_map(self.mesh.FunctionSpace())
+        dof_to_vertex = dolfin.dof_to_vertex_map(self.mesh.FunctionSpace())
+        
+        vertex_to_dof_to_vertex = dof_to_vertex[vertex_to_dof]
         
         # Subdomain vector
         # convert to dof ordering
@@ -678,8 +681,22 @@ class URDMEModel(Model):
         u0_dof = numpy.zeros((num_species, num_vox))
         for vox_ndx in range(self.mesh.getNumVoxels()):
             dof_ndx = vertex_to_dof[vox_ndx]
-            for cndx in range(num_species):
-                u0_dof[cndx, dof_ndx] = self.u0[cndx, vox_ndx]
+            # With periodic BCs the same dof_ndx voxel will get written to twice
+            # which may overwrite the value.  We need to check for this case.
+            if vertex_to_dof_to_vertex[vox_ndx] != vox_ndx:
+                vox_ndx2 = vertex_to_dof_to_vertex[vox_ndx]
+                for cndx in range(num_species):
+                    if self.u0[cndx, vox_ndx] == 0 or self.u0[cndx, vox_ndx] == self.u0[cndx, vox_ndx2]:
+                        u0_dof[cndx, dof_ndx] = self.u0[cndx, vox_ndx]
+                    elif self.u0[cndx, vox_ndx2] == 0 and vox_ndx < vox_ndx2:
+                        self.u0[cndx, vox_ndx2] = self.u0[cndx, vox_ndx]
+                    elif self.u0[cndx, vox_ndx2] == 0 and vox_ndx > vox_ndx2:
+                        u0_dof[cndx, dof_ndx] = self.u0[cndx, vox_ndx]
+                    else:
+                        sys.stderr.write("Warning: the initial condition for species {0} in voxel {1} will be discarded due to periodic boundary conditions.")
+            else:
+                for cndx in range(num_species):
+                    u0_dof[cndx, dof_ndx] = self.u0[cndx, vox_ndx]
         urdme_solver_data['u0'] = u0_dof
 
         tspan = numpy.asarray(self.tspan, dtype=numpy.float)
@@ -696,10 +713,6 @@ class URDMEModel(Model):
         urdme_solver_data['K'] = self.connectivityMatrix()
 
         urdme_solver_data['report']=0
-
-        #rows,cols,vals = self.stiffness_matrices["MinD_m"].data()
-        #SM = scipy.sparse.csr_matrix((vals,cols,rows))
-        #urdme_solver_data["Kmindm"] = SM.tocsc()
 
         return urdme_solver_data
 

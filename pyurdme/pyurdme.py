@@ -725,7 +725,7 @@ class URDMEModel(Model):
         # convert to dof ordering
         p_dof = numpy.zeros((num_vox, 3))
         for vox_ndx, row in enumerate(self.mesh.getVoxels()):
-            p_dof[vertex_to_dof[vox_ndx],:] = row
+                p_dof[vertex_to_dof[vox_ndx],:len(row)] = row
         urdme_solver_data['p'] = p_dof
 
         # Connectivity matrix

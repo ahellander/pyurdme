@@ -644,7 +644,7 @@ class URDMEModel(Model):
         urdme_solver_data['D'] = D
         
         #
-        num_vox = D.shape[0]
+        num_vox = self.vol.shape[0]
 
         # Get vertex to dof ordering
         vertex_to_dof = dolfin.vertex_to_dof_map(self.mesh.FunctionSpace())
@@ -693,7 +693,7 @@ class URDMEModel(Model):
                     elif self.u0[cndx, vox_ndx2] == 0 and vox_ndx > vox_ndx2:
                         u0_dof[cndx, dof_ndx] = self.u0[cndx, vox_ndx]
                     else:
-                        sys.stderr.write("Warning: the initial condition for species {0} in voxel {1} will be discarded due to periodic boundary conditions.")
+                        sys.stderr.write("Warning: the initial condition for species {0} in voxel {1} will be discarded due to periodic boundary conditions.\n".format(self.listOfSpecies.keys()[cndx], vox_ndx))
             else:
                 for cndx in range(num_species):
                     u0_dof[cndx, dof_ndx] = self.u0[cndx, vox_ndx]

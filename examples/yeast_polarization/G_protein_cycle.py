@@ -2,6 +2,7 @@
 """ pyURDME model file for the polarization 1D example. """
 
 import os
+import sys
 import pyurdme
 import dolfin
 import math
@@ -37,9 +38,8 @@ class PheromoneGradient(pyurdme.URDMEDataFunction):
         self.MOLAR = MOLAR
 
     def map(self, x):
-        #ligand_c[i] = ( (L_max-L_min)*.5*(1+cos( .5*(i*l - 2*3.14159))) + L_min)*MOLAR ;
-        #  x[0] == i*l
-        return ((self.L_max - self.L_min) * 0.5 * (1 + math.cos( 0.5*(x[0] - self.a))) + self.L_min) * self.MOLAR
+        ret =  ((self.L_max - self.L_min) * 0.5 * (1 + math.cos(0.5*x[0])) + self.L_min) * self.MOLAR
+        return ret
 
 
 class G_protein_cycle_1D(pyurdme.URDMEModel):
@@ -61,9 +61,7 @@ class G_protein_cycle_1D(pyurdme.URDMEModel):
         L = 4*3.14159
         NUM_VOXEL = 200
         MOLAR=6.02e-01*((L/NUM_VOXEL)**3)
-        #self.mesh = pyurdme.Mesh.IntervalMesh(nx=NUM_VOXEL, a=-2*3.14159, b=2*3.14159)
         self.mesh = pyurdme.Mesh.IntervalMesh(nx=NUM_VOXEL, a=-2*3.14159, b=2*3.14159, periodic=True)
-        #self.mesh.addPeriodicBoundaryCondition(PeriodicBoundary1D(a=-2*3.14159, b=2*3.14159))
         
         SA    = pyurdme.Parameter(name="SA" ,expression=201.056)
         V     = pyurdme.Parameter(name="V" ,expression=33.5)
@@ -106,7 +104,10 @@ if __name__=="__main__":
     print result
 
     x_vals = model.mesh.coordinates()[:, 0]
-    G = result.getSpecies("G", timepoints=200)
-    Gbg = result.getSpecies("Gbg", timepoints=200)
+    G = result.getSpecies("G", timepoints=49)
+    Gbg = result.getSpecies("Gbg", timepoints=49)
     plt.plot(x_vals, Gbg)
+    plt.title('Gbg at t=49')
+    plt.xlabel('Space')
+    plt.ylabel('Number of Molecules')
     plt.show()

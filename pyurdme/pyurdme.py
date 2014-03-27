@@ -8,6 +8,7 @@ import subprocess
 import sys
 import tempfile
 import types
+import warnings
 
 import numpy
 import scipy.io
@@ -33,7 +34,7 @@ import pickle
 import json
 
 # Set log level to report only errors or worse
-#dolfin.set_log_level(dolfin.ERROR)
+dolfin.set_log_level(dolfin.ERROR)
 
 class URDMEModel(Model):
     """
@@ -283,7 +284,13 @@ class URDMEModel(Model):
     def initializeInitialValue(self):
         """ Create all-zeros inital condition matrix. """
         ns = self.getNumSpecies()
+        if self.xmesh == None:
+            self.meshextend()
         nv = self.mesh.getNumVoxels()
+        #dims = numpy.shape(self.mesh.FunctionSpace().dofmap().dof_to_vertex_map(self.mesh))
+        #nv = dims[0]
+        #print nv
+
         self.u0 = numpy.zeros((ns, nv))
 
     def meshextend(self):
@@ -306,10 +313,20 @@ class URDMEModel(Model):
             spec_index = species_map[spec_name]
 
             xmesh.function_space[spec_name] = self.mesh.FunctionSpace()
+            
             # vertex_to_dof_map provides a map between the vertex index and the dof.
-            xmesh.vertex_to_dof_map[spec_name] = xmesh.function_space[spec_name].dofmap().dof_to_vertex_map(self.mesh)
-            xmesh.vertex_to_dof_map[spec_name] = len(self.listOfSpecies) * xmesh.vertex_to_dof_map[spec_name] + spec_index
-            xmesh.dof_to_vertex_map[spec_name] = xmesh.function_space[spec_name].dofmap().vertex_to_dof_map(self.mesh)
+
+
+            try:
+            # For Dolfin 1.3.0 and above
+                xmesh.vertex_to_dof_map[spec_name] = dolfin.vertex_to_dof_map(xmesh.function_space[spec_name])
+                xmesh.vertex_to_dof_map[spec_name] = len(self.listOfSpecies) * xmesh.vertex_to_dof_map[spec_name] + spec_index
+                xmesh.dof_to_vertex_map[spec_name] = dolfin.dof_to_vertex_map(xmesh.function_space[spec_name])
+            except:
+                # Older versions of dolfin
+                xmesh.vertex_to_dof_map[spec_name] = xmesh.function_space[spec_name].dofmap().dof_to_vertex_map(self.mesh)
+                xmesh.vertex_to_dof_map[spec_name] = len(self.listOfSpecies) * xmesh.vertex_to_dof_map[spec_name] + spec_index
+                xmesh.dof_to_vertex_map[spec_name] = xmesh.function_space[spec_name].dofmap().vertex_to_dof_map(self.mesh)
 
         xmesh.vertex = self.mesh.coordinates()
         self.xmesh = xmesh
@@ -525,14 +542,16 @@ class URDMEModel(Model):
         D = S.tocsc()
 
         # Renormalize the columns (may not sum to zero since elements may have been filtered out
-        sumcol = numpy.zeros((Ndofs, 1))
-        for i in range(Ndofs):
-            col = D.getcol(i)
-            for val in col.data:
-                if val > 0.0:
-                    sumcol[i] += val
+        with warnings.catch_warnings():
+	    warnings.simplefilter("ignore")
+            sumcol = numpy.zeros((Ndofs, 1))
+            for i in range(Ndofs):
+                col = D.getcol(i)
+                for val in col.data:
+                    if val > 0.0:
+                        sumcol[i] += val
 
-        D.setdiag(-sumcol.flatten())
+            D.setdiag(-sumcol.flatten())        
 
         #print "Fraction of positive off-diagonal entries: " + str(numpy.abs(positive_mass/total_mass))
         return {'vol':vol, 'D':D, 'relative_positive_mass':positive_mass/total_mass}
@@ -1078,7 +1097,7 @@ class Mesh(dolfin.Mesh):
         if self.topology().dim() == 2:
             # 2D
             num_elements = self.num_cells()
-            # This is a fix for the built+in 2D meshes that only have x,y-coordinates.
+            # This is a fix for the built-in 2D meshes that only have x,y-coordinates.
             dims = numpy.shape(vtx)
             if dims[1] == 2:
                 vtxx = numpy.zeros((dims[0],3))
@@ -1470,10 +1489,19 @@ class URDMEResult(dict):
     
         import random
         
-        template = open("particles.html",'r').read()
+        with open(os.path.dirname(os.path.abspath(__file__))+"/data/three.js_templates/particles.html",'r') as fd:
+            template = fd.read()
         
-        #coordinates = self.model.mesh.scaledCoordinates()
-        coordinates = self.model.mesh.coordinates()
+        factor, coordinates = self.model.mesh.scaledNormalizedCoordinates()
+        dims = numpy.shape(coordinates)
+        if dims[1]==2:
+            is3d = 0
+            vtxx = numpy.zeros((dims[0],3))
+            for i, v in enumerate(coordinates):
+                vtxx[i,:]=(list(v)+[0])
+            coordinates = vtxx
+        else:
+            is3d = 1
         
         h = self.model.mesh.meshSize()
         
@@ -1481,26 +1509,33 @@ class URDMEResult(dict):
         y=[];
         z=[];
         c=[];
-        factor, cd = self.model.mesh.scaledCoordinates()
-
+        radius = []
 
         total_num_particles = 0
         colors = ["blue","red","yellow", "green"]
         
         for j,spec in enumerate(species):
             
-            US = self.getSpecies(spec)
-            timeslice = US[time_index,:]
+            timeslice = self.getSpecies(spec, 0)
+            #timeslice = US[time_index,:]
             ns = numpy.sum(timeslice)
             total_num_particles += ns
 
             for i, particles in enumerate(timeslice):
                 # "Radius" of voxel
-                hi = h[i]
+                hix = h[i]*factor
+                hiy = hix;
+                hiz = hix*is3d
+                
                 for particle in range(particles):
-                    x.append((coordinates[i,0]+random.uniform(-1,1)*hi)*factor)
-                    y.append((coordinates[i,1]+random.uniform(-1,1)*hi)*factor)
-                    z.append((coordinates[i,2]+random.uniform(-1,1)*hi)*factor)
+                    x.append((coordinates[i,0]+random.uniform(-1,1)*hix))
+                    y.append((coordinates[i,1]+random.uniform(-1,1)*hiy))
+                    z.append((coordinates[i,2]+random.uniform(-1,1)*hiz))
+                    try:
+                        radius.append(self.model.listOfSpecies[spec].reaction_radius)
+                    except:
+                        radius.append(0.01)
+                    
                     c.append(colors[j])
     
         docstr = template.replace("__NUM__MOLECULES__", str(total_num_particles))
@@ -1508,6 +1543,8 @@ class URDMEResult(dict):
         docstr = docstr.replace("__Y__",str(y))
         docstr = docstr.replace("__Z__",str(z))
         docstr = docstr.replace("__COLOR__",str(c))
+        docstr = docstr.replace("__RADIUS__",str(radius))
+
 
         return docstr
 

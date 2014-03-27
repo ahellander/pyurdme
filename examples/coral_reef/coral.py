@@ -2,6 +2,7 @@
 import pyurdme
 from pyurdme.nsmsolver import NSMSolver
 import numpy
+
 from dolfin import *
 import dolfin
 
@@ -21,6 +22,7 @@ class unitSquareMeshPeriodicBoundary(dolfin.SubDomain):
 
     def map(self, x, y):
         ''' # Map right boundary G (x) to left boundary H (y) '''
+
         if dolfin.near(x[0], self.Lx) and dolfin.near(x[1], self.Ly):
             y[0] = x[0] - self.Lx
             y[1] = x[1] - self.Ly
@@ -55,9 +57,10 @@ class CoralReef(pyurdme.URDMEModel):
         self.mesh.addPeriodicBoundaryCondition(unitSquareMeshPeriodicBoundary())
 
         # Place the A molecules in the voxel nearest the center of the square
+
         self.placeNear({Coral:1000}, point=[0,0])
 
-        self.timespan(numpy.linspace(0,1,50))        
+        self.timespan(numpy.linspace(0,500,500))
 
 if __name__ == "__main__":
     reef = CoralReef()

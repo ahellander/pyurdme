@@ -46,6 +46,8 @@ def run():
     #fs = dolfin.FunctionSpace(mesh, "Lagrange", 1)
     trial_function = dolfin.TrialFunction(fs)
     test_function = dolfin.TestFunction(fs)
+    
+    
     a_K = -1*dolfin.inner(dolfin.nabla_grad(trial_function), dolfin.nabla_grad(test_function)) * dolfin.dx
     C = dolfin.assemble(a_K)
     rows, cols, vals = C.data()
@@ -58,10 +60,12 @@ if __name__ == "__main__":
     (mesh, fs, C) = run()
 
     print "C:\n", C
+    print numpy.shape(C)
     p = mesh.coordinates()
 
     # This gives you a mapping from dofs (rows in matrix) to vertices (points in mesh.coordinates)
     dof2vtx =  fs.dofmap().vertex_to_dof_map(mesh)
+    vtx2dof = fs.dofmap().dof_to_vertex_map(mesh)
     # It seems like the number of dofs now is num_coordinates-1, and I guess this makes sense since x[0] = x[1]
     
     

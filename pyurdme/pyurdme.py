@@ -241,7 +241,6 @@ class URDMEModel(Model):
                     GF[s,self.getNumReactions()+j] = 1
 
 
-            print GF
         try:
             #GF = numpy.ones((self.getNumReactions(), self.getNumReactions() + self.getNumSpecies()))
             G = scipy.sparse.csc_matrix(GF)

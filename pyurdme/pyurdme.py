@@ -663,7 +663,7 @@ class URDMEModel(Model):
         urdme_solver_data['D'] = D
         
         #
-        num_vox = self.vol.shape[0]
+        num_dofvox = self.vol.shape[0]
 
         # Get vertex to dof ordering
         vertex_to_dof = dolfin.vertex_to_dof_map(self.mesh.FunctionSpace())
@@ -673,16 +673,16 @@ class URDMEModel(Model):
         
         # Subdomain vector
         # convert to dof ordering
-        sd_vec_dof = numpy.zeros(num_vox)
+        sd_vec_dof = numpy.zeros(num_dofvox)
         for ndx, sd_val in enumerate(self.subdomainVector(self.subdomains)):
             sd_vec_dof[vertex_to_dof[ndx]] = sd_val
         urdme_solver_data['sd'] = sd_vec_dof
         
         # Data vector. If not present in model, it defaults to a vector with all elements zero.
         # convert to dof ordering
-        data = numpy.zeros((1, num_vox))
+        data = numpy.zeros((1, num_dofvox))
         if len(self.listOfDataFunctions) > 0:
-            data = numpy.zeros((len(self.listOfDataFunctions), num_vox))
+            data = numpy.zeros((len(self.listOfDataFunctions), num_dofvox))
             coords = self.mesh.coordinates()
             for ndf, df in enumerate(self.listOfDataFunctions):
                 for ndx in range(len(coords)):
@@ -697,7 +697,7 @@ class URDMEModel(Model):
             self.initializeInitialValue()
 
         # Initial Conditions, convert to dof ordering
-        u0_dof = numpy.zeros((num_species, num_vox))
+        u0_dof = numpy.zeros((num_species, num_dofvox))
         for vox_ndx in range(self.mesh.getNumVoxels()):
             dof_ndx = vertex_to_dof[vox_ndx]
             # With periodic BCs the same dof_ndx voxel will get written to twice
@@ -723,7 +723,7 @@ class URDMEModel(Model):
 
         # Vertex coordinates
         # convert to dof ordering
-        p_dof = numpy.zeros((num_vox, 3))
+        p_dof = numpy.zeros((num_dofvox, 3))
         for vox_ndx, row in enumerate(self.mesh.getVoxels()):
                 p_dof[vertex_to_dof[vox_ndx],:len(row)] = row
         urdme_solver_data['p'] = p_dof

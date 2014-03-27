@@ -66,7 +66,7 @@ class cylinderDemo3D(pyurdme.URDMEModel):
 
 if __name__ == "__main__":
     model = cylinderDemo3D()
-    result = pyurdme.urdme(model)
+    result = pyurdme.urdme(model, report_level=1)
     
     # This line here dumps the state of A at all timepoints to Paraview comaptible output (VTK). The trajectory
     # is written to a folder "Aout", where each snapshot is stored in a separate file. To open the "movie",

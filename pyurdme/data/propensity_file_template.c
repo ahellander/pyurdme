@@ -8,8 +8,15 @@
 __DEFINE_SPECIES__
 
 /* Number of reactions */
-#define NR __NUMBER_OF_REACTIONS__
+#define NR __NUMBER_OF_REACTIONS__  // Depricated, will remove in future version.
+#define NUM_REACTIONS __NUMBER_OF_REACTIONS__
+#define NUM_SPECIES __NUMBER_OF_SPECIES__
+#define NUM_VOXELS __NUMBER_OF_VOXELS__
 
+/* Define DataFunctions */
+__DEFINE_DATA_FUNCTIONS__
+
+/* Parameter definitions */
 __DEFINE_PARAMETERS__
 
 /* Reaction definitions */
@@ -17,7 +24,7 @@ __DEFINE_REACTIONS__
 
 PropensityFun *ALLOC_propensities(void)
 {
-    PropensityFun *ptr = (PropensityFun *)malloc(sizeof(PropensityFun)*NR);
+    PropensityFun *ptr = (PropensityFun *)malloc(sizeof(PropensityFun)*NUM_REACTIONS);
     
 __DEFINE_PROPFUNS__
     return ptr;

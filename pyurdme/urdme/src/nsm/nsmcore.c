@@ -73,7 +73,8 @@ void nsm_core(const size_t *irD,const size_t *jcD,const double *prD,
               const double *vol,const double *data,const int *sd,
               const size_t Ncells,
               const size_t Mspecies,const size_t Mreactions,
-              const size_t dsize,int report_level, hid_t output_file)
+              const size_t dsize,int report_level, hid_t output_file,
+              const size_t *irK,const size_t *jcK,const double *prK)
 
 /* Specification of the inputs:
  
@@ -238,7 +239,7 @@ void nsm_core(const size_t *irD,const size_t *jcD,const double *prD,
         srrate[i] = 0.0;
         for (j = 0; j < Mreactions; j++) {
             rrate[i*Mreactions+j] =
-            (*rfun[j])(&xx[i*Mspecies],tt,vol[i],&data[i*dsize],sd[i]);
+            (*rfun[j])(&xx[i*Mspecies],tt,vol[i],&data[i*dsize],sd[i],i,xx,irK,jcK,prK);
             srrate[i] += rrate[i*Mreactions+j];
         }
     }
@@ -365,8 +366,8 @@ void nsm_core(const size_t *irD,const size_t *jcD,const double *prD,
                 j = irG[i];
                 rdelta +=
                 (rrate[subvol*Mreactions+j] =
-                 (*rfun[j])(&xx[subvol*Mspecies],tt,vol[subvol],
-                            &data[subvol*dsize],sd[subvol]))-old;
+                 (*rfun[j])(&xx[subvol*Mspecies],tt,vol[subvol],&data[subvol*dsize],sd[subvol],subvol,xx,irK,jcK,prK)
+                 )-old;
             }
             srrate[subvol] += rdelta;
             
@@ -421,12 +422,15 @@ void nsm_core(const size_t *irD,const size_t *jcD,const double *prD,
                     old = rrate[subvol*Mreactions+j];
                     
                     rdelta +=
-                    (rrate[subvol*Mreactions+j] =
-                     (*rfun[j])(&xx[subvol*Mspecies],tt,vol[subvol],
-                                &data[subvol*dsize],sd[subvol]))-old;
+                      (rrate[subvol*Mreactions+j] =
+                        (*rfun[j])(&xx[subvol*Mspecies],tt,vol[subvol],&data[subvol*dsize],sd[subvol],subvol,xx,irK,jcK,prK)
+                      )-old;
                     old = rrate[to_vol*Mreactions+j];
                     
-                    rrdelta += (rrate[to_vol*Mreactions+j] = (*rfun[j])(&xx[to_vol*Mspecies],tt,vol[to_vol], &data[to_vol*dsize],sd[to_vol]))-old;
+                    rrdelta += 
+					  (rrate[to_vol*Mreactions+j] = 
+                        (*rfun[j])(&xx[to_vol*Mspecies],tt,vol[to_vol],&data[to_vol*dsize],sd[to_vol],to_vol,xx,irK,jcK,prK)
+                      )-old;
                 }
                 
                 srrate[subvol] += rdelta;

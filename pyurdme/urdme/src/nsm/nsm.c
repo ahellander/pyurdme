@@ -201,7 +201,8 @@ void nsm(void *data, hid_t output_file){
 			 model->irN, model->jcN, model->prN, model->irG,
 			 model->jcG, model->tspan, model->tlen, 
 			 model->vol, model->data, model->sd, model->Ncells,
-			 model->Mspecies, model->Mreactions, model->dsize, report_level, output_file);
+			 model->Mspecies, model->Mreactions, model->dsize, report_level, output_file,
+			 model->irK, model->jcK, model->prK);
 	
 		
 }

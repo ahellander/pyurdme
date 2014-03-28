@@ -181,11 +181,71 @@ class URDMEModel(Model):
         return N
 
     def createDependencyGraph(self):
-        """ Construct the sparse dependecy graph. """
+        """ Construct the sparse dependency graph. """
 
-        #TODO: Automatically create a dependency graph (cannot be optimal, but good enough.)
-        GF = numpy.ones((self.getNumReactions(), self.getNumReactions() + self.getNumSpecies()))
+        #GF = numpy.ones((self.getNumReactions(), self.getNumReactions() + self.getNumSpecies()))
+        
+        # We cannot safely generate a dependency graph (without attempting to analyze the propensity string itself)
+        # if the model contains custom propensities.
+        mass_action_model = True
+        for name,reaction in self.listOfReactions.items():
+            if not reaction.massaction:
+                GF = numpy.ones((self.getNumReactions(), self.getNumReactions() + self.getNumSpecies()))
+                mass_action_model = False
+
+        if mass_action_model:
+            GF = numpy.zeros((self.getNumReactions(), self.getNumReactions() + self.getNumSpecies()))
+            species_map = self.speciesMap()
+            
+            involved_species = []
+            reactants = []
+            for name, reaction in self.listOfReactions.items():
+                temp = []
+                temp2 = []
+                for s in reaction.reactants:
+                    temp.append(species_map[s])
+                    temp2.append(species_map[s])
+                for s in reaction.products:
+                    temp.append(species_map[s])
+                involved_species.append(temp)
+                reactants.append(temp2)
+                    
+            species_to_reactions = []
+            for species in self.listOfSpecies:
+                temp = []
+                for j,x in enumerate(reactants):
+                    if species_map[species] in x:
+                        temp.append(j)
+                species_to_reactions.append(temp)
+            
+
+            reaction_to_reaction = []
+            for name, reaction in self.listOfReactions.items():
+                temp = []
+                for s in reaction.reactants:
+                    if species_to_reactions[species_map[s]] not in temp:
+                        temp = temp+species_to_reactions[species_map[s]]
+                
+                for s in reaction.products:
+                    if species_to_reactions[species_map[s]] not in temp:
+                        temp = temp+ species_to_reactions[species_map[s]]
+                
+                temp = list(set(temp))
+                reaction_to_reaction.append(temp)
+            
+            # Populate G
+            for i,reac in enumerate(reaction_to_reaction):
+                for r in reac:
+                    GF[r,i] = 1
+
+            for j, spec in enumerate(species_to_reactions):
+                for s in spec:
+                    GF[s,self.getNumReactions()+j] = 1
+                        
+
+                
         try:
+            #GF = numpy.ones((self.getNumReactions(), self.getNumReactions() + self.getNumSpecies()))
             G = scipy.sparse.csc_matrix(GF)
         except Exception as e:
             G = GF
@@ -874,6 +934,19 @@ class Mesh(dolfin.Mesh):
 
         return vtxh
 
+
+    def normalizedCoordinates(self):
+        """ Return vertex coordinates centered at origo. """
+        
+        # Compute mesh centroid
+        vtx = self.coordinates()
+        centroid = numpy.mean(vtx,axis=0)
+        # Shift so the centroid is now origo
+        normalized_vtx = numpy.zeros(numpy.shape(vtx))
+        for i,v in enumerate(vtx):
+            normalized_vtx[i,:] = v - centroid
+
+        return normalized_vtx
 
     def scaledNormalizedCoordinates(self):
         """ Return vertex coordinates scaled to the interval (-1,1) and centered at origo. """

@@ -90,6 +90,7 @@ if __name__=="__main__":
     """ Dump model to a file. """
                      
     model = mincde(model_name="mincde")
+# model.solverData()
     result = pyurdme.urdme(model)
 
 

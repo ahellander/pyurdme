@@ -198,22 +198,25 @@ class URDMEModel(Model):
             species_map = self.speciesMap()
             
             involved_species = []
+            reactants = []
             for name, reaction in self.listOfReactions.items():
                 temp = []
+                temp2 = []
                 for s in reaction.reactants:
                     temp.append(species_map[s])
+                    temp2.append(species_map[s])
                 for s in reaction.products:
                     temp.append(species_map[s])
                 involved_species.append(temp)
+                reactants.append(temp2)
                     
             species_to_reactions = []
             for species in self.listOfSpecies:
                 temp = []
-                for j,x in enumerate(involved_species):
+                for j,x in enumerate(reactants):
                     if species_map[species] in x:
                         temp.append(j)
                 species_to_reactions.append(temp)
-                # print species_to_reactions
             
 
             reaction_to_reaction = []
@@ -230,7 +233,6 @@ class URDMEModel(Model):
                 temp = list(set(temp))
                 reaction_to_reaction.append(temp)
             
-
             # Populate G
             for i,reac in enumerate(reaction_to_reaction):
                 for r in reac:
@@ -239,8 +241,9 @@ class URDMEModel(Model):
             for j, spec in enumerate(species_to_reactions):
                 for s in spec:
                     GF[s,self.getNumReactions()+j] = 1
+                        
 
-
+                
         try:
             #GF = numpy.ones((self.getNumReactions(), self.getNumReactions() + self.getNumSpecies()))
             G = scipy.sparse.csc_matrix(GF)

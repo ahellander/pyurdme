@@ -939,6 +939,7 @@ class Mesh(dolfin.Mesh):
         """ Return vertex coordinates centered at origo. """
         
         # Compute mesh centroid
+        vtx = self.coordinates()
         centroid = numpy.mean(vtx,axis=0)
         # Shift so the centroid is now origo
         normalized_vtx = numpy.zeros(numpy.shape(vtx))

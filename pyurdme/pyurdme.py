@@ -935,6 +935,18 @@ class Mesh(dolfin.Mesh):
         return vtxh
 
 
+    def normalizedCoordinates(self):
+        """ Return vertex coordinates centered at origo. """
+        
+        # Compute mesh centroid
+        centroid = numpy.mean(vtx,axis=0)
+        # Shift so the centroid is now origo
+        normalized_vtx = numpy.zeros(numpy.shape(vtx))
+        for i,v in enumerate(vtx):
+            normalized_vtx[i,:] = v - centroid
+
+        return normalized_vtx
+
     def scaledNormalizedCoordinates(self):
         """ Return vertex coordinates scaled to the interval (-1,1) and centered at origo. """
         # Scale the verices so the max dimension is in the range (-1,1) to be compatible with the browser display

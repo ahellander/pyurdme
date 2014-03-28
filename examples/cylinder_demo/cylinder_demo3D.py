@@ -71,26 +71,18 @@ if __name__ == "__main__":
     # This line here dumps the state of A at all timepoints to Paraview comaptible output (VTK). The trajectory
     # is written to a folder "Aout", where each snapshot is stored in a separate file. To open the "movie",
     # just open Aout/trajectory.pvd, then you can animate etc.
-    result.toVTK(species='A',folder_name="Aout")
-    result.toVTK(species='B',folder_name="Bout")
+    if not os.path.isdir('Aout'):
+        print "Writing species 'A' to folder 'Aout'"
+        result.toVTK(species='A',folder_name="Aout")
+    if not os.path.isdir('Bout'):
+        print "Writing species 'B' to folder 'Bout'"
+        result.toVTK(species='B',folder_name="Bout")
 
 
     # Plot of the time-average spatial concentration.
     x_vals = model.mesh.coordinates()[:, 0]
-    l = x_vals.shape[0]
-    
-    import time
-    tic = time.time()
     A_vals = numpy.mean(result.getSpecies("A", concentration = True), axis=0)
     B_vals = numpy.mean(result.getSpecies("B", concentration = True), axis=0)
-    
-    #A_vals = numpy.sum(result['U'], axis=0)[0:2*l-1:2]
-    #B_vals = numpy.sum(result['U'], axis=0)[1:2*l:2]
-    #plt.plot(x_vals,A_vals,'.r',x_vals,B_vals,'.b')
     plt.plot(x_vals,A_vals,'.r',x_vals,B_vals,'.b')
     plt.legend(['A', 'B'])
     plt.show()
-
-
-
-

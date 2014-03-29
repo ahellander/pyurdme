@@ -241,7 +241,7 @@ class Reaction():
                 annotation:                 Description of the reaction (meta)
             
                 massaction True,{False}     is the reaction of mass action type or not?
-                rate                        if mass action, rate is a reference to a paramter instance.
+                rate                        if mass action, rate is a reference to a parameter instance.
             
             Raises: ReactionError
             
@@ -251,8 +251,6 @@ class Reaction():
         self.name = name
         self.annotation = ""
         
-        # We might use this flag in the future to automatically generate
-        # the propensity function if set to True. 
         self.massaction = massaction
 
         self.propensity_function = propensity_function

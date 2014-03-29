@@ -1490,7 +1490,15 @@ class URDMEResult(dict):
                     dof = voxel*len(self.model.listOfSpecies)+i
                     ix  = vertex_to_dof_map[voxel]
                     dolfvox = (ix-i)/len(self.model.listOfSpecies)
-                    func_vector[dolfvox] = float(S[voxel]/self.model.dofvol[voxel])
+                    try:
+                        func_vector[dolfvox] = float(S[voxel]/self.model.dofvol[vertex_to_dof_map[voxel]])
+                    except IndexError as e:
+                        print "func_vector.size(): ", func_vector.size()
+                        print "dolfvox: ",dolfvox
+                        print "S.shape: ",S.shape
+                        print "voxel: ",voxel
+                        print "self.model.dofvol.shape: ", self.model.dofvol.shape
+                        raise e
 
                 spec_sol[time] = func
 

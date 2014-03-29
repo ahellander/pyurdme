@@ -57,10 +57,12 @@ class URDMEModel(Model):
         # This dictionary hold information about the subdomains each species is active on
         self.species_to_subdomains = {}
         self.tspan = None
-        self.vol = None
 
         # URDMEDataFunction objects to construct the data vector.
         self.listOfDataFunctions = []
+
+        # Volume of each voxel in the dolfin dof ordering (not vetex ordering).
+        self.dofvol = None
 
     def __getstate__(self):
         """ Used by pickle to get state when pickling. Because we
@@ -716,14 +718,14 @@ class URDMEModel(Model):
         urdme_solver_data['dofvolumes'] = vol
 
         #TODO: Make use of all dofs values, requires modification of CORE URDME...
-        self.vol = vol[::len(self.listOfSpecies)]
-        urdme_solver_data['vol'] = self.vol
+        self.dofvol = vol[::len(self.listOfSpecies)]
+        urdme_solver_data['vol'] = self.dofvol
         
         D = result['D']
         urdme_solver_data['D'] = D
         
         #
-        num_dofvox = self.vol.shape[0]
+        num_dofvox = self.dofvol.shape[0]
 
         # Get vertex to dof ordering
         vertex_to_dof = dolfin.vertex_to_dof_map(self.mesh.FunctionSpace())
@@ -1337,10 +1339,20 @@ class URDMEResult(dict):
         for t in range(num_timepoints):
             for vox_ndx in range(num_vox):
                 for cndx in range(num_species):
-                    if num_timepoints == 1:
-                        C[t, vox_ndx*num_species+cndx] = M[v2d[vox_ndx]*num_species+cndx]
-                    else:
-                        C[t, vox_ndx*num_species+cndx] = M[t, v2d[vox_ndx]*num_species+cndx]
+                    try:
+                        if len(M.shape) == 1:
+                            C[t, vox_ndx*num_species+cndx] = M[v2d[vox_ndx]*num_species+cndx]
+                        else:
+                            C[t, vox_ndx*num_species+cndx] = M[t, v2d[vox_ndx]*num_species+cndx]
+                    except IndexError as e:
+                        print "C.shape: ", C.shape
+                        print "M.shape: ", M.shape
+                        print "num_timepoints: ", num_timepoints
+                        print "t={0},vox_ndx={1},num_species={2},cndx={3}".format(t,vox_ndx,num_species,cndx)
+                        print "v2d[vox_ndx]={0}".format(v2d[vox_ndx])
+                        print "vox_ndx*num_species+cndx={0}".format(vox_ndx*num_species+cndx)
+                        print "v2d[vox_ndx]*num_species+cndx={0}".format(v2d[vox_ndx]*num_species+cndx)
+                        raise e
         return C
 
     def read_solution(self):
@@ -1478,7 +1490,15 @@ class URDMEResult(dict):
                     dof = voxel*len(self.model.listOfSpecies)+i
                     ix  = vertex_to_dof_map[voxel]
                     dolfvox = (ix-i)/len(self.model.listOfSpecies)
-                    func_vector[dolfvox] = float(S[voxel]/self.model.vol[voxel])
+                    try:
+                        func_vector[dolfvox] = float(S[voxel]/self.model.dofvol[vertex_to_dof_map[voxel]])
+                    except IndexError as e:
+                        print "func_vector.size(): ", func_vector.size()
+                        print "dolfvox: ",dolfvox
+                        print "S.shape: ",S.shape
+                        print "voxel: ",voxel
+                        print "self.model.dofvol.shape: ", self.model.dofvol.shape
+                        raise e
 
                 spec_sol[time] = func
 
@@ -1648,7 +1668,7 @@ class URDMEResult(dict):
         for t in range(dims[0]):
             timeslice = scaled_sol[t,:]
             for i,cn in enumerate(timeslice):
-                scaled_sol[t, i] = float(cn)/(6.022e23*self.model.vol[v2d[i]])
+                scaled_sol[t, i] = float(cn)/(6.022e23*self.model.dofvol[v2d[i]])
 
         return scaled_sol
 
@@ -2028,13 +2048,7 @@ class URDMESolver:
             func += funheader.replace("__NAME__", rname) + "\n{\n"
             if self.model.listOfReactions[R].restrict_to == None:
                 func += "    return " + self.model.listOfReactions[R].propensity_function
-                order = len(self.model.listOfReactions[R].reactants)
-                if order == 2:
-                    func += "/vol;"
-                elif order == 0:
-                    func += "*vol;"
-                else:
-                    func += ";"
+                func += ";"
 
             else:
                 func += "if("
@@ -2048,13 +2062,7 @@ class URDMESolver:
                     raise URDMEError("When restricting reaction to subdomains, you must specify either a list or an int")
                 func += ")\n"
                 func += "\treturn " + self.model.listOfReactions[R].propensity_function
-                order = len(self.model.listOfReactions[R].reactants)
-                if order == 2:
-                    func += "/vol;"
-                elif order == 0:
-                    func += "*vol;"
-                else:
-                    func += ";"
+                func += ";"
 
                 func += "\nelse"
                 func += "\n\treturn 0.0;"

@@ -6,34 +6,6 @@ import numpy
 from dolfin import *
 import dolfin
 
-class unitSquareMeshPeriodicBoundary(dolfin.SubDomain):
-    """ Sub domain for Periodic boundary condition """
-    def __init__(self, Lx=1.0, Ly=1.0):
-        dolfin.SubDomain.__init__(self)
-        self.Lx = Lx
-        self.Ly = Ly
-
-    def inside(self, x, on_boundary):
-        """ Left boundary is "target domain" G """
-        # return True if on left or bottom boundary AND NOT on one of the two corners (0, 1) and (1, 0)
-        return bool((dolfin.near(x[0], 0) or dolfin.near(x[1], 0)) and
-                (not ((dolfin.near(x[0], 0) and dolfin.near(x[1], 1)) or
-                        (dolfin.near(x[0], 1) and dolfin.near(x[1], 0)))) and on_boundary)
-
-    def map(self, x, y):
-        ''' # Map right boundary G (x) to left boundary H (y) '''
-
-        if dolfin.near(x[0], self.Lx) and dolfin.near(x[1], self.Ly):
-            y[0] = x[0] - self.Lx
-            y[1] = x[1] - self.Ly
-        elif dolfin.near(x[0], self.Lx):
-            y[0] = x[0] - self.Lx
-            y[1] = x[1]
-        else:   # near(x[1], 1)
-            y[0] = x[0]
-            y[1] = x[1] - self.Ly
-
-
 class CoralReef(pyurdme.URDMEModel):
     """ Model of a coral reef, published in Sandin & McNamara (2012) """
 
@@ -53,11 +25,9 @@ class CoralReef(pyurdme.URDMEModel):
 
         # A unit square
         # each grid point is 10cm x 10cm, domain is 5m x 5m
-        self.mesh = pyurdme.Mesh.SquareMesh(L=500, nx=50, ny=50)
-        self.mesh.addPeriodicBoundaryCondition(unitSquareMeshPeriodicBoundary())
+        self.mesh = pyurdme.Mesh.SquareMesh(L=500, nx=50, ny=50, periodic=True)
 
         # Place the A molecules in the voxel nearest the center of the square
-
         self.placeNear({Coral:1000}, point=[0,0])
 
         self.timespan(numpy.linspace(0,500,500))

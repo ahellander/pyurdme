@@ -1967,13 +1967,7 @@ class URDMESolver:
             func += funheader.replace("__NAME__", rname) + "\n{\n"
             if self.model.listOfReactions[R].restrict_to == None:
                 func += "    return " + self.model.listOfReactions[R].propensity_function
-                order = len(self.model.listOfReactions[R].reactants)
-                if order == 2:
-                    func += "/vol;"
-                elif order == 0:
-                    func += "*vol;"
-                else:
-                    func += ";"
+                func += ";"
 
             else:
                 func += "if("
@@ -1987,13 +1981,7 @@ class URDMESolver:
                     raise URDMEError("When restricting reaction to subdomains, you must specify either a list or an int")
                 func += ")\n"
                 func += "\treturn " + self.model.listOfReactions[R].propensity_function
-                order = len(self.model.listOfReactions[R].reactants)
-                if order == 2:
-                    func += "/vol;"
-                elif order == 0:
-                    func += "*vol;"
-                else:
-                    func += ";"
+                func += ";"
 
                 func += "\nelse"
                 func += "\n\treturn 0.0;"

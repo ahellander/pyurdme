@@ -228,7 +228,7 @@ class Reaction():
         in the namespace defined by the union of those dicts.
     """
 
-    def __init__(self, name = "", reactants = {}, products = {}, propensity_function = None, massaction = False, rate=None, annotation=None,restrict_to=None):
+    def __init__(self, name = "", reactants = {}, products = {}, propensity_function=None, massaction=None, rate=None, annotation=None,restrict_to=None):
         """ 
             Initializes the reaction using short-hand notation. 
             
@@ -256,8 +256,16 @@ class Reaction():
         self.massaction = massaction
 
         self.propensity_function = propensity_function
-        if self.propensity_function !=None and self.massaction:
-            errmsg = "Reaction "+self.name +" You cannot set the propensity type to mass-action and simultaneously set a propensity function."
+        if self.propensity_function is None and self.massaction is None:
+            if rate is None:
+                errmsg = "Reaction "+self.name +": You must either set the reaction to be mass-action or specifiy a propensity function."
+                raise ReactionError(errmsg)
+            else:
+                # If they don't give us a propensity function and do give a rate, assume mass-action.
+                self.massaction = True
+
+        if self.propensity_function is not None and self.massaction:
+            errmsg = "Reaction "+self.name +": You cannot set the propensity type to mass-action and simultaneously set a propensity function."
             raise ReactionError(errmsg)
         
         self.reactants = {}
@@ -315,6 +323,14 @@ class Reaction():
             else:
             # Case 3: X1, X2 -> Y;
                 propensity_function += "*"+r
+
+        # Set the volume dependency based on order.
+        order = len(self.reactants)
+        if order == 2:
+            propensity_function += "/vol"
+        elif order == 0:
+            propensity_function += "*vol"
+
 
         self.propensity_function = propensity_function
             

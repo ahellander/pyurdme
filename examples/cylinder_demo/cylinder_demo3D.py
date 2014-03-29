@@ -52,12 +52,9 @@ class cylinderDemo3D(pyurdme.URDMEModel):
         self.addSubDomain(subdomains)
         
         # Define Reactions
-        R1 = pyurdme.Reaction(name="R1", reactants=None, products={A:1}, 
-           massaction=True, rate=k_creat, restrict_to=2)
-        R2 = pyurdme.Reaction(name="R2", reactants=None, products={B:1}, 
-            massaction=True, rate=k_creat, restrict_to=3)
-        R3 = pyurdme.Reaction(name="R3", reactants={A:1, B:1}, products=None, 
-            massaction=True, rate=k_react)
+        R1 = pyurdme.Reaction(name="R1", reactants=None, products={A:1}, rate=k_creat, restrict_to=2)
+        R2 = pyurdme.Reaction(name="R2", reactants=None, products={B:1}, rate=k_creat, restrict_to=3)
+        R3 = pyurdme.Reaction(name="R3", reactants={A:1, B:1}, products=None, rate=k_react)
         self.addReaction([R1, R2, R3])
 
         # Define simulation timespan

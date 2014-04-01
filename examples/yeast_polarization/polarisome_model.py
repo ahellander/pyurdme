@@ -90,5 +90,6 @@ if __name__=="__main__":
     x_vals = model.mesh.coordinates()[:, 0]
     Bni1 = result.getSpecies("Bni1m", timepoints=20)
     Spa2 = result.getSpecies("Spa2m", timepoints=20)
-    plt.plot(x_vals, Bni1)
+    plt.plot(x_vals, Spa2)
+    plt.title('Spa2_m at t={0}'.format(model.tspan[20]))
     plt.show()

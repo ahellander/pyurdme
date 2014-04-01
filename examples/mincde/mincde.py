@@ -1,7 +1,9 @@
+#!/usr/bin/env python
 """ pyURDME model file for the MinCDE example. """
 
+import matplotlib.pyplot as plt
+import numpy
 import os.path
-#from pyurdme import pyurdme
 import pyurdme
 import dolfin
 import numpy
@@ -90,8 +92,14 @@ if __name__=="__main__":
     """ Dump model to a file. """
                      
     model = mincde(model_name="mincde")
-# model.solverData()
-    result = pyurdme.urdme(model)
-
-
+    result = pyurdme.urdme(model, report_level=1)
+    if False:
+        print "Writing species 'MinD_m' to folder 'MinDout'"
+        result.toVTK(species='MinD_m',folder_name="MinDout")
+    result._initialize_sol()
+    x_vals = model.mesh.coordinates()[:, 0]
+    MinD_vals = numpy.mean(result.getSpecies("MinD_m", concentration=True), axis=0)
+    plt.plot(x_vals,MinD_vals,'.r')
+    plt.title('Temporal Average')
+    plt.show()    
 

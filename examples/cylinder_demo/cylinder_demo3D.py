@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#self.model.mesh.FunctionSpace()!/usr/bin/env python
 """ pyURDME model file for the annihilation cylinder 3D example. """
 
 import os
@@ -41,7 +41,7 @@ class cylinderDemo3D(pyurdme.URDMEModel):
         pt1 = dolfin.Point(MAX_X_DIM, 0, 0)
         pt2 = dolfin.Point(MIN_X_DIM, 0, 0)
         cylinder = dolfin.Cylinder(pt1, pt2, 1.0)
-        self.mesh = pyurdme.Mesh(mesh=dolfin.Mesh(cylinder, 32))
+        self.mesh = pyurdme.URDMEMesh(mesh=dolfin.Mesh(cylinder, 32))
         
         # Define Subdomains
         subdomains = dolfin.MeshFunction("size_t", self.mesh, self.mesh.topology().dim()-1)

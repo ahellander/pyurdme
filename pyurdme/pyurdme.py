@@ -362,7 +362,7 @@ class URDMEModel(Model):
 
             """
 
-        xmesh = Xmesh()
+        xmesh = URDMEXmesh()
 
         # Construct a species map (dict mapping model species name to an integer index)
         species_map = self.speciesMap()
@@ -788,7 +788,7 @@ class URDMEModel(Model):
         # convert to dof ordering
         p_dof = numpy.zeros((num_dofvox, 3))
         for vox_ndx, row in enumerate(self.mesh.getVoxels()):
-                p_dof[vertex_to_dof[vox_ndx],:len(row)] = row
+            p_dof[vertex_to_dof[vox_ndx],:len(row)] = row
         urdme_solver_data['p'] = p_dof
 
         # Connectivity matrix
@@ -869,7 +869,7 @@ class URDMEModel(Model):
 
 
 
-class Mesh(dolfin.Mesh):
+class URDMEMesh(dolfin.Mesh):
     """ A URDME mesh extends the Dolfin mesh class. """
 
     def __init__(self, mesh=None):
@@ -995,7 +995,7 @@ class Mesh(dolfin.Mesh):
     @classmethod
     def IntervalMesh(cls, nx, a, b, periodic=False):
         mesh = dolfin.IntervalMesh(nx, a, b)
-        ret = Mesh(mesh)
+        ret = URDMEMesh(mesh)
         if isinstance(periodic, bool) and periodic:
             ret.addPeriodicBoundaryCondition(cls.IntervalMeshPeriodicBoundary(a=a, b=b))
         elif isinstance(periodic, dolfin.SubDomain):
@@ -1006,7 +1006,7 @@ class Mesh(dolfin.Mesh):
     def SquareMesh(cls, L, nx, ny, periodic=False):
         """ Regular mesh of a square with side length L. """
         mesh = dolfin.RectangleMesh(0, 0, L, L, nx, ny)
-        ret = Mesh(mesh)
+        ret = URDMEMesh(mesh)
         if isinstance(periodic, bool) and periodic:
             ret.addPeriodicBoundaryCondition(cls.SquareMeshPeriodicBoundary(Lx=L, Ly=L))
         elif isinstance(periodic, dolfin.SubDomain):
@@ -1017,7 +1017,7 @@ class Mesh(dolfin.Mesh):
     def CubeMesh(cls, L, nx, ny, nz, periodic=False):
         """ Cube with nx,ny points in the respective axes. """
         mesh = dolfin.BoxMesh(0, 0, 0, L, L, L, nx, ny, nz)
-        ret = Mesh(mesh)
+        ret = URDMEMesh(mesh)
         if isinstance(periodic, bool) and periodic:
             ret.addPeriodicBoundaryCondition(cls.CubeMeshPeriodicBoundary(Lx=L, Ly=L, Lz=L))
         elif isinstance(periodic, dolfin.SubDomain):
@@ -1153,7 +1153,7 @@ class Mesh(dolfin.Mesh):
 
         try:
             dolfin_mesh = dolfin.Mesh(filename)
-            mesh = Mesh(mesh=dolfin_mesh)
+            mesh = URDMEMesh(mesh=dolfin_mesh)
             return mesh
         except Exception as e:
             raise MeshImportError("Failed to import mesh: " + filename+"\n" + str(e))
@@ -1256,7 +1256,7 @@ class Mesh(dolfin.Mesh):
         else:
             IPython.display.display(IPython.display.HTML(html+hstr))
 
-class Xmesh():
+class URDMEXmesh():
     """ Extended mesh object.
 
         Contains function spaces and dof mappings.

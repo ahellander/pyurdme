@@ -41,7 +41,7 @@ class simple_diffusion2(pyurdme.URDMEModel):
         # A circle
         c1 = dolfin.Circle(0,0,1)
         mesh = dolfin.Mesh(c1,20)
-        self.mesh = pyurdme.Mesh(mesh)
+        self.mesh = pyurdme.URDMEMesh(mesh)
         
         # A mesh function for the cells
         cell_function = dolfin.CellFunction("size_t",self.mesh)

@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """ PyURDME model with one species diffusing in the unit circle and one
     species diffusing on the boundary of the circle. Subdomains are 
     here handled by Dolfin's native subdomain model. """
@@ -38,9 +39,8 @@ class simple_diffusion2(pyurdme.URDMEModel):
         self.addSpecies([A,B])
 
         # A circle
-        c1 = dolfin.Circle(0,0,1)
-        mesh = dolfin.Mesh(c1,20)
-        self.mesh = pyurdme.Mesh(mesh)
+        mesh = dolfin.UnitCircleMesh(20)
+        self.mesh = pyurdme.URDMEMesh(mesh)
         
         # A mesh function for the cells
         cell_function = dolfin.CellFunction("size_t",self.mesh)

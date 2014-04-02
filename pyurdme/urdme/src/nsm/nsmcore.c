@@ -238,8 +238,11 @@ void nsm_core(const size_t *irD,const size_t *jcD,const double *prD,
     for (i = 0; i < Ncells; i++) {
         srrate[i] = 0.0;
         for (j = 0; j < Mreactions; j++) {
+            //rrate[i*Mreactions+j] =
+            //(*rfun[j])(&xx[i*Mspecies],tt,vol[i],&data[i*dsize],sd[i],i,xx,irK,jcK,prK);
+            //srrate[i] += rrate[i*Mreactions+j];
             rrate[i*Mreactions+j] =
-            (*rfun[j])(&xx[i*Mspecies],tt,vol[i],&data[i*dsize],sd[i],i,xx,irK,jcK,prK);
+            (*rfun[j])(&xx[i*Mspecies],tt,vol[i],&data[i*dsize],sd[i]);
             srrate[i] += rrate[i*Mreactions+j];
         }
     }
@@ -364,9 +367,13 @@ void nsm_core(const size_t *irD,const size_t *jcD,const double *prD,
             for (i = jcG[Mspecies+re], rdelta = 0.0; i < jcG[Mspecies+re+1]; i++) {
                 old = rrate[subvol*Mreactions+irG[i]];
                 j = irG[i];
+                //rdelta +=
+                //(rrate[subvol*Mreactions+j] =
+                // (*rfun[j])(&xx[subvol*Mspecies],tt,vol[subvol],&data[subvol*dsize],sd[subvol],subvol,xx,irK,jcK,prK)
+                // )-old;
                 rdelta +=
                 (rrate[subvol*Mreactions+j] =
-                 (*rfun[j])(&xx[subvol*Mspecies],tt,vol[subvol],&data[subvol*dsize],sd[subvol],subvol,xx,irK,jcK,prK)
+                 (*rfun[j])(&xx[subvol*Mspecies],tt,vol[subvol],&data[subvol*dsize],sd[subvol])
                  )-old;
             }
             srrate[subvol] += rdelta;
@@ -421,15 +428,23 @@ void nsm_core(const size_t *irD,const size_t *jcD,const double *prD,
                     j = irG[i];
                     old = rrate[subvol*Mreactions+j];
                     
+                    //rdelta +=
+                    //  (rrate[subvol*Mreactions+j] =
+                    //    (*rfun[j])(&xx[subvol*Mspecies],tt,vol[subvol],&data[subvol*dsize],sd[subvol],subvol,xx,irK,jcK,prK)
+                    //  )-old;
                     rdelta +=
                       (rrate[subvol*Mreactions+j] =
-                        (*rfun[j])(&xx[subvol*Mspecies],tt,vol[subvol],&data[subvol*dsize],sd[subvol],subvol,xx,irK,jcK,prK)
+                        (*rfun[j])(&xx[subvol*Mspecies],tt,vol[subvol],&data[subvol*dsize],sd[subvol])
                       )-old;
                     old = rrate[to_vol*Mreactions+j];
                     
+                    //rrdelta += 
+					//  (rrate[to_vol*Mreactions+j] = 
+                    //    (*rfun[j])(&xx[to_vol*Mspecies],tt,vol[to_vol],&data[to_vol*dsize],sd[to_vol],to_vol,xx,irK,jcK,prK)
+                    //  )-old;
                     rrdelta += 
 					  (rrate[to_vol*Mreactions+j] = 
-                        (*rfun[j])(&xx[to_vol*Mspecies],tt,vol[to_vol],&data[to_vol*dsize],sd[to_vol],to_vol,xx,irK,jcK,prK)
+                        (*rfun[j])(&xx[to_vol*Mspecies],tt,vol[to_vol],&data[to_vol*dsize],sd[to_vol])
                       )-old;
                 }
                 

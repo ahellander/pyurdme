@@ -184,9 +184,6 @@ class URDMEModel(Model):
 
     def createDependencyGraph(self):
         """ Construct the sparse dependency graph. """
-
-        #GF = numpy.ones((self.getNumReactions(), self.getNumReactions() + self.getNumSpecies()))
-        
         # We cannot safely generate a dependency graph (without attempting to analyze the propensity string itself)
         # if the model contains custom propensities.
         mass_action_model = True
@@ -194,7 +191,7 @@ class URDMEModel(Model):
             if not reaction.massaction:
                 GF = numpy.ones((self.getNumReactions(), self.getNumReactions() + self.getNumSpecies()))
                 mass_action_model = False
-
+    
         if mass_action_model:
             GF = numpy.zeros((self.getNumReactions(), self.getNumReactions() + self.getNumSpecies()))
             species_map = self.speciesMap()
@@ -236,18 +233,16 @@ class URDMEModel(Model):
                 reaction_to_reaction.append(temp)
             
             # Populate G
-            for i,reac in enumerate(reaction_to_reaction):
-                for r in reac:
-                    GF[r,i] = 1
-
             for j, spec in enumerate(species_to_reactions):
                 for s in spec:
-                    GF[s,self.getNumReactions()+j] = 1
-                        
+                    GF[s,j] = 1
+            
+            for i,reac in enumerate(reaction_to_reaction):
+                for r in reac:
+                    GF[r,self.getNumSpecies()+i] = 1
 
                 
         try:
-            #GF = numpy.ones((self.getNumReactions(), self.getNumReactions() + self.getNumSpecies()))
             G = scipy.sparse.csc_matrix(GF)
         except Exception as e:
             G = GF

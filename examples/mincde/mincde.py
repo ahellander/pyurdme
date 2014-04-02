@@ -107,9 +107,11 @@ if __name__=="__main__":
                      
     model = mincde(model_name="mincde")
     result = pyurdme.urdme(model)
+
     if False:
         print "Writing species 'MinD_m' to folder 'MinDout'"
         result.toVTK(species='MinD_m',folder_name="MinDout")
+    
     result._initialize_sol()
     x_vals = model.mesh.coordinates()[:, 0]
     MinD_vals = numpy.mean(result.getSpecies("MinD_m", concentration=True), axis=0)

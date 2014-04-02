@@ -1315,6 +1315,7 @@ class URDMEResult(dict):
 
     def reorderDofToVoxel(self, M, num_species=None):
         """ Reorder the colums of M from dof ordering to vertex ordering. """
+        
         fs = self.model.mesh.FunctionSpace()
         v2d = dolfin.vertex_to_dof_map(fs)
         if len(M.shape) == 1:

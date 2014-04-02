@@ -5,7 +5,6 @@ import numpy
 
 c = dolfin.Circle(0,0,1)
 mesh = dolfin.Mesh(c,20)
-
 function_space = dolfin.FunctionSpace(mesh,"Lagrange",1)
 trial_function = dolfin.TrialFunction(function_space)
 test_function = dolfin.TestFunction(function_space)

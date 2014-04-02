@@ -33,14 +33,14 @@ class simple_diffusion2(URDMEModel):
         URDMEModel.__init__(self,name="simple_diffusion2")
 
         A = Species(name="A",diffusion_constant=1.0,dimension=2)
-        B = Species(name="B",diffusion_constant=0.1,dimension=21)
+        B = Species(name="B",diffusion_constant=0.1,dimension=1)
 
         self.addSpecies([A,B])
 
         # A circle
         c1 = dolfin.Circle(0,0,1)
         mesh = dolfin.Mesh(c1,20)
-        self.mesh = Mesh(mesh)
+        self.mesh = URDMEMesh(mesh=mesh)
         
         # A mesh function for the cells
         cell_function = dolfin.CellFunction("size_t",self.mesh)

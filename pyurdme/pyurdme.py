@@ -371,19 +371,10 @@ class URDMEModel(Model):
 
             xmesh.function_space[spec_name] = self.mesh.FunctionSpace()
             
-            # vertex_to_dof_map provides a map between the vertex index and the dof.
-
-
-            try:
-            # For Dolfin 1.3.0 and above
-                xmesh.vertex_to_dof_map[spec_name] = dolfin.vertex_to_dof_map(xmesh.function_space[spec_name])
-                xmesh.vertex_to_dof_map[spec_name] = len(self.listOfSpecies) * xmesh.vertex_to_dof_map[spec_name] + spec_index
-                xmesh.dof_to_vertex_map[spec_name] = dolfin.dof_to_vertex_map(xmesh.function_space[spec_name])
-            except:
-                # Older versions of dolfin
-                xmesh.vertex_to_dof_map[spec_name] = xmesh.function_space[spec_name].dofmap().dof_to_vertex_map(self.mesh)
-                xmesh.vertex_to_dof_map[spec_name] = len(self.listOfSpecies) * xmesh.vertex_to_dof_map[spec_name] + spec_index
-                xmesh.dof_to_vertex_map[spec_name] = xmesh.function_space[spec_name].dofmap().vertex_to_dof_map(self.mesh)
+            xmesh.vertex_to_dof_map[spec_name] = dolfin.vertex_to_dof_map(xmesh.function_space[spec_name])
+            xmesh.vertex_to_dof_map[spec_name] = len(self.listOfSpecies) * xmesh.vertex_to_dof_map[spec_name] + spec_index
+            xmesh.dof_to_vertex_map[spec_name] = dolfin.dof_to_vertex_map(xmesh.function_space[spec_name])
+    
 
         xmesh.vertex = self.mesh.coordinates()
         self.xmesh = xmesh
@@ -594,7 +585,7 @@ class URDMEModel(Model):
                     vi = 1
                 else:
                     vi = vol[Mspecies*ij+spec]
-
+                
                 S[Mspecies*ir+spec, Mspecies*ij+spec] = -val/vi
 
             spec = spec + 1
@@ -613,9 +604,7 @@ class URDMEModel(Model):
                         sumcol[i] += val
 
             D.setdiag(-sumcol.flatten())        
-        
-        print numpy.min(vol)
-        #print "Fraction of positive off-diagonal entries: " + str(numpy.abs(positive_mass/total_mass))
+
         return {'vol':vol, 'D':D, 'relative_positive_mass':positive_mass/total_mass}
 
 
@@ -635,12 +624,9 @@ class URDMEModel(Model):
         # not define a Markov process and the solvers might segfault or produce erraneous results.
         colsum = numpy.abs(urdme_solver_data['D'].sum(axis=0))
         colsum = colsum.flatten()
-        print numpy.shape(colsum)
         maxcolsum = numpy.argmax(colsum)
-        print maxcolsum
         if colsum[0,maxcolsum] > 1e-10:
             D = urdme_solver_data["D"]
-            print D[:,maxcolsum]
             raise InvalidSystemMatrixException("Invalid diffusion matrix. The sum of the columns does not sum to zero. " + str(maxcolsum) + str(colsum[0,maxcolsum]))
 
 
@@ -862,7 +848,6 @@ class URDMEModel(Model):
             stiffness_matrices[spec_name] = dolfin.assemble(weak_form_K[spec_name])
             if ndofs is None:
                 ndofs = stiffness_matrices[spec_name].size(0)
-                print ndofs
                 self.mesh.setNumDofVoxels(ndofs)
             
             # We cannot include the diffusion constant in the assembly, dolfin does not seem to deal well
@@ -872,8 +857,6 @@ class URDMEModel(Model):
 
 
         return {'K':stiffness_matrices, 'M':mass_matrices}
-
-
 
 
 

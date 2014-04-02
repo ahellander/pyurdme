@@ -33,7 +33,7 @@ class simple_diffusion2(URDMEModel):
         URDMEModel.__init__(self,name="simple_diffusion2")
 
         A = Species(name="A",diffusion_constant=1.0,dimension=2)
-        B = Species(name="B",diffusion_constant=0.1,dimension=1)
+        B = Species(name="B",diffusion_constant=0.1,dimension=21)
 
         self.addSpecies([A,B])
 

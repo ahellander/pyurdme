@@ -529,7 +529,6 @@ class URDMEModel(Model):
         for species, M in mass_matrices.iteritems():
 
             #dof2vtx = xmesh.dof_to_vertex_map[species]
-
             rows, cols, vals = M.data()
             SM = scipy.sparse.csr_matrix((vals, cols, rows))
             vols = SM.sum(axis=1)
@@ -554,6 +553,11 @@ class URDMEModel(Model):
             sd = self.sd
         except:
             sd = self.subdomainVector(self.subdomains)
+            sd_vec_dof = numpy.zeros(self.mesh.getNumDofVoxels())
+            vertex_to_dof = dolfin.vertex_to_dof_map(self.mesh.FunctionSpace())
+            for ndx, sd_val in enumerate(sd):
+                sd_vec_dof[vertex_to_dof[ndx]] = sd_val
+            sd = sd_vec_dof
 
         for species, K in stiffness_matrices.iteritems():
 
@@ -605,7 +609,7 @@ class URDMEModel(Model):
 
         # Renormalize the columns (may not sum to zero since elements may have been filtered out
         with warnings.catch_warnings():
-	    warnings.simplefilter("ignore")
+            warnings.simplefilter("ignore")
             sumcol = numpy.zeros((Ndofs, 1))
             for i in range(Ndofs):
                 col = D.getcol(i)
@@ -614,7 +618,8 @@ class URDMEModel(Model):
                         sumcol[i] += val
 
             D.setdiag(-sumcol.flatten())        
-
+        
+        print numpy.min(vol)
         #print "Fraction of positive off-diagonal entries: " + str(numpy.abs(positive_mass/total_mass))
         return {'vol':vol, 'D':D, 'relative_positive_mass':positive_mass/total_mass}
 
@@ -633,9 +638,15 @@ class URDMEModel(Model):
 
         # Check that all the columns of the system matrix sums to zero (or close to zero). If not, it does
         # not define a Markov process and the solvers might segfault or produce erraneous results.
-        maxcolsum = numpy.max(numpy.abs(urdme_solver_data['D'].sum(axis=0)))
-        if maxcolsum > 1e-10:
-            raise InvalidSystemMatrixException("Invalid diffusion matrix. The sum of the columns does not sum to zero. " + str(maxcolsum))
+        colsum = numpy.abs(urdme_solver_data['D'].sum(axis=0))
+        colsum = colsum.flatten()
+        print numpy.shape(colsum)
+        maxcolsum = numpy.argmax(colsum)
+        print maxcolsum
+        if colsum[0,maxcolsum] > 1e-10:
+            D = urdme_solver_data["D"]
+            print D[:,maxcolsum]
+            raise InvalidSystemMatrixException("Invalid diffusion matrix. The sum of the columns does not sum to zero. " + str(maxcolsum) + str(colsum[0,maxcolsum]))
 
 
     def connectivityMatrix(self):
@@ -855,7 +866,9 @@ class URDMEModel(Model):
             stiffness_matrices[spec_name] = dolfin.assemble(weak_form_K[spec_name])
             if ndofs is None:
                 ndofs = stiffness_matrices[spec_name].size(0)
+                print ndofs
                 self.mesh.setNumDofVoxels(ndofs)
+            
             # We cannot include the diffusion constant in the assembly, dolfin does not seem to deal well
             # with small diffusion constants (drops small elements)
             stiffness_matrices[spec_name] = species.diffusion_constant * stiffness_matrices[spec_name]
@@ -915,7 +928,6 @@ class Mesh(dolfin.Mesh):
     def meshSize(self):
         """ Estimate of mesh size at each vertex. """
         coordinates = self.coordinates()
-        
         
         # Compute the circumradius of the cells
         cr = []
@@ -1402,10 +1414,8 @@ class URDMEResult(dict):
         
         if timepoints  ==  "all":
             Uslice= U[:,(spec_indx*Ncells):(spec_indx*Ncells+Ncells)]
-            #Uslice= U[:, spec_indx::num_species]
         else:
             Uslice = U[timepoints,(spec_indx*Ncells):(spec_indx*Ncells+Ncells)]
-            #Uslice= U[timepoints, spec_indx::num_species]
         
         if concentration:
             Uslice = self._copynumber_to_concentration(Uslice)
@@ -2093,7 +2103,9 @@ def urdme(model=None, solver='nsm', solver_path="", model_file=None, input_file=
         stdout:    the standard ouput stream from the call to the core solver
         stderr:    the standard error stream from the call to the core solver
 
-        """
+    """
+    
+    
     #If solver is a subclass of URDMESolver, use it directly.
     if isinstance(solver, (type, types.ClassType)) and  issubclass(solver, URDMESolver):
         sol = solver(model, solver_path, report_level, model_file=model_file)

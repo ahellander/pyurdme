@@ -16,13 +16,26 @@ class Cytosol(dolfin.SubDomain):
         return not on_boundary
 
 
+class PheromoneGradient(pyurdme.URDMEDataFunction):
+    def __init__(self, a=0.0, b=1.0, L_min=0, L_max=4, MOLAR=1.0):
+        """ 1D domain from a to b. """
+        pyurdme.URDMEDataFunction.__init__(self, name="PheromoneGradient")
+        self.a = a
+        self.b = b
+        self.L_min = L_min
+        self.L_max = L_max
+        self.MOLAR = MOLAR
+    
+    def map(self, x):
+        ret =  ((self.L_max - self.L_min) * 0.5 * (1 + math.cos(0.5*x[0])) + self.L_min) * self.MOLAR
+        return ret
+
 class mincde(pyurdme.URDMEModel):
 
     def __init__(self,model_name="mincde"):
         pyurdme.URDMEModel.__init__(self,model_name)
 
         # Species
-        # TODO: We need a way to localize species to subdomains/boundaries
         MinD_m     = pyurdme.Species(name="MinD_m",diffusion_constant=1e-14,dimension=2)
         MinD_c_atp = pyurdme.Species(name="MinD_c_atp",diffusion_constant=2.5e-12,dimension=3)
         MinD_c_adp = pyurdme.Species(name="MinD_c_adp",diffusion_constant=2.5e-12,dimension=3)
@@ -48,6 +61,7 @@ class mincde(pyurdme.URDMEModel):
         self.addSubDomain(boundary)
         
         # Average mesh size to feed into the propensity functions
+
         hmax = self.mesh.hmax()
         hmin = self.mesh.hmin()
         h = (hmax+hmin)/2
@@ -90,7 +104,6 @@ if __name__=="__main__":
     """ Dump model to a file. """
                      
     model = mincde(model_name="mincde")
-# model.solverData()
     result = pyurdme.urdme(model)
 
 

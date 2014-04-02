@@ -362,7 +362,7 @@ class URDMEModel(Model):
 
             """
 
-        xmesh = Xmesh()
+        xmesh = URDMEXmesh()
 
         # Construct a species map (dict mapping model species name to an integer index)
         species_map = self.speciesMap()
@@ -697,6 +697,7 @@ class URDMEModel(Model):
            containing the mandatory input data structures of the core NSM solver in URDME
            that is derived from the model. The data strucyures are
 
+           D    - the Diffusion matrix
            N    - the stochiometry matrix
            G    - the dependency graph
            vol  - the volume vector
@@ -798,7 +799,7 @@ class URDMEModel(Model):
         # convert to dof ordering
         p_dof = numpy.zeros((num_dofvox, 3))
         for vox_ndx, row in enumerate(self.mesh.getVoxels()):
-                p_dof[vertex_to_dof[vox_ndx],:len(row)] = row
+            p_dof[vertex_to_dof[vox_ndx],:len(row)] = row
         urdme_solver_data['p'] = p_dof
 
         # Connectivity matrix
@@ -881,7 +882,7 @@ class URDMEModel(Model):
 
 
 
-class Mesh(dolfin.Mesh):
+class URDMEMesh(dolfin.Mesh):
     """ A URDME mesh extends the Dolfin mesh class. """
 
     def __init__(self, mesh=None):
@@ -1006,7 +1007,7 @@ class Mesh(dolfin.Mesh):
     @classmethod
     def IntervalMesh(cls, nx, a, b, periodic=False):
         mesh = dolfin.IntervalMesh(nx, a, b)
-        ret = Mesh(mesh)
+        ret = URDMEMesh(mesh)
         if isinstance(periodic, bool) and periodic:
             ret.addPeriodicBoundaryCondition(cls.IntervalMeshPeriodicBoundary(a=a, b=b))
         elif isinstance(periodic, dolfin.SubDomain):
@@ -1017,7 +1018,7 @@ class Mesh(dolfin.Mesh):
     def SquareMesh(cls, L, nx, ny, periodic=False):
         """ Regular mesh of a square with side length L. """
         mesh = dolfin.RectangleMesh(0, 0, L, L, nx, ny)
-        ret = Mesh(mesh)
+        ret = URDMEMesh(mesh)
         if isinstance(periodic, bool) and periodic:
             ret.addPeriodicBoundaryCondition(cls.SquareMeshPeriodicBoundary(Lx=L, Ly=L))
         elif isinstance(periodic, dolfin.SubDomain):
@@ -1028,7 +1029,7 @@ class Mesh(dolfin.Mesh):
     def CubeMesh(cls, L, nx, ny, nz, periodic=False):
         """ Cube with nx,ny points in the respective axes. """
         mesh = dolfin.BoxMesh(0, 0, 0, L, L, L, nx, ny, nz)
-        ret = Mesh(mesh)
+        ret = URDMEMesh(mesh)
         if isinstance(periodic, bool) and periodic:
             ret.addPeriodicBoundaryCondition(cls.CubeMeshPeriodicBoundary(Lx=L, Ly=L, Lz=L))
         elif isinstance(periodic, dolfin.SubDomain):
@@ -1164,7 +1165,7 @@ class Mesh(dolfin.Mesh):
 
         try:
             dolfin_mesh = dolfin.Mesh(filename)
-            mesh = Mesh(mesh=dolfin_mesh)
+            mesh = URDMEMesh(mesh=dolfin_mesh)
             return mesh
         except Exception as e:
             raise MeshImportError("Failed to import mesh: " + filename+"\n" + str(e))
@@ -1267,7 +1268,7 @@ class Mesh(dolfin.Mesh):
         else:
             IPython.display.display(IPython.display.HTML(html+hstr))
 
-class Xmesh():
+class URDMEXmesh():
     """ Extended mesh object.
 
         Contains function spaces and dof mappings.
@@ -1298,13 +1299,12 @@ class URDMEResult(dict):
 
     def __getstate__(self):
         """ Used by pickle to get state when pickling. We need to read the contents of the
-        output file  since we can't picke file objects. """
+        output file since we can't pickel file objects. """
 
-#  if not self.data_is_loaded:
         try:
             with open(self.filename,mode='rb') as fh:
                 filecontents = fh.read()
-        except Exception,e:
+        except Exception as e:
             raise Exception(("Error pickling model. Failed to read result file:",str(e)))
         
         state = self.__dict__
@@ -1328,9 +1328,9 @@ class URDMEResult(dict):
             with open(fd.name, mode='wb') as fh:
                 fh.write(filecontents)
             state["filename"] = fd.name
-        except Exception, e:
+        except Exception as e:
             print "Error unpickling model, could not recreate the solution file."
-            raise
+            raise e
 
         for k,v in state.items():
             self.__dict__[k] = v
@@ -1479,19 +1479,22 @@ class URDMEResult(dict):
         if self.model is None:
             raise URDMEError("URDMEResult.model must be set before the sol attribute can be accessed.")
         numvox = self.model.mesh.num_vertices()
+        fs = self.model.mesh.FunctionSpace()
+        vertex_to_dof_map = dolfin.vertex_to_dof_map(fs)
+        dof_to_vertex_map = dolfin.dof_to_vertex_map(fs)
 
         # The result is loaded in dolfin Functions, one for each species and time point
         for i, spec in enumerate(self.model.listOfSpecies):
 
             species = self.model.listOfSpecies[spec]
             spec_name = species.name
-            dof_to_vertex_map = self.model.xmesh.dof_to_vertex_map[spec]
-            vertex_to_dof_map = self.model.xmesh.vertex_to_dof_map[spec]
+            #dof_to_vertex_map = self.model.xmesh.dof_to_vertex_map[spec]
+            #vertex_to_dof_map = self.model.xmesh.vertex_to_dof_map[spec]
 
             spec_sol = {}
             for j, time in enumerate(self.tspan):
                 
-                func = dolfin.Function(self.model.mesh.FunctionSpace())
+                func = dolfin.Function(fs)
                 func_vector = func.vector()
 
                 S = self.getSpecies(spec, [j])
@@ -1507,6 +1510,7 @@ class URDMEResult(dict):
                         print "dolfvox: ",dolfvox
                         print "S.shape: ",S.shape
                         print "voxel: ",voxel
+                        print "vertex_to_dof_map[voxel]", vertex_to_dof_map[voxel]
                         print "self.model.dofvol.shape: ", self.model.dofvol.shape
                         raise e
 
@@ -1526,7 +1530,7 @@ class URDMEResult(dict):
         func = dolfin.Function(self.model.mesh.FunctionSpace())
         func_vector = func.vector()
         fd = dolfin.File(folder_name+"/trajectory.pvd")
-        numvox = self.model.mesh.getNumVoxels()
+        numvox = self.model.mesh.getNumDofVoxels()
 
         for i, time in enumerate(self.tspan):
             solvector = (self.sol[species][time]).vector()
@@ -1772,7 +1776,7 @@ class URDMESolver:
         # Save the instance variables
         ret['vars'] = self.__dict__.copy()
         # The model object is not picklabe due to the Swig-objects from Dolfin
-        ret['vars']['model'] = None
+        #ret['vars']['model'] = None
         ret['vars']['is_compiled'] = False
         # Create temp root
         tmproot = tempfile.mkdtemp()
@@ -2046,8 +2050,8 @@ class URDMESolver:
 
 
         # Reactions
-        #funheader = "double __NAME__(const int *x, double t, const double vol, const double *data, int sd)"
-        funheader = "double __NAME__(const int *x, double t, const double vol, const double *data, int sd, int voxel, int *xx, const size_t *irK, const size_t *jcK, const double *prK)"
+        funheader = "double __NAME__(const int *x, double t, const double vol, const double *data, int sd)"
+        #funheader = "double __NAME__(const int *x, double t, const double vol, const double *data, int sd, int voxel, int *xx, const size_t *irK, const size_t *jcK, const double *prK)"
 
         funcs = ""
         funcinits = ""
@@ -2057,8 +2061,7 @@ class URDMESolver:
             rname = self.model.listOfReactions[R].name
             func += funheader.replace("__NAME__", rname) + "\n{\n"
             if self.model.listOfReactions[R].restrict_to == None:
-                func += "    return " + self.model.listOfReactions[R].propensity_function
-                func += ";"
+                func += self.model.listOfReactions[R].propensity_function
 
             else:
                 func += "if("
@@ -2070,12 +2073,11 @@ class URDMESolver:
                     func += "sd == " +  str(self.model.listOfReactions[R].restrict_to)
                 else:
                     raise URDMEError("When restricting reaction to subdomains, you must specify either a list or an int")
-                func += ")\n"
-                func += "\treturn " + self.model.listOfReactions[R].propensity_function
-                func += ";"
+                func += "){\n"
+                func += self.model.listOfReactions[R].propensity_function
 
-                func += "\nelse"
-                func += "\n\treturn 0.0;"
+                func += "\n}else{"
+                func += "\n\treturn 0.0;}"
 
 
             func += "\n}"

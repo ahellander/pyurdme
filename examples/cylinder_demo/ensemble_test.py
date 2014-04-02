@@ -8,19 +8,21 @@ import numpy
 model = cylinderDemo3D()
 sol = NSMSolver(model, report_level=2)
 print "Beginning simulation"
-result = sol.run()
-results = [result]
-#results = sol.run_ensemble(5)
+#result = sol.run()
+#results = [result]
+results = sol.run_ensemble(4)
 
 # Plot of the time-average spatial concentration.
 x_vals = model.mesh.coordinates()[:, 0]
 l = x_vals.shape[0]
-for res in results:
+plt.clf()
+plt.figure(1)
+for ndx, res in enumerate(results):
     print "result.filename={0} loaded={1}".format(res.filename, res.data_is_loaded)
-    plt.clf()
-    A_vals = numpy.sum(res['U'], axis=0)[0:2*l-1:2]
-    B_vals = numpy.sum(res['U'], axis=0)[1:2*l:2]
-    plt.plot(x_vals,A_vals/model.vol,'.r',x_vals,B_vals/model.vol,'.b')
+    plt.subplot(2,2,ndx)
+    A_vals = numpy.mean(res.getSpecies("A", concentration=True), axis=0)
+    B_vals = numpy.mean(res.getSpecies("B", concentration=True), axis=0)
+    plt.plot(x_vals,A_vals,'.r',x_vals,B_vals,'.b')
     plt.legend(['A', 'B'])
-    plt.show()
+plt.show()
 

@@ -46,7 +46,7 @@ class polarisome_1D(pyurdme.URDMEModel):
         self.addSpecies([Bni1c, Bni1m, Spa2c, Spa2m, Actinc, Actinm])
     
         NUM_VOXEL = 160
-        self.mesh = pyurdme.Mesh.IntervalMesh(nx=NUM_VOXEL, a=-4*numpy.pi, b=4*numpy.pi, periodic=True)
+        self.mesh = pyurdme.URDMEMesh.IntervalMesh(nx=NUM_VOXEL, a=-4*numpy.pi, b=4*numpy.pi, periodic=True)
 
         Bon = pyurdme.Parameter(name="Bon", expression=1.6e-6)
         Boff = pyurdme.Parameter(name="Boff", expression=0.25)
@@ -90,5 +90,6 @@ if __name__=="__main__":
     x_vals = model.mesh.coordinates()[:, 0]
     Bni1 = result.getSpecies("Bni1m", timepoints=20)
     Spa2 = result.getSpecies("Spa2m", timepoints=20)
-    plt.plot(x_vals, Bni1)
+    plt.plot(x_vals, Spa2)
+    plt.title('Spa2_m at t={0}'.format(model.tspan[20]))
     plt.show()

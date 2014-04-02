@@ -1,7 +1,9 @@
+#!/usr/bin/env python
 """ pyURDME model file for the MinCDE example. """
 
+import matplotlib.pyplot as plt
+import numpy
 import os.path
-#from pyurdme import pyurdme
 import pyurdme
 import dolfin
 import numpy
@@ -33,7 +35,7 @@ class mincde(pyurdme.URDMEModel):
         
         # Make sure that we have the correct path to the mesh file even if we are not executing from the basedir.
         basedir = os.path.dirname(os.path.abspath(__file__))
-        self.mesh = pyurdme.Mesh.read_dolfin_mesh(basedir+"/mesh/coli.xml")
+        self.mesh = pyurdme.URDMEMesh.read_dolfin_mesh(basedir+"/mesh/coli.xml")
         
         interior = dolfin.CellFunction("size_t",self.mesh)
         interior.set_all(1)
@@ -90,8 +92,14 @@ if __name__=="__main__":
     """ Dump model to a file. """
                      
     model = mincde(model_name="mincde")
-# model.solverData()
     result = pyurdme.urdme(model)
-
-
+    if False:
+        print "Writing species 'MinD_m' to folder 'MinDout'"
+        result.toVTK(species='MinD_m',folder_name="MinDout")
+    result._initialize_sol()
+    x_vals = model.mesh.coordinates()[:, 0]
+    MinD_vals = numpy.mean(result.getSpecies("MinD_m", concentration=True), axis=0)
+    plt.plot(x_vals,MinD_vals,'.r')
+    plt.title('Temporal Average')
+    plt.show()    
 

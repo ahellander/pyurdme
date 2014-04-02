@@ -253,7 +253,13 @@ class Reaction():
         
         self.massaction = massaction
 
-        self.propensity_function = propensity_function
+        self.propensity_function = None
+        if propensity_function is not None:
+            if 'return ' in propensity_function:
+                self.propensity_function = propensity_function
+            else:
+                self.propensity_function = 'return ' +  propensity_function + ';'
+
         if self.propensity_function is None and self.massaction is None:
             if rate is None:
                 errmsg = "Reaction "+self.name +": You must either set the reaction to be mass-action or specifiy a propensity function."
@@ -311,7 +317,7 @@ class Reaction():
             raise ReactionError("Reaction: " +self.name + "A mass-action reaction cannot involve more than two species.")
     
         # Case EmptySet -> Y
-        propensity_function = self.marate.name;
+        propensity_function = 'return ' + self.marate.name;
              
         # There are only three ways to get 'total_stoch==2':
         for r in self.reactants:
@@ -330,7 +336,7 @@ class Reaction():
             propensity_function += "*vol"
 
 
-        self.propensity_function = propensity_function
+        self.propensity_function = propensity_function + ';'
             
     def setType(self,type):
         if type not in {'mass-action','customized'}:

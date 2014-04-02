@@ -8,14 +8,14 @@ class CoralReef(pyurdme.URDMEModel):
         non-spatial model by Briggs and Adam.
     """
 
-    def __init__(self, name="coral_reef"):
+    def __init__(self, name="coral_reef", D_c=1.0, D_m=1.0, version=1):
         pyurdme.URDMEModel.__init__(self, name)
 
         # Species
         Coral = pyurdme.Species(name="Coral",diffusion_constant=0.0)
-        Coral_m = pyurdme.Species(name="Coral_m",diffusion_constant=1.0)
+        Coral_m = pyurdme.Species(name="Coral_m",diffusion_constant=D_c)
         MA = pyurdme.Species(name="MA", diffusion_constant=0.0)
-        MA_m = pyurdme.Species(name="MA_m", diffusion_constant=1.0)
+        MA_m = pyurdme.Species(name="MA_m", diffusion_constant=D_m)
         Turf = pyurdme.Species(name="Turf", diffusion_constant=0.0)
         self.addSpecies([Coral, MA, Coral_m, MA_m, Turf])
 
@@ -37,9 +37,13 @@ class CoralReef(pyurdme.URDMEModel):
 
         # Propagule Recruitment
         # T -> C  : phi_c
-        R0 = pyurdme.Reaction(name="R0", reactants={Turf:1}, products={Coral:1}, rate=phi_c)
         # T -> MA : phi_m
-        R1 = pyurdme.Reaction(name="R1", reactants={Turf:1}, products={MA:1}, rate=phi_m)
+        if version > 1:
+            R0 = pyurdme.Reaction(name="R0", reactants={}, products={Coral_m:1}, rate=phi_c)
+            R1 = pyurdme.Reaction(name="R1", reactants={}, products={MA_m:1}, rate=phi_m)
+        else:
+            R0 = pyurdme.Reaction(name="R0", reactants={Turf:1}, products={Coral:1}, rate=phi_c)
+            R1 = pyurdme.Reaction(name="R1", reactants={Turf:1}, products={MA:1}, rate=phi_m)
         
         # Death rates
         # C -> T : dc
@@ -52,8 +56,12 @@ class CoralReef(pyurdme.URDMEModel):
         R5 = pyurdme.Reaction(name="R5", reactants={Turf:1, Coral_m:1}, products={Coral:1}, propensity_function="Turf * Coral_m * g_tc * exp(-1.0 * psi_g * MA * 100)/vol")
         # T + MA_m -> MA : g_tm
         R6  = pyurdme.Reaction(name="R6", reactants={Turf:1, MA_m:1}, products={MA:1}, propensity_function="Turf * MA_m * g_tm / vol")
-        # MA + C -> 2MA : Gamma*g_tm
-        R7 = pyurdme.Reaction(name="R7", reactants={Coral:1}, products={MA:1}, propensity_function="MA * Coral * Gamma * g_tm / vol")
+        if version > 1:
+            # MA_m + C -> 2MA : Gamma*g_tm
+            R7 = pyurdme.Reaction(name="R7", reactants={Coral:1}, products={MA_m:1}, propensity_function="MA_m * Coral * Gamma * g_tm / vol")
+        else:
+            # MA + C -> 2MA : Gamma*g_tm
+            R7 = pyurdme.Reaction(name="R7", reactants={Coral:1}, products={MA:1}, propensity_function="MA * Coral * Gamma * g_tm / vol")
 
         # Movement, working in meters
         # C -> C + C_m : mu_c + g_tc * exp(-1*psi_g*MA*100)
@@ -64,8 +72,14 @@ class CoralReef(pyurdme.URDMEModel):
         R10 = pyurdme.Reaction(name="R10", reactants={}, products={MA_m:1}, propensity_function="MA * (g_tc + mu_m)")
         # MA_m -> 0 :  mu_m
         R11 = pyurdme.Reaction(name="R11", reactants={MA_m:1},  products={}, rate=mu_m)
-
         self.addReaction([R0, R1, R3, R4, R5, R6, R7, R8, R9, R10, R11])
+
+        if version > 1:
+            # C_m + MA_m -> 0
+            R12 = pyurdme.Reaction(name="R12", reactants={MA_m:1,Coral_m:1},  products={}, propensity_function="(mu_c + mu_m) * MA_m * Coral_m / vol")
+            self.addReaction([R12])
+
+
 
 
         # A unit square

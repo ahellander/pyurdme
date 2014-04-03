@@ -1,4 +1,4 @@
-#self.model.mesh.FunctionSpace()!/usr/bin/env python
+#!/usr/bin/env python
 """ pyURDME model file for the annihilation cylinder 3D example. """
 
 import os

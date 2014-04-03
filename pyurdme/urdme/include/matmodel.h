@@ -59,6 +59,11 @@ typedef struct{
 	size_t* irN;
 	size_t* jcN;
 	int *prN;
+
+	/* Connectivity matrix (sparse CCS) */
+	size_t* irK;
+	size_t* jcK;
+	int *prK;
 	
 	/* Dependency graph (sparse CCS) */
 	size_t* irG;

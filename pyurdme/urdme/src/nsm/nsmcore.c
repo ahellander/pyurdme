@@ -188,6 +188,7 @@ void nsm_core(const size_t *irD,const size_t *jcD,const double *prD,
     // Write tspan to the file
     herr_t status;
     hsize_t dataset_dims[2]; /* dataset dimensions */
+    hsize_t chunk_dims[2];
     
     dataset_dims[0] = 1;
     dataset_dims[1] = tlen;
@@ -206,6 +207,9 @@ void nsm_core(const size_t *irD,const size_t *jcD,const double *prD,
     /* How many timepoints do we log before the buffer is full? */
     size_t column_size = Ndofs*sizeof(int);
     int num_columns = max_buffer_size / column_size;
+    if (num_columns > tlen){
+        num_columns = tlen;
+    }
     size_t buffer_size = num_columns*Ndofs;
     int *buffer = (int *)calloc(buffer_size,sizeof(int));
     int num_columns_since_flush = 0;
@@ -214,9 +218,14 @@ void nsm_core(const size_t *irD,const size_t *jcD,const double *prD,
     dataset_dims[0] = tlen;
     dataset_dims[1] = Ndofs;
     
+    chunk_dims[0] = num_columns;
+    chunk_dims[1] = Ndofs;
+    
     trajectory_dataspace = H5Screate_simple(2, dataset_dims, NULL);
     hid_t plist = H5Pcreate(H5P_DATASET_CREATE);
-    H5Pset_chunk(plist,2,dataset_dims);
+    //H5Pset_chunk(plist,2,dataset_dims);
+    H5Pset_chunk(plist,2,chunk_dims);
+    
     //status = H5Pset_deflate (plist, 4);
     
     trajectory_dataset = H5Dcreate2(output_file, "/U", datatype, trajectory_dataspace, H5P_DEFAULT,plist,H5P_DEFAULT);

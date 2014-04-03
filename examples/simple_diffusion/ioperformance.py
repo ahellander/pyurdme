@@ -79,7 +79,8 @@ if __name__ == '__main__':
         we can measure the peroformace as we become IO/Memory bound. """
     
     model = simple_diffusion2()
-    print "Output data set size:", str(4*1620*500/1.048e6) + " MB"
+    num_dofs = 2*model.mesh.num_vertices()
+    print "Output data set size:", str(4*num_dofs*500/1.048e6) + " MB"
     model.timespan(numpy.linspace(0,1,500))
 
     tic = time.time()
@@ -98,7 +99,7 @@ if __name__ == '__main__':
     print "\t Selecting a single timepoint took "+str(time.time()-tic)+" s."
 
 
-    print "Output data set size:",str(4*1620*5000/1.024e6) + " MB"
+    print "Output data set size:",str(4*num_dofs*5000/1.024e6) + " MB"
     model.timespan(numpy.linspace(0,1,5000))
     tic = time.time()
     result = urdme(model,report_level=0)
@@ -118,7 +119,7 @@ if __name__ == '__main__':
 
 
 
-    print "Output data set size:", str(4*1620*50000/1.024e6) + " MB"
+    print "Output data set size:", str(4*num_dofs*50000/1.024e6) + " MB"
     model.timespan(numpy.linspace(0,1,50000))
     tic = time.time()
     result = urdme(model,report_level=0)
@@ -135,8 +136,8 @@ if __name__ == '__main__':
     print "\t Selecting a single timepoint took "+str(time.time()-tic)+" s."
 
 
-    print "Output data set size:", str(4*1620*500000/1.024e6) + " MB"
-    model.timespan(numpy.linspace(0,1,500000))
+    print "Output data set size:", str(4*num_dofs*500000/2/1.024e6) + " MB"
+    model.timespan(numpy.linspace(0,1,500000/2))
     tic = time.time()
     result = urdme(model,report_level=0)
     print "\t pyurdme took "+str(time.time()-tic)+" s."

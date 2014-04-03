@@ -1327,23 +1327,32 @@ class URDMEResult(dict):
             num_species = self.model.getNumSpecies()
         num_dofs = num_vox*num_species
         C = numpy.zeros((num_timepoints, num_dofs), dtype=numpy.float64)
-        for t in range(num_timepoints):
-            for vox_ndx in range(num_vox):
-                for cndx in range(num_species):
-                    try:
-                        if len(M.shape) == 1:
-                            C[t, vox_ndx*num_species+cndx] = M[v2d[vox_ndx]*num_species+cndx]
-                        else:
-                            C[t, vox_ndx*num_species+cndx] = M[t, v2d[vox_ndx]*num_species+cndx]
-                    except IndexError as e:
-                        print "C.shape: ", C.shape
-                        print "M.shape: ", M.shape
-                        print "num_timepoints: ", num_timepoints
-                        print "t={0},vox_ndx={1},num_species={2},cndx={3}".format(t,vox_ndx,num_species,cndx)
-                        print "v2d[vox_ndx]={0}".format(v2d[vox_ndx])
-                        print "vox_ndx*num_species+cndx={0}".format(vox_ndx*num_species+cndx)
-                        print "v2d[vox_ndx]*num_species+cndx={0}".format(v2d[vox_ndx]*num_species+cndx)
-                        raise e
+
+#        reorder_map = numpy.zeros((num_vox*num_species), dtype=numpy.int)
+#        for vox_ndx in range(num_vox):
+#            for cndx in range(num_species):
+#                reorder_map[vox_ndx*num_species+cndx] = v2d[vox_ndx]*num_species+cndx
+#        if len(M.shape) == 1:
+#            C[:,:] = M[reorder_map]
+#        else:
+#            C[:,:] = M[:, reorder_map]
+        #for t in range(num_timepoints):
+        for vox_ndx in range(num_vox):
+            for cndx in range(num_species):
+                try:
+                    if len(M.shape) == 1:
+                        C[:, vox_ndx*num_species+cndx] = M[v2d[vox_ndx]*num_species+cndx]
+                    else:
+                        C[:, vox_ndx*num_species+cndx] = M[:, v2d[vox_ndx]*num_species+cndx]
+                except IndexError as e:
+                    print "C.shape: ", C.shape
+                    print "M.shape: ", M.shape
+                    print "num_timepoints: ", num_timepoints
+                    print "vox_ndx={1},num_species={2},cndx={3}".format(vox_ndx,num_species,cndx)
+                    print "v2d[vox_ndx]={0}".format(v2d[vox_ndx])
+                    print "vox_ndx*num_species+cndx={0}".format(vox_ndx*num_species+cndx)
+                    print "v2d[vox_ndx]*num_species+cndx={0}".format(v2d[vox_ndx]*num_species+cndx)
+                    raise e
         return C
 
     def read_solution(self):

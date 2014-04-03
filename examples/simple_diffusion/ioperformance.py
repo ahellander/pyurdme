@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """ PyURDME model with one species diffusing in the unit circle and one
     species diffusing on the boundary of the circle. Subdomains are 
     here handled by Dolfin's native subdomain model. """
@@ -94,7 +95,7 @@ if __name__ == '__main__':
     tic  = time.time()
     A = result.getSpecies("A",[300])
     #print numpy.sum(A,axis=1)
-    print "\t Selecting a singe timepoint took "+str(time.time()-tic)+" s."
+    print "\t Selecting a single timepoint took "+str(time.time()-tic)+" s."
 
 
     print "Output data set size:",str(4*1620*5000/1.024e6) + " MB"
@@ -113,7 +114,7 @@ if __name__ == '__main__':
     tic  = time.time()
     A = result.getSpecies("A",[4000])
     #print numpy.sum(A,axis=1)
-    print "\t Selecting a singe timepoint took "+str(time.time()-tic)+" s."
+    print "\t Selecting a single timepoint took "+str(time.time()-tic)+" s."
 
 
 
@@ -131,7 +132,7 @@ if __name__ == '__main__':
     tic  = time.time()
     A = result.getSpecies("A",[25000])
     #print numpy.sum(A,axis=1)
-    print "\t Selecting a singe timepoint took "+str(time.time()-tic)+" s."
+    print "\t Selecting a single timepoint took "+str(time.time()-tic)+" s."
 
 
     print "Output data set size:", str(4*1620*500000/1.024e6) + " MB"
@@ -149,7 +150,7 @@ if __name__ == '__main__':
     tic  = time.time()
     A = result.getSpecies("A",[100000])
     #print numpy.sum(A,axis=1)
-    print "\t Selecting a singe timepoint took "+str(time.time()-tic)+" s."
+    print "\t Selecting a single timepoint took "+str(time.time()-tic)+" s."
 
 
 

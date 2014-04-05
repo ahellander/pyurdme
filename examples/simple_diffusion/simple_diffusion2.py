@@ -80,16 +80,26 @@ if __name__ == '__main__':
     A = result.getSpecies("A")
     #print numpy.sum(A,axis=1)
     data = model.solverData()
-    u0 = data["u0"];
-    x = model.mesh.coordinates()[:,1]
-    idx = numpy.argmin(numpy.abs(x))
-    print numpy.sum(A[:,idx])
-    print u0[0,idx]
+    u0 = model.u0
+    print numpy.sum(u0,axis=1)
+    ix = numpy.argmax(u0[0,:])
     
+    c = model.mesh.coordinates()
+    x = c[:,0]
+    print c[ix,:]
+    dof2vtx = dolfin.dof_to_vertex_map(model.mesh.FunctionSpace())
+    u0 = data["u0"]
+    ixdof = numpy.argmax(u0[0,:])
+    print ix, dof2vtx[ixdof]
+    print u0[0,ixdof]
+    print A[0,ix]
+    print A[1,ix]
+#print A0[ixdof]
+
     #print numpy.max(x)
     #print numpy.min(x)
     # Dump timeseries in Paraview format
-    #result.toVTK(species="B",folder_name="Bout")
-#result.toVTK(species="A",folder_name="Aout")
+    result.toVTK(species="B",folder_name="Bout")
+    result.toVTK(species="A",folder_name="Aout")
 
 

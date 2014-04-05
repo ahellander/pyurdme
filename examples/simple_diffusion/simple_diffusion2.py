@@ -77,8 +77,19 @@ if __name__ == '__main__':
     
     model = simple_diffusion2()
     result = pyurdme.urdme(model)
+    A = result.getSpecies("A")
+    #print numpy.sum(A,axis=1)
+    data = model.solverData()
+    u0 = data["u0"];
+    x = model.mesh.coordinates()[:,1]
+    idx = numpy.argmin(numpy.abs(x))
+    print numpy.sum(A[:,idx])
+    print u0[0,idx]
+    
+    #print numpy.max(x)
+    #print numpy.min(x)
     # Dump timeseries in Paraview format
-    result.toVTK(species="B",folder_name="Bout")
-    result.toVTK(species="A",folder_name="Aout")
+    #result.toVTK(species="B",folder_name="Bout")
+#result.toVTK(species="A",folder_name="Aout")
 
 

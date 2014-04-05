@@ -100,7 +100,7 @@ class mincde(pyurdme.URDMEModel):
         self.scatter({MinD_c_adp:4500})
         self.scatter({MinD_e:1575})
 
-        self.timespan(range(50))
+        self.timespan(range(400))
 
 if __name__=="__main__":
     """ Dump model to a file. """
@@ -111,11 +111,18 @@ if __name__=="__main__":
     if False:
         print "Writing species 'MinD_m' to folder 'MinDout'"
         result.toVTK(species='MinD_m',folder_name="MinDout")
-    
-    result._initialize_sol()
+
+    mindm = result.getSpecies("MinD_m")
+    print numpy.shape(mindm)
+
+#    result._initialize_sol()
     x_vals = model.mesh.coordinates()[:, 0]
-    MinD_vals = numpy.mean(result.getSpecies("MinD_m", concentration=True), axis=0)
-    plt.plot(x_vals,MinD_vals,'.r')
-    plt.title('Temporal Average')
+
+    idx = (x_vals < 0)
+    mindmmean = numpy.sum(mindm[:,idx],axis=1)
+    plt.plot(model.tspan, mindmmean)
+#   MinD_vals = numpy.mean(result.getSpecies("MinD_m", concentration=True), axis=0)
+#    plt.plot(x_vals,MinD_vals,'.r')
+#    plt.title('Temporal Average')
     plt.show()    
 

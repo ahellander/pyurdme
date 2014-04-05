@@ -539,11 +539,11 @@ class URDMEModel(Model):
             sd = self.sd
         except:
             sd = self.subdomainVector(self.subdomains)
-            sd_vec_dof = numpy.zeros(self.mesh.getNumDofVoxels())
-            vertex_to_dof = dolfin.vertex_to_dof_map(self.mesh.FunctionSpace())
-            for ndx, sd_val in enumerate(sd):
-                sd_vec_dof[vertex_to_dof[ndx]] = sd_val
-            sd = sd_vec_dof
+            #  sd_vec_dof = numpy.zeros(self.mesh.getNumDofVoxels())
+            #vertex_to_dof = dolfin.vertex_to_dof_map(self.mesh.FunctionSpace())
+            #for ndx, sd_val in enumerate(sd):
+            #    sd_vec_dof[vertex_to_dof[ndx]] = sd_val
+            #sd = sd_vec_dof
 
         for species, K in stiffness_matrices.iteritems():
 

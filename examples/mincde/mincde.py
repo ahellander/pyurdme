@@ -113,16 +113,13 @@ if __name__=="__main__":
         result.toVTK(species='MinD_m',folder_name="MinDout")
 
     mindm = result.getSpecies("MinD_m")
-    print numpy.shape(mindm)
 
-#    result._initialize_sol()
-    x_vals = model.mesh.coordinates()[:, 0]
-
-    idx = (x_vals < 0)
-    mindmmean = numpy.sum(mindm[:,idx],axis=1)
-    plt.plot(model.tspan, mindmmean)
-#   MinD_vals = numpy.mean(result.getSpecies("MinD_m", concentration=True), axis=0)
-#    plt.plot(x_vals,MinD_vals,'.r')
-#    plt.title('Temporal Average')
+    y_vals = model.mesh.coordinates()[:, 1]
+    print numpy.max(y_vals)
+    print numpy.min(y_vals)
+    idx = (z_vals < 1e-6)
+    mindmsum = numpy.sum(mindm[:,idx],axis=1)
+    plt.plot(model.tspan, mindmsum)
+    plt.title('MinD_m oscillations')
     plt.show()    
 

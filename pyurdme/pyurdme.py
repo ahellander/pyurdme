@@ -535,15 +535,15 @@ class URDMEModel(Model):
         positive_mass = 0.0
         total_mass = 0.0
 
-        try:
-            sd = self.sd
-        except:
-            sd = self.subdomainVector(self.subdomains)
-            sd_vec_dof = numpy.zeros(self.mesh.getNumDofVoxels())
-            vertex_to_dof = dolfin.vertex_to_dof_map(self.mesh.FunctionSpace())
-            for ndx, sd_val in enumerate(sd):
-                sd_vec_dof[vertex_to_dof[ndx]] = sd_val
-            sd = sd_vec_dof
+#try:
+#           sd = self.sd
+#        except:
+        sd = self.subdomainVector(self.subdomains)
+        sd_vec_dof = numpy.zeros(self.mesh.getNumDofVoxels())
+        vertex_to_dof = dolfin.vertex_to_dof_map(self.mesh.FunctionSpace())
+        for ndx, sd_val in enumerate(sd):
+            sd_vec_dof[vertex_to_dof[ndx]] = sd_val
+        sd = sd_vec_dof
 
         for species, K in stiffness_matrices.iteritems():
 
@@ -1158,8 +1158,6 @@ class URDMEMesh(dolfin.Mesh):
         document["metadata"] = {"formatVersion":3}
         gfdg,vtx = self.scaledNormalizedCoordinates()
         
-
-
         if self.topology().dim() == 2:
             # 2D
             num_elements = self.num_cells()
@@ -1190,7 +1188,6 @@ class URDMEMesh(dolfin.Mesh):
             colors = [255]*self.num_vertices()
         
         document["colors"] = colors
-        #document["scale"] = 1.000000
         
         self.init(2,0)
         connectivity = self.topology()(2,0)
@@ -1476,8 +1473,6 @@ class URDMEResult(dict):
 
             species = self.model.listOfSpecies[spec]
             spec_name = species.name
-            #dof_to_vertex_map = self.model.xmesh.dof_to_vertex_map[spec]
-            #vertex_to_dof_map = self.model.xmesh.vertex_to_dof_map[spec]
 
             spec_sol = {}
             for j, time in enumerate(self.tspan):
@@ -1488,11 +1483,10 @@ class URDMEResult(dict):
                 S = self.getSpecies(spec, [j])
 
                 for voxel in range(numvox):
-                    dof = voxel*len(self.model.listOfSpecies)+i
                     ix  = vertex_to_dof_map[voxel]
-                    dolfvox = (ix-i)/len(self.model.listOfSpecies)
                     try:
-                        func_vector[dolfvox] = float(S[voxel]/self.model.dofvol[vertex_to_dof_map[voxel]])
+                        func_vector[ix] = float(S[voxel]/self.model.dofvol[ix])
+
                     except IndexError as e:
                         print "func_vector.size(): ", func_vector.size()
                         print "dolfvox: ",dolfvox

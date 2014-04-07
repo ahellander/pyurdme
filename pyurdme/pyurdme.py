@@ -946,13 +946,11 @@ class URDMEMesh(dolfin.Mesh):
         # Scale the verices so the max dimension is in the range (-1,1) to be compatible with the browser display
         vtx = self.coordinates()
         maxvtx = numpy.max(numpy.amax(vtx,axis=0))
-        print maxvtx
         factor = 1/maxvtx
         vtx = factor*vtx
         
         # Compute mesh centroid
         centroid = numpy.mean(vtx,axis=0)
-        print centroid
         # Shift so the centroid is now origo
         normalized_vtx = numpy.zeros(numpy.shape(vtx))
         for i,v in enumerate(vtx):
@@ -1160,11 +1158,6 @@ class URDMEMesh(dolfin.Mesh):
         document["metadata"] = {"formatVersion":3}
         gfdg,vtx = self.scaledNormalizedCoordinates()
         
-        #foo,vtx = self.scaledCoordinates()
-        #vtx = self.coordinates()
-        
-
-
         if self.topology().dim() == 2:
             # 2D
             num_elements = self.num_cells()
@@ -1195,7 +1188,6 @@ class URDMEMesh(dolfin.Mesh):
             colors = [255]*self.num_vertices()
         
         document["colors"] = colors
-        #document["scale"] = foo
         
         self.init(2,0)
         connectivity = self.topology()(2,0)

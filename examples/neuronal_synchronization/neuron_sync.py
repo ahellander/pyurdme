@@ -1,5 +1,7 @@
 #!/usr/bin/env python
-""" pyURDME model file for the Locke 2008 model. """
+""" pyURDME model file for Giovanni's three state  model.
+cite: Schroder JBR (2012)
+"""
 
 import os
 import pyurdme
@@ -41,37 +43,32 @@ class neuron_sync_1D(pyurdme.URDMEModel):
         self.addSpecies([X, Y, Z, V])
    
         # Create Mesh
-        self.mesh = pyurdme.Mesh.IntervalMesh(nx=5, a=0, b=5)
+        self.mesh = pyurdme.URDMEMesh.IntervalMesh(nx=5, a=0, b=5)
         #self.mesh.addPeriodicBoundaryCondition(PeriodicBoundary1D(a=0, b=5))
 
-        v1 = pyurdme.Parameter(name="v1" ,expression=6.8355) #nM/h
-        K1 = pyurdme.Parameter(name="K1" ,expression=2.7266) #nM
-        n  = pyurdme.Parameter(name="n"  ,expression=5.6645)
-        v2 = pyurdme.Parameter(name="v2" ,expression=8.4297) #nM/h
-        K2 = pyurdme.Parameter(name="K2" ,expression=0.2910) #nM
-        k3 = pyurdme.Parameter(name="k3" ,expression=0.1177) #1/h
-        v4 = pyurdme.Parameter(name="v4" ,expression=1.0841) #nM/h
-        K4 = pyurdme.Parameter(name="K4" ,expression=8.1343) #nM
-        k5 = pyurdme.Parameter(name="k5" ,expression=0.3352) #1/h
-        v6 = pyurdme.Parameter(name="v6" ,expression=4.6645) #nM/h
-        K6 = pyurdme.Parameter(name="K6" ,expression=9.9849) #nM
-        k7 = pyurdme.Parameter(name="k7" ,expression=0.2282) #1/h
-        v8 = pyurdme.Parameter(name="v8" ,expression=3.5216) #nM/h
-        K8 = pyurdme.Parameter(name="K8" ,expression=7.4519) #nM
-        vc = pyurdme.Parameter(name="vc" ,expression=6.7924) #nM/h
-        Kc = pyurdme.Parameter(name="Kc" ,expression=4.8283) #nM
-        K  = pyurdme.Parameter(name="K"  ,expression=1.0)
+
+        alpha = pyurdme.Parameter(name="alpha" ,expression=0.1) 
+        KI = pyurdme.Parameter(name="KI" ,expression=1.0) 
+        KM = pyurdme.Parameter(name="KM" ,expression=0.5) 
+        ks = pyurdme.Parameter(name="ks" ,expression=0.417) 
+        vd = pyurdme.Parameter(name="vd" ,expression=1.167) 
+        KD = pyurdme.Parameter(name="KD" ,expression=0.13) 
+        k1 = pyurdme.Parameter(name="k1" ,expression=0.417) 
+        k2 = pyurdme.Parameter(name="k2" ,expression=0.5) 
+        n  = pyurdme.Parameter(name="n"  ,expression=4)
+        #vm = normrnd(0.416,0.04,N,1);
+        vm = pyurdme.Parameter(name="vm" ,expression=0.416)
         L  = pyurdme.Parameter(name="L"  ,expression=0.0)
+
         
         self.addParameter([ v1, K1, n, v2, K2, k3, v4, K4, k5, v6, K6, k7, v8, K8, vc, Kc, K, L ]) 
 
         # Convert ODEs into stochastic reactions
-        # since we have explicit diffusion F_i = V_i
-        # (1) dX/dt = v1*K1^n/(K1^n + Z^n) - v2*X/(K2 + X) + vc*K*V/(Kc + K*V) + L
-        # (2) dY/dt = k3*X - v4*Y/(K4 + Y)
-        # (3) dZ/dt = k5*Y - v6*Z/(K6 + Z)
-        # (4) dV/dt = -D\nambla^2*V + k7*X - v8*V/(K8 + V)
-
+        #x1(t,osc1) = x1(t-1,osc1) + dt * ( v(t-1,osc1) * KI^n / (KI^n + x3(t-1,osc1)^n) - vm(osc1) * x1(t-1,osc1)/(KM + x1(t-1,osc1)) );
+        #x2(t,osc1) = x2(t-1,osc1) + dt * ( ks * x1(t-1,osc1) - vd * x2(t-1,osc1) / (KD + x2(t-1,osc1)) - k1 * x2(t-1,osc1) + k2 * x3(t-1,osc1) );
+        #x3(t,osc1) = x3(t-1,osc1) + dt * ( k1 * x2(t-1,osc1) - k2 * x3(t-1,osc1) );
+        #v(t,osc1) = -Diff_Cost/(ell*ell)*dt*(right_v + left_v - 2*v(t-1, osc1)) + 0.83 + L(osc1) + alpha(osc1) * x1(t-1,osc1) - v_deg*v(t-1, osc1);
+                        
         # Reactions
         R1c = pyurdme.Reaction(name="R1c", reactants={}, products={X:1}, 
             propensity_function="v1*pow(K1,n)/(pow(K1,n) + pow(Z/vol,n))*vol + vc*K*V/(Kc + K*V/vol) + L*vol")
@@ -103,14 +100,14 @@ class neuron_sync_1D(pyurdme.URDMEModel):
         self.distributeUniformly({V:numpy.floor(1.0*NANO_MOLAR)})
 
         # Set time range and sample points
-        self.timespan(range(101))
+        self.timespan(range(201))
 
 
 if __name__=="__main__":
     """ Dump model to a file. """
                      
     model = neuron_sync_1D()
-    result = pyurdme.urdme(model)
+    result = pyurdme.urdme(model, report_level=1)
     print result
 
     x_vals = model.mesh.coordinates()[:, 0]

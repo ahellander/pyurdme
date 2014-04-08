@@ -19,12 +19,12 @@ class simple_diffusion(pyurdme.URDMEModel):
         self.addSpecies([A])
 
         # A unit square
-        self.mesh = pyurdme.Mesh.unitSquareMesh(40,40)
+        self.mesh = pyurdme.URDMEMesh.unitSquareMesh(40,40)
                 
         # Place the A molecules in the voxel nearest the center of the square
         self.placeNear({A:100000},point=[0.5,0.5])
 
-        self.timespan(numpy.linspace(0,1,50))
+        self.timespan(numpy.linspace(0,5,200))
 
 
 if __name__ == '__main__':

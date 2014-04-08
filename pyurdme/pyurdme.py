@@ -105,7 +105,7 @@ class URDMEModel(Model):
             fdname = fd.name
             fd.write(state["mesh"])
             fd.seek(0)
-            mesh = Mesh.read_dolfin_mesh(fdname)
+            mesh = URDMEMesh.read_dolfin_mesh(fdname)
             fd.close()
             self.__dict__["mesh"] = mesh
         except Exception, e:

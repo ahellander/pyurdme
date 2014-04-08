@@ -21,6 +21,7 @@
 
 int flush_solution_to_file(hid_t trajectory_dataset,int *buffer,int column_offset, int num_columns, int col_size)
 {
+
     /* This  is the column offset in the hdf5 datafile. */
     hsize_t start[2];
     hsize_t count[2];
@@ -300,6 +301,7 @@ void nsm_core(const size_t *irD,const size_t *jcD,const double *prD,
         /* Store solution if the global time counter tt has passed the
          next time is tspan. */
         if (tt >= tspan[it] || isinf(tt)) {
+	  
             for (; it < tlen && (tt >= tspan[it] || isinf(tt)); it++) {
                 
                 if (report)
@@ -318,7 +320,6 @@ void nsm_core(const size_t *irD,const size_t *jcD,const double *prD,
 
                 if (num_columns_since_flush == num_columns){
 
-
                     status = flush_solution_to_file(trajectory_dataset,buffer,chunk_indx*num_columns,num_columns_since_flush,Ndofs);
                     if (status){
                         printf("Failed to flush buffer to file.");
@@ -335,12 +336,14 @@ void nsm_core(const size_t *irD,const size_t *jcD,const double *prD,
             /* If the simulation has reached the final time, exit. */
             if (it >= tlen){
                 /* Flush the buffer */
-
-                status = flush_solution_to_file(trajectory_dataset,buffer,chunk_indx*num_columns,num_columns_since_flush,Ndofs);
-                if (status){
-                    printf("Failed to flush buffer to file.");
+		
+		if (num_columns_since_flush > 0){
+		  status = flush_solution_to_file(trajectory_dataset,buffer,chunk_indx*num_columns,num_columns_since_flush,Ndofs);
+		  if (status){
+                    printf("Failed to flush buffer to file.\n");
                     exit(-1);
-                }
+		  }
+		}
                 total_columns_written += num_columns_since_flush;
                 break;
             }

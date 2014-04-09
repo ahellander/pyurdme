@@ -105,7 +105,7 @@ class URDMEModel(Model):
             fdname = fd.name
             fd.write(state["mesh"])
             fd.seek(0)
-            mesh = Mesh.read_dolfin_mesh(fdname)
+            mesh = URDMEMesh.read_dolfin_mesh(fdname)
             fd.close()
             self.__dict__["mesh"] = mesh
         except Exception, e:
@@ -535,9 +535,7 @@ class URDMEModel(Model):
         positive_mass = 0.0
         total_mass = 0.0
 
-#try:
-#           sd = self.sd
-#        except:
+
         sd = self.subdomainVector(self.subdomains)
         sd_vec_dof = numpy.zeros(self.mesh.getNumDofVoxels())
         vertex_to_dof = dolfin.vertex_to_dof_map(self.mesh.FunctionSpace())

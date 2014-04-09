@@ -62,6 +62,7 @@ class cylinderDemo3D(pyurdme.URDMEModel):
 
 
 if __name__ == "__main__":
+    
     model = cylinderDemo3D()
     result = pyurdme.urdme(model, report_level=1)
     

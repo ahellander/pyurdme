@@ -1614,7 +1614,7 @@ class URDMEResult(dict):
                 hiy = hix;
                 hiz = hix*is3d
                 
-                for particle in range(particles):
+                for particle in range(int(particles)):
                     x.append((coordinates[i,0]+random.uniform(-1,1)*hix))
                     y.append((coordinates[i,1]+random.uniform(-1,1)*hiy))
                     z.append((coordinates[i,2]+random.uniform(-1,1)*hiz))

@@ -74,7 +74,7 @@ class CoralReef(pyurdme.URDMEModel):
         R11 = pyurdme.Reaction(name="R11", reactants={MA_m:1},  products={}, rate=mu_m)
         self.addReaction([R0, R1, R3, R4, R5, R6, R7, R8, R9, R10, R11])
 
-        if version > 1:
+        if version > 1 and version != 3:
             # C_m + MA_m -> 0
             R12 = pyurdme.Reaction(name="R12", reactants={MA_m:1,Coral_m:1},  products={}, propensity_function="(mu_c + mu_m) * MA_m * Coral_m / vol")
             self.addReaction([R12])

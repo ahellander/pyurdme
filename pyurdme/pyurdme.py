@@ -9,6 +9,7 @@ import sys
 import tempfile
 import types
 import warnings
+import copy
 
 import numpy
 import scipy.io
@@ -1269,6 +1270,21 @@ class URDMEResult(dict):
             self.read_solution()
 
 
+    def get_endtime_model(self):
+        """ Return a URDME model object with the initial conditions set to the final time point of the
+            result object.
+        """
+        if self.model is None:
+            raise Exception("can not continue a result with no model")
+        # create a soft copy
+        model2 = copy.copy(self.model)
+        # set the initial conditions 
+        model2.u0 = numpy.zeros(self.model.u0.shape)
+        for s, sname in enumerate(self.model.listOfSpecies):
+            model2.u0[s,:] = self.getSpecies(sname, timepoints=-1)
+        return model2
+
+
 
     def __getstate__(self):
         """ Used by pickle to get state when pickling. We need to read the contents of the
@@ -1340,10 +1356,13 @@ class URDMEResult(dict):
                     else:
                         C[:, vox_ndx*num_species+cndx] = M[:, v2d[vox_ndx]*num_species+cndx]
                 except IndexError as e:
+                    import traceback
+                    #traceback.print_stack()
+                    print traceback.format_exc()
                     print "C.shape: ", C.shape
                     print "M.shape: ", M.shape
                     print "num_timepoints: ", num_timepoints
-                    print "vox_ndx={1},num_species={2},cndx={3}".format(vox_ndx,num_species,cndx)
+                    print "vox_ndx={0},num_species={1},cndx={2}".format(vox_ndx,num_species,cndx)
                     print "v2d[vox_ndx]={0}".format(v2d[vox_ndx])
                     print "vox_ndx*num_species+cndx={0}".format(vox_ndx*num_species+cndx)
                     print "v2d[vox_ndx]*num_species+cndx={0}".format(v2d[vox_ndx]*num_species+cndx)

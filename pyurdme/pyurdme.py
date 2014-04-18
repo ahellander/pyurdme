@@ -18,6 +18,8 @@ import scipy.sparse
 import gmsh
 from model import *
 
+import inspect
+
 import IPython.display
 
 try:
@@ -51,7 +53,9 @@ class URDMEModel(Model):
 
         self.mesh = None
         self.xmesh = None
-
+        self.stiffness_matrices = None
+        self.mass_matrices = None
+        
         # subdomins is a list of MeshFunctions with subdomain marker information
         self.subdomains = OrderedDict()
 
@@ -71,16 +75,35 @@ class URDMEModel(Model):
             for the object to pickle. """
 
         #  Filter out any instance variable that is not picklable...
-        state = self.__dict__
-        for key, item in state.items():
+        state = {}
+        for key, item in self.__dict__.items():
             try:
                 pickle.dumps(item)
+                state[key] = item
             except Exception as e:
                 if key == "mesh":
                     tmpfile = tempfile.NamedTemporaryFile(suffix=".xml")
                     dolfin.File(tmpfile.name) << item
                     tmpfile.seek(0)
-                    state[key] = tmpfile.read()
+                    state['mesh'] = {}
+                    state['mesh']['data'] = tmpfile.read()
+                    tmpfile.close()
+                    if item.constrained_domain is not None:
+                        # Warning: This is black magic.
+                        try:
+                            cdd = {}
+                            cdd['source'] = inspect.getsource(item.constrained_domain.__class__)
+                            cdd['name'] = item.constrained_domain.__class__.__name__
+                            cdd['dict'] = {}
+                            for k,v in item.constrained_domain.__dict__.iteritems():
+                                if type(v).__name__ != 'SwigPyObject':
+                                    cdd['dict'][k] = v
+                            state['mesh']['constrained_domain'] = cdd
+                        except Exception as e:
+                            sys.stderr.write("error pickling mesh.constrained_domain: {0}\n".format(e))
+                            raise e
+                    if item.num_dof_voxels is not None:
+                        state['mesh']['num_dof_voxels'] = item.num_dof_voxels
                 elif key == "subdomains":
                     sddict = OrderedDict()
                     for sdkey, sd_func in item.items():
@@ -88,6 +111,7 @@ class URDMEModel(Model):
                         dolfin.File(tmpfile.name) << sd_func
                         tmpfile.seek(0)
                         sddict[sdkey] = tmpfile.read()
+                        tmpfile.close()
                     state[key] = sddict
                 else:
                     state[key] = None
@@ -100,36 +124,49 @@ class URDMEModel(Model):
 
         self.__dict__ = state
 
-        # Recreate the mesh
-        try:
-            fd = tempfile.NamedTemporaryFile(suffix=".xml")
-            fdname = fd.name
-            fd.write(state["mesh"])
-            fd.seek(0)
-            mesh = URDMEMesh.read_dolfin_mesh(fdname)
-            fd.close()
-            self.__dict__["mesh"] = mesh
-        except Exception, e:
-            print "Error unpickling model, could not recreate the mesh."
-            raise
-
-        # Recreate the subdomain functions
-        try:
-            sddict = OrderedDict()
-            for sdkey, sd_func_str in state["subdomains"].items():
+        if 'mesh' in state:
+            # Recreate the mesh
+            try:
                 fd = tempfile.NamedTemporaryFile(suffix=".xml")
                 fdname = fd.name
-                fd.write(sd_func_str)
+                fd.write(state['mesh']['data'])
                 fd.seek(0)
-                fd_in = dolfin.File(fdname)
-                func = dolfin.MeshFunction("size_t", self.__dict__["mesh"])
-                fd_in >> func
-                sddict[sdkey] = func
+                mesh = URDMEMesh.read_dolfin_mesh(fdname)
                 fd.close()
-            self.__dict__["subdomains"] = sddict
-        except Exception as e:
-            raise Exception("Error unpickling model, could not recreate the subdomain functions"+str(e))
-            
+                if 'constrained_domain' in state['mesh']:
+                    # Black magic to match that in __getstate__
+                    cdd = state['mesh']['constrained_domain']
+                    compiled_class = compile(cdd['source'], 'pyurdme.mesh.constrained_domain', 'exec')
+                    eval(compiled_class)
+                    compiled_object = eval("{0}()".format(cdd['name']))
+                    for k,v in cdd['dict'].iteritems():
+                        compiled_object.__dict__[k] = v
+                    mesh.constrained_domain = compiled_object
+                if 'num_dof_voxels' in state['mesh']:
+                    mesh.num_dof_voxels = state['mesh']['num_dof_voxels']
+                self.__dict__['mesh'] = mesh
+            except Exception as e:
+                print "Error unpickling model, could not recreate the mesh."
+                raise e
+
+        if 'subdomains' in state:
+            # Recreate the subdomain functions
+            try:
+                sddict = OrderedDict()
+                for sdkey, sd_func_str in state["subdomains"].items():
+                    fd = tempfile.NamedTemporaryFile(suffix=".xml")
+                    fdname = fd.name
+                    fd.write(sd_func_str)
+                    fd.seek(0)
+                    fd_in = dolfin.File(fdname)
+                    func = dolfin.MeshFunction("size_t", self.__dict__["mesh"])
+                    fd_in >> func
+                    sddict[sdkey] = func
+                    fd.close()
+                self.__dict__["subdomains"] = sddict
+            except Exception as e:
+                raise Exception("Error unpickling model, could not recreate the subdomain functions"+str(e))
+    
         self.meshextend()
 
 
@@ -484,10 +521,10 @@ class URDMEModel(Model):
             """
 
         # Check if the individual stiffness and mass matrices (per species) have been assembled, otherwise assemble them.
-        try:
+        if self.stiffness_matrices is not None and self.mass_matrices is not None:
             stiffness_matrices = self.stiffness_matrices
             mass_matrices = self.mass_matrices
-        except AttributeError:
+        else:
             if self.mesh is None:
                 raise ModelException("This model has no mesh, can not create system matrix.")
             matrices = self.assemble()
@@ -870,6 +907,7 @@ class URDMEMesh(dolfin.Mesh):
         self.function_space = None
         self.num_dof_voxels = None
 
+
     def addPeriodicBoundaryCondition(self, domain):
         self.constrained_domain = domain
 
@@ -988,7 +1026,7 @@ class URDMEMesh(dolfin.Mesh):
         mesh = dolfin.IntervalMesh(nx, a, b)
         ret = URDMEMesh(mesh)
         if isinstance(periodic, bool) and periodic:
-            ret.addPeriodicBoundaryCondition(cls.IntervalMeshPeriodicBoundary(a=a, b=b))
+            ret.addPeriodicBoundaryCondition(IntervalMeshPeriodicBoundary(a=a, b=b))
         elif isinstance(periodic, dolfin.SubDomain):
             ret.addPeriodicBoundaryCondition(periodic)
         return ret
@@ -999,7 +1037,7 @@ class URDMEMesh(dolfin.Mesh):
         mesh = dolfin.RectangleMesh(0, 0, L, L, nx, ny)
         ret = URDMEMesh(mesh)
         if isinstance(periodic, bool) and periodic:
-            ret.addPeriodicBoundaryCondition(cls.SquareMeshPeriodicBoundary(Lx=L, Ly=L))
+            ret.addPeriodicBoundaryCondition(SquareMeshPeriodicBoundary(Lx=L, Ly=L))
         elif isinstance(periodic, dolfin.SubDomain):
             ret.addPeriodicBoundaryCondition(periodic)
         return ret
@@ -1010,106 +1048,12 @@ class URDMEMesh(dolfin.Mesh):
         mesh = dolfin.BoxMesh(0, 0, 0, L, L, L, nx, ny, nz)
         ret = URDMEMesh(mesh)
         if isinstance(periodic, bool) and periodic:
-            ret.addPeriodicBoundaryCondition(cls.CubeMeshPeriodicBoundary(Lx=L, Ly=L, Lz=L))
+            ret.addPeriodicBoundaryCondition(CubeMeshPeriodicBoundary(Lx=L, Ly=L, Lz=L))
         elif isinstance(periodic, dolfin.SubDomain):
             ret.addPeriodicBoundaryCondition(periodic)
         return ret
 
-    class IntervalMeshPeriodicBoundary(dolfin.SubDomain):
-        def __init__(self, a=0.0, b=1.0):
-            """ 1D domain from a to b. """
-            dolfin.SubDomain.__init__(self)
-            self.a = a
-            self.b = b
 
-        def inside(self, x, on_boundary):
-            return not bool((dolfin.near(x[0], self.b)) and on_boundary)
-
-        def map(self, x, y):
-            if dolfin.near(x[0], self.b):
-                y[0] = self.a + (x[0] - self.b)
-
-    class SquareMeshPeriodicBoundary(dolfin.SubDomain):
-        """ Sub domain for Periodic boundary condition """
-        def __init__(self, Lx=1.0, Ly=1.0):
-            dolfin.SubDomain.__init__(self)
-            self.Lx = Lx
-            self.Ly = Ly
-
-        def inside(self, x, on_boundary):
-            """ Left boundary is "target domain" G """
-            # return True if on left or bottom boundary AND NOT on one of the two corners (0, 1) and (1, 0)
-            return bool((dolfin.near(x[0], 0) or dolfin.near(x[1], 0)) and
-                    (not ((dolfin.near(x[0], 0) and dolfin.near(x[1], 1)) or
-                            (dolfin.near(x[0], 1) and dolfin.near(x[1], 0)))) and on_boundary)
-
-        def map(self, x, y):
-            ''' # Map right boundary G (x) to left boundary H (y) '''
-            if dolfin.near(x[0], self.Lx) and dolfin.near(x[1], self.Ly):
-                y[0] = x[0] - self.Lx
-                y[1] = x[1] - self.Ly
-            elif dolfin.near(x[0], self.Lx):
-                y[0] = x[0] - self.Lx
-                y[1] = x[1]
-            else:   # near(x[1], 1)
-                y[0] = x[0]
-                y[1] = x[1] - self.Ly
-
-    class CubeMeshPeriodicBoundary(dolfin.SubDomain):
-        """ Sub domain for Periodic boundary condition """
-        def __init__(self, Lx=1.0, Ly=1.0, Lz=1.0):
-            dolfin.SubDomain.__init__(self)
-            self.Lx = Lx
-            self.Ly = Ly
-            self.Lz = Lz
-
-        def inside(self, x, on_boundary):
-            """ Left boundary is "target domain" G """
-            # return True if on left or bottom boundary AND NOT on one of the two corners (0, 1) and (1, 0)
-            return bool(
-                    (dolfin.near(x[0], 0) or dolfin.near(x[1], 0) or dolfin.near(x[3], 0))
-                    and (not (
-                            (dolfin.near(x[0], 1) and dolfin.near(x[1], 0) and dolfin.near(x[1], 0)) or
-                            (dolfin.near(x[0], 0) and dolfin.near(x[1], 1) and dolfin.near(x[1], 0)) or
-                            (dolfin.near(x[0], 0) and dolfin.near(x[1], 0) and dolfin.near(x[1], 1))
-                        ))
-                    and on_boundary
-                   )
-
-        def map(self, x, y):
-            ''' # Map right boundary G (x) to left boundary H (y) '''
-            if dolfin.near(x[0], self.Lx) and dolfin.near(x[1], self.Ly) and dolfin.near(x[2], self.Lz):
-                y[0] = x[0] - self.Lx
-                y[1] = x[1] - self.Ly
-                y[2] = x[2] - self.Lz
-            elif dolfin.near(x[0], self.Lx) and dolfin.near(x[1], self.Ly):
-                y[0] = x[0] - self.Lx
-                y[1] = x[1] - self.Ly
-                y[2] = x[2]
-            elif dolfin.near(x[0], self.Lx) and dolfin.near(x[2], self.Lz):
-                y[0] = x[0] - self.Lx
-                y[1] = x[1]
-                y[2] = x[2] - self.Lz
-            elif dolfin.near(x[1], self.Ly) and dolfin.near(x[2], self.Lz):
-                y[0] = x[0]
-                y[1] = x[1] - self.Ly
-                y[2] = x[2] - self.Lz
-            elif dolfin.near(x[0], self.Lx):
-                y[0] = x[0] - self.Lx
-                y[1] = x[1]
-                y[2] = x[2]
-            elif dolfin.near(x[1], self.Ly):
-                y[0] = x[0]
-                y[1] = x[1] - self.Ly
-                y[2] = x[2]
-            elif dolfin.near(x[2], self.Lz):
-                y[0] = x[0]
-                y[1] = x[1]
-                y[2] = x[2] - self.Lz
-            else:
-                y[0] = x[0]
-                y[1] = x[1]
-                y[2] = x[2]
 
 
 
@@ -2159,6 +2103,104 @@ class ModelException(Exception):
 
 class InvalidSystemMatrixException(Exception):
     pass
+
+
+class IntervalMeshPeriodicBoundary(dolfin.SubDomain):
+    def __init__(self, a=0.0, b=1.0):
+        """ 1D domain from a to b. """
+        dolfin.SubDomain.__init__(self)
+        self.a = a
+        self.b = b
+
+    def inside(self, x, on_boundary):
+        return not bool((dolfin.near(x[0], self.b)) and on_boundary)
+
+    def map(self, x, y):
+        if dolfin.near(x[0], self.b):
+            y[0] = self.a + (x[0] - self.b)
+
+class SquareMeshPeriodicBoundary(dolfin.SubDomain):
+    """ Sub domain for Periodic boundary condition """
+    def __init__(self, Lx=1.0, Ly=1.0):
+        dolfin.SubDomain.__init__(self)
+        self.Lx = Lx
+        self.Ly = Ly
+
+    def inside(self, x, on_boundary):
+        """ Left boundary is "target domain" G """
+        # return True if on left or bottom boundary AND NOT on one of the two corners (0, 1) and (1, 0)
+        return bool((dolfin.near(x[0], 0) or dolfin.near(x[1], 0)) and
+                (not ((dolfin.near(x[0], 0) and dolfin.near(x[1], 1)) or
+                        (dolfin.near(x[0], 1) and dolfin.near(x[1], 0)))) and on_boundary)
+
+    def map(self, x, y):
+        ''' # Map right boundary G (x) to left boundary H (y) '''
+        if dolfin.near(x[0], self.Lx) and dolfin.near(x[1], self.Ly):
+            y[0] = x[0] - self.Lx
+            y[1] = x[1] - self.Ly
+        elif dolfin.near(x[0], self.Lx):
+            y[0] = x[0] - self.Lx
+            y[1] = x[1]
+        else:   # near(x[1], 1)
+            y[0] = x[0]
+            y[1] = x[1] - self.Ly
+
+class CubeMeshPeriodicBoundary(dolfin.SubDomain):
+    """ Sub domain for Periodic boundary condition """
+    def __init__(self, Lx=1.0, Ly=1.0, Lz=1.0):
+        dolfin.SubDomain.__init__(self)
+        self.Lx = Lx
+        self.Ly = Ly
+        self.Lz = Lz
+
+    def inside(self, x, on_boundary):
+        """ Left boundary is "target domain" G """
+        # return True if on left or bottom boundary AND NOT on one of the two corners (0, 1) and (1, 0)
+        return bool(
+                (dolfin.near(x[0], 0) or dolfin.near(x[1], 0) or dolfin.near(x[3], 0))
+                and (not (
+                        (dolfin.near(x[0], 1) and dolfin.near(x[1], 0) and dolfin.near(x[1], 0)) or
+                        (dolfin.near(x[0], 0) and dolfin.near(x[1], 1) and dolfin.near(x[1], 0)) or
+                        (dolfin.near(x[0], 0) and dolfin.near(x[1], 0) and dolfin.near(x[1], 1))
+                    ))
+                and on_boundary
+               )
+
+    def map(self, x, y):
+        ''' # Map right boundary G (x) to left boundary H (y) '''
+        if dolfin.near(x[0], self.Lx) and dolfin.near(x[1], self.Ly) and dolfin.near(x[2], self.Lz):
+            y[0] = x[0] - self.Lx
+            y[1] = x[1] - self.Ly
+            y[2] = x[2] - self.Lz
+        elif dolfin.near(x[0], self.Lx) and dolfin.near(x[1], self.Ly):
+            y[0] = x[0] - self.Lx
+            y[1] = x[1] - self.Ly
+            y[2] = x[2]
+        elif dolfin.near(x[0], self.Lx) and dolfin.near(x[2], self.Lz):
+            y[0] = x[0] - self.Lx
+            y[1] = x[1]
+            y[2] = x[2] - self.Lz
+        elif dolfin.near(x[1], self.Ly) and dolfin.near(x[2], self.Lz):
+            y[0] = x[0]
+            y[1] = x[1] - self.Ly
+            y[2] = x[2] - self.Lz
+        elif dolfin.near(x[0], self.Lx):
+            y[0] = x[0] - self.Lx
+            y[1] = x[1]
+            y[2] = x[2]
+        elif dolfin.near(x[1], self.Ly):
+            y[0] = x[0]
+            y[1] = x[1] - self.Ly
+            y[2] = x[2]
+        elif dolfin.near(x[2], self.Lz):
+            y[0] = x[0]
+            y[1] = x[1]
+            y[2] = x[2] - self.Lz
+        else:
+            y[0] = x[0]
+            y[1] = x[1]
+            y[2] = x[2]
+
 
 
 

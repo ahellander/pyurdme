@@ -896,6 +896,31 @@ class URDMEModel(Model):
 
         return {'K':stiffness_matrices, 'M':mass_matrices}
 
+    def run(self, solver='nsm', seed=None, report_level=0):
+        """ Simulate the model.
+        
+        Args:
+            solver: A str or class type that is a subclass of URDMESolver.  Default: NSM solver.
+            seed: An int, the random seed given to the solver.
+            report_level: An int, Level of output from the solver: 0, 1, or 2. Default: 0.
+        Returns:
+            A URDMEResult object with the results of the simulation.
+        """
+        
+        #If solver is a subclass of URDMESolver, use it directly.
+        if isinstance(solver, (type, types.ClassType)) and  issubclass(solver, URDMESolver):
+            sol = solver(self, report_level=report_level)
+        elif type(solver) is str:
+            if solver == 'nsm':
+                from nsmsolver import NSMSolver
+                sol = NSMSolver(self, report_level=report_level)
+            else:
+                raise URDMEError("Unknown solver: {0}".format(solver_name))
+        else:
+            raise URDMEError("solver argument to urdme() must be a string or a URDMESolver class object.")
+
+        return sol.run(seed)
+
 
 
 class URDMEMesh(dolfin.Mesh):
@@ -2041,9 +2066,10 @@ class URDMESolver:
 def urdme(model=None, solver='nsm', solver_path="", model_file=None, input_file=None, seed=None, report_level=0):
     """ URDME solver interface.
 
-        TODO: Docs...
+        Similar to model.run() the urdme() function provides an interface that is backwards compatiable with the
+        previous URDME implementation.
 
-        After sucessful execution, urdme returns a dictionary, result, with the following members
+        After sucessful execution, urdme returns a URDMEResults object with the following members:
         U:         the raw copy number output in a matrix with dimension (Ndofs, num_time_points)
         tspan:     the time span vector containing the time points that corresponds to the columns in U
         status:    Sucess if the solver executed without error

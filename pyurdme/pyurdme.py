@@ -1838,6 +1838,9 @@ class URDMESolver:
         self.solver_dir = self.solver_base_dir + '/.urdme/'
         #print "URDMESolver.compile()  self.solver_dir={0}".format(self.solver_dir)
 
+        if self.report_level >= 1:
+            print "Compiling Solver"
+
         if os.path.isdir(self.solver_dir):
             try:
                 shutil.rmtree(self.solver_dir)
@@ -1851,14 +1854,20 @@ class URDMESolver:
         # Write the propensity file
         self.propfilename = self.model_name + '_pyurdme_generated_model'
         if self.model_file == None:
-            self.createPropensityFile(file_name=self.solver_dir + self.propfilename + '.c')
+            if self.report_level > 1:
+                prop_file_name=self.solver_dir + self.propfilename + '.c'
+                print "Creating propensity file {0}".format(prop_file_name)
+            self.createPropensityFile(file_name=prop_file_name)
         else:
-            subprocess.call(['cp', self.model_file, self.solver_dir + self.propfilename + '.c'])
+            cmd = " ".join(['cp', self.model_file, self.solver_dir + self.propfilename + '.c'])
+            if self.report_level > 1:
+                print cmd
+            subprocess.call(cmd)
 
         # Build the solver
         makefile = 'Makefile.' + self.NAME
         cmd = " ".join([ 'cd', self.solver_base_dir , ';', 'make', '-f', self.URDME_BUILD + makefile, 'URDME_ROOT=' + self.URDME_ROOT, 'URDME_MODEL=' + self.propfilename])
-        if self.report_level >= 1:
+        if self.report_level > 1:
             print "cmd: {0}\n".format(cmd)
         try:
             handle = subprocess.Popen(cmd, stdout = subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
@@ -1869,11 +1878,14 @@ class URDMESolver:
             raise URDMEError("Compilation of solver failed")
 
         if return_code != 0:
-            print handle.stdout.read()
-            print handle.stderr.read()
-            raise URDMEError("Compilation of solver failed")
+            try:
+                print handle.stdout.read()
+                print handle.stderr.read()
+            except Exception as e:
+                pass
+            raise URDMEError("Compilation of solver failed, return_code={0}".format(return_code))
 
-        if self.report_level >= 1:
+        if self.report_level > 1:
             print handle.stdout.read()
             print handle.stderr.read()
 

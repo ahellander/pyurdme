@@ -9,6 +9,7 @@ import sys
 import tempfile
 import types
 import warnings
+import copy
 
 import numpy
 import scipy.io
@@ -16,6 +17,8 @@ import scipy.sparse
 
 import gmsh
 from model import *
+
+import inspect
 
 import IPython.display
 
@@ -50,7 +53,9 @@ class URDMEModel(Model):
 
         self.mesh = None
         self.xmesh = None
-
+        self.stiffness_matrices = None
+        self.mass_matrices = None
+        
         # subdomins is a list of MeshFunctions with subdomain marker information
         self.subdomains = OrderedDict()
 
@@ -70,16 +75,35 @@ class URDMEModel(Model):
             for the object to pickle. """
 
         #  Filter out any instance variable that is not picklable...
-        state = self.__dict__
-        for key, item in state.items():
+        state = {}
+        for key, item in self.__dict__.items():
             try:
                 pickle.dumps(item)
+                state[key] = item
             except Exception as e:
                 if key == "mesh":
                     tmpfile = tempfile.NamedTemporaryFile(suffix=".xml")
                     dolfin.File(tmpfile.name) << item
                     tmpfile.seek(0)
-                    state[key] = tmpfile.read()
+                    state['mesh'] = {}
+                    state['mesh']['data'] = tmpfile.read()
+                    tmpfile.close()
+                    if item.constrained_domain is not None:
+                        # Warning: This is black magic.
+                        try:
+                            cdd = {}
+                            cdd['source'] = inspect.getsource(item.constrained_domain.__class__)
+                            cdd['name'] = item.constrained_domain.__class__.__name__
+                            cdd['dict'] = {}
+                            for k,v in item.constrained_domain.__dict__.iteritems():
+                                if type(v).__name__ != 'SwigPyObject':
+                                    cdd['dict'][k] = v
+                            state['mesh']['constrained_domain'] = cdd
+                        except Exception as e:
+                            sys.stderr.write("error pickling mesh.constrained_domain: {0}\n".format(e))
+                            raise e
+                    if item.num_dof_voxels is not None:
+                        state['mesh']['num_dof_voxels'] = item.num_dof_voxels
                 elif key == "subdomains":
                     sddict = OrderedDict()
                     for sdkey, sd_func in item.items():
@@ -87,6 +111,7 @@ class URDMEModel(Model):
                         dolfin.File(tmpfile.name) << sd_func
                         tmpfile.seek(0)
                         sddict[sdkey] = tmpfile.read()
+                        tmpfile.close()
                     state[key] = sddict
                 else:
                     state[key] = None
@@ -99,36 +124,49 @@ class URDMEModel(Model):
 
         self.__dict__ = state
 
-        # Recreate the mesh
-        try:
-            fd = tempfile.NamedTemporaryFile(suffix=".xml")
-            fdname = fd.name
-            fd.write(state["mesh"])
-            fd.seek(0)
-            mesh = URDMEMesh.read_dolfin_mesh(fdname)
-            fd.close()
-            self.__dict__["mesh"] = mesh
-        except Exception, e:
-            print "Error unpickling model, could not recreate the mesh."
-            raise
-
-        # Recreate the subdomain functions
-        try:
-            sddict = OrderedDict()
-            for sdkey, sd_func_str in state["subdomains"].items():
+        if 'mesh' in state:
+            # Recreate the mesh
+            try:
                 fd = tempfile.NamedTemporaryFile(suffix=".xml")
                 fdname = fd.name
-                fd.write(sd_func_str)
+                fd.write(state['mesh']['data'])
                 fd.seek(0)
-                fd_in = dolfin.File(fdname)
-                func = dolfin.MeshFunction("size_t", self.__dict__["mesh"])
-                fd_in >> func
-                sddict[sdkey] = func
+                mesh = URDMEMesh.read_dolfin_mesh(fdname)
                 fd.close()
-            self.__dict__["subdomains"] = sddict
-        except Exception as e:
-            raise Exception("Error unpickling model, could not recreate the subdomain functions"+str(e))
-            
+                if 'constrained_domain' in state['mesh']:
+                    # Black magic to match that in __getstate__
+                    cdd = state['mesh']['constrained_domain']
+                    compiled_class = compile(cdd['source'], 'pyurdme.mesh.constrained_domain', 'exec')
+                    eval(compiled_class)
+                    compiled_object = eval("{0}()".format(cdd['name']))
+                    for k,v in cdd['dict'].iteritems():
+                        compiled_object.__dict__[k] = v
+                    mesh.constrained_domain = compiled_object
+                if 'num_dof_voxels' in state['mesh']:
+                    mesh.num_dof_voxels = state['mesh']['num_dof_voxels']
+                self.__dict__['mesh'] = mesh
+            except Exception as e:
+                print "Error unpickling model, could not recreate the mesh."
+                raise e
+
+        if 'subdomains' in state:
+            # Recreate the subdomain functions
+            try:
+                sddict = OrderedDict()
+                for sdkey, sd_func_str in state["subdomains"].items():
+                    fd = tempfile.NamedTemporaryFile(suffix=".xml")
+                    fdname = fd.name
+                    fd.write(sd_func_str)
+                    fd.seek(0)
+                    fd_in = dolfin.File(fdname)
+                    func = dolfin.MeshFunction("size_t", self.__dict__["mesh"])
+                    fd_in >> func
+                    sddict[sdkey] = func
+                    fd.close()
+                self.__dict__["subdomains"] = sddict
+            except Exception as e:
+                raise Exception("Error unpickling model, could not recreate the subdomain functions"+str(e))
+    
         self.meshextend()
 
 
@@ -483,10 +521,10 @@ class URDMEModel(Model):
             """
 
         # Check if the individual stiffness and mass matrices (per species) have been assembled, otherwise assemble them.
-        try:
+        if self.stiffness_matrices is not None and self.mass_matrices is not None:
             stiffness_matrices = self.stiffness_matrices
             mass_matrices = self.mass_matrices
-        except AttributeError:
+        else:
             if self.mesh is None:
                 raise ModelException("This model has no mesh, can not create system matrix.")
             matrices = self.assemble()
@@ -858,6 +896,31 @@ class URDMEModel(Model):
 
         return {'K':stiffness_matrices, 'M':mass_matrices}
 
+    def run(self, solver='nsm', seed=None, report_level=0):
+        """ Simulate the model.
+        
+        Args:
+            solver: A str or class type that is a subclass of URDMESolver.  Default: NSM solver.
+            seed: An int, the random seed given to the solver.
+            report_level: An int, Level of output from the solver: 0, 1, or 2. Default: 0.
+        Returns:
+            A URDMEResult object with the results of the simulation.
+        """
+        
+        #If solver is a subclass of URDMESolver, use it directly.
+        if isinstance(solver, (type, types.ClassType)) and  issubclass(solver, URDMESolver):
+            sol = solver(self, report_level=report_level)
+        elif type(solver) is str:
+            if solver == 'nsm':
+                from nsmsolver import NSMSolver
+                sol = NSMSolver(self, report_level=report_level)
+            else:
+                raise URDMEError("Unknown solver: {0}".format(solver_name))
+        else:
+            raise URDMEError("solver argument to urdme() must be a string or a URDMESolver class object.")
+
+        return sol.run(seed)
+
 
 
 class URDMEMesh(dolfin.Mesh):
@@ -868,6 +931,7 @@ class URDMEMesh(dolfin.Mesh):
         dolfin.Mesh.__init__(self, mesh)
         self.function_space = None
         self.num_dof_voxels = None
+
 
     def addPeriodicBoundaryCondition(self, domain):
         self.constrained_domain = domain
@@ -987,7 +1051,7 @@ class URDMEMesh(dolfin.Mesh):
         mesh = dolfin.IntervalMesh(nx, a, b)
         ret = URDMEMesh(mesh)
         if isinstance(periodic, bool) and periodic:
-            ret.addPeriodicBoundaryCondition(cls.IntervalMeshPeriodicBoundary(a=a, b=b))
+            ret.addPeriodicBoundaryCondition(IntervalMeshPeriodicBoundary(a=a, b=b))
         elif isinstance(periodic, dolfin.SubDomain):
             ret.addPeriodicBoundaryCondition(periodic)
         return ret
@@ -998,7 +1062,7 @@ class URDMEMesh(dolfin.Mesh):
         mesh = dolfin.RectangleMesh(0, 0, L, L, nx, ny)
         ret = URDMEMesh(mesh)
         if isinstance(periodic, bool) and periodic:
-            ret.addPeriodicBoundaryCondition(cls.SquareMeshPeriodicBoundary(Lx=L, Ly=L))
+            ret.addPeriodicBoundaryCondition(SquareMeshPeriodicBoundary(Lx=L, Ly=L))
         elif isinstance(periodic, dolfin.SubDomain):
             ret.addPeriodicBoundaryCondition(periodic)
         return ret
@@ -1009,106 +1073,12 @@ class URDMEMesh(dolfin.Mesh):
         mesh = dolfin.BoxMesh(0, 0, 0, L, L, L, nx, ny, nz)
         ret = URDMEMesh(mesh)
         if isinstance(periodic, bool) and periodic:
-            ret.addPeriodicBoundaryCondition(cls.CubeMeshPeriodicBoundary(Lx=L, Ly=L, Lz=L))
+            ret.addPeriodicBoundaryCondition(CubeMeshPeriodicBoundary(Lx=L, Ly=L, Lz=L))
         elif isinstance(periodic, dolfin.SubDomain):
             ret.addPeriodicBoundaryCondition(periodic)
         return ret
 
-    class IntervalMeshPeriodicBoundary(dolfin.SubDomain):
-        def __init__(self, a=0.0, b=1.0):
-            """ 1D domain from a to b. """
-            dolfin.SubDomain.__init__(self)
-            self.a = a
-            self.b = b
 
-        def inside(self, x, on_boundary):
-            return not bool((dolfin.near(x[0], self.b)) and on_boundary)
-
-        def map(self, x, y):
-            if dolfin.near(x[0], self.b):
-                y[0] = self.a + (x[0] - self.b)
-
-    class SquareMeshPeriodicBoundary(dolfin.SubDomain):
-        """ Sub domain for Periodic boundary condition """
-        def __init__(self, Lx=1.0, Ly=1.0):
-            dolfin.SubDomain.__init__(self)
-            self.Lx = Lx
-            self.Ly = Ly
-
-        def inside(self, x, on_boundary):
-            """ Left boundary is "target domain" G """
-            # return True if on left or bottom boundary AND NOT on one of the two corners (0, 1) and (1, 0)
-            return bool((dolfin.near(x[0], 0) or dolfin.near(x[1], 0)) and
-                    (not ((dolfin.near(x[0], 0) and dolfin.near(x[1], 1)) or
-                            (dolfin.near(x[0], 1) and dolfin.near(x[1], 0)))) and on_boundary)
-
-        def map(self, x, y):
-            ''' # Map right boundary G (x) to left boundary H (y) '''
-            if dolfin.near(x[0], self.Lx) and dolfin.near(x[1], self.Ly):
-                y[0] = x[0] - self.Lx
-                y[1] = x[1] - self.Ly
-            elif dolfin.near(x[0], self.Lx):
-                y[0] = x[0] - self.Lx
-                y[1] = x[1]
-            else:   # near(x[1], 1)
-                y[0] = x[0]
-                y[1] = x[1] - self.Ly
-
-    class CubeMeshPeriodicBoundary(dolfin.SubDomain):
-        """ Sub domain for Periodic boundary condition """
-        def __init__(self, Lx=1.0, Ly=1.0, Lz=1.0):
-            dolfin.SubDomain.__init__(self)
-            self.Lx = Lx
-            self.Ly = Ly
-            self.Lz = Lz
-
-        def inside(self, x, on_boundary):
-            """ Left boundary is "target domain" G """
-            # return True if on left or bottom boundary AND NOT on one of the two corners (0, 1) and (1, 0)
-            return bool(
-                    (dolfin.near(x[0], 0) or dolfin.near(x[1], 0) or dolfin.near(x[3], 0))
-                    and (not (
-                            (dolfin.near(x[0], 1) and dolfin.near(x[1], 0) and dolfin.near(x[1], 0)) or
-                            (dolfin.near(x[0], 0) and dolfin.near(x[1], 1) and dolfin.near(x[1], 0)) or
-                            (dolfin.near(x[0], 0) and dolfin.near(x[1], 0) and dolfin.near(x[1], 1))
-                        ))
-                    and on_boundary
-                   )
-
-        def map(self, x, y):
-            ''' # Map right boundary G (x) to left boundary H (y) '''
-            if dolfin.near(x[0], self.Lx) and dolfin.near(x[1], self.Ly) and dolfin.near(x[2], self.Lz):
-                y[0] = x[0] - self.Lx
-                y[1] = x[1] - self.Ly
-                y[2] = x[2] - self.Lz
-            elif dolfin.near(x[0], self.Lx) and dolfin.near(x[1], self.Ly):
-                y[0] = x[0] - self.Lx
-                y[1] = x[1] - self.Ly
-                y[2] = x[2]
-            elif dolfin.near(x[0], self.Lx) and dolfin.near(x[2], self.Lz):
-                y[0] = x[0] - self.Lx
-                y[1] = x[1]
-                y[2] = x[2] - self.Lz
-            elif dolfin.near(x[1], self.Ly) and dolfin.near(x[2], self.Lz):
-                y[0] = x[0]
-                y[1] = x[1] - self.Ly
-                y[2] = x[2] - self.Lz
-            elif dolfin.near(x[0], self.Lx):
-                y[0] = x[0] - self.Lx
-                y[1] = x[1]
-                y[2] = x[2]
-            elif dolfin.near(x[1], self.Ly):
-                y[0] = x[0]
-                y[1] = x[1] - self.Ly
-                y[2] = x[2]
-            elif dolfin.near(x[2], self.Lz):
-                y[0] = x[0]
-                y[1] = x[1]
-                y[2] = x[2] - self.Lz
-            else:
-                y[0] = x[0]
-                y[1] = x[1]
-                y[2] = x[2]
 
 
 
@@ -1271,6 +1241,21 @@ class URDMEResult(dict):
             self.read_solution()
 
 
+    def get_endtime_model(self):
+        """ Return a URDME model object with the initial conditions set to the final time point of the
+            result object.
+        """
+        if self.model is None:
+            raise Exception("can not continue a result with no model")
+        # create a soft copy
+        model2 = copy.copy(self.model)
+        # set the initial conditions 
+        model2.u0 = numpy.zeros(self.model.u0.shape)
+        for s, sname in enumerate(self.model.listOfSpecies):
+            model2.u0[s,:] = self.getSpecies(sname, timepoints=-1)
+        return model2
+
+
 
     def __getstate__(self):
         """ Used by pickle to get state when pickling. We need to read the contents of the
@@ -1342,10 +1327,13 @@ class URDMEResult(dict):
                     else:
                         C[:, vox_ndx*num_species+cndx] = M[:, v2d[vox_ndx]*num_species+cndx]
                 except IndexError as e:
+                    import traceback
+                    #traceback.print_stack()
+                    print traceback.format_exc()
                     print "C.shape: ", C.shape
                     print "M.shape: ", M.shape
                     print "num_timepoints: ", num_timepoints
-                    print "vox_ndx={1},num_species={2},cndx={3}".format(vox_ndx,num_species,cndx)
+                    print "vox_ndx={0},num_species={1},cndx={2}".format(vox_ndx,num_species,cndx)
                     print "v2d[vox_ndx]={0}".format(v2d[vox_ndx])
                     print "vox_ndx*num_species+cndx={0}".format(vox_ndx*num_species+cndx)
                     print "v2d[vox_ndx]*num_species+cndx={0}".format(v2d[vox_ndx]*num_species+cndx)
@@ -1850,6 +1838,9 @@ class URDMESolver:
         self.solver_dir = self.solver_base_dir + '/.urdme/'
         #print "URDMESolver.compile()  self.solver_dir={0}".format(self.solver_dir)
 
+        if self.report_level >= 1:
+            print "Compiling Solver"
+
         if os.path.isdir(self.solver_dir):
             try:
                 shutil.rmtree(self.solver_dir)
@@ -1863,14 +1854,20 @@ class URDMESolver:
         # Write the propensity file
         self.propfilename = self.model_name + '_pyurdme_generated_model'
         if self.model_file == None:
-            self.createPropensityFile(file_name=self.solver_dir + self.propfilename + '.c')
+            if self.report_level > 1:
+                prop_file_name=self.solver_dir + self.propfilename + '.c'
+                print "Creating propensity file {0}".format(prop_file_name)
+            self.createPropensityFile(file_name=prop_file_name)
         else:
-            subprocess.call(['cp', self.model_file, self.solver_dir + self.propfilename + '.c'])
+            cmd = " ".join(['cp', self.model_file, self.solver_dir + self.propfilename + '.c'])
+            if self.report_level > 1:
+                print cmd
+            subprocess.call(cmd)
 
         # Build the solver
         makefile = 'Makefile.' + self.NAME
         cmd = " ".join([ 'cd', self.solver_base_dir , ';', 'make', '-f', self.URDME_BUILD + makefile, 'URDME_ROOT=' + self.URDME_ROOT, 'URDME_MODEL=' + self.propfilename])
-        if self.report_level >= 1:
+        if self.report_level > 1:
             print "cmd: {0}\n".format(cmd)
         try:
             handle = subprocess.Popen(cmd, stdout = subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
@@ -1881,11 +1878,14 @@ class URDMESolver:
             raise URDMEError("Compilation of solver failed")
 
         if return_code != 0:
-            print handle.stdout.read()
-            print handle.stderr.read()
-            raise URDMEError("Compilation of solver failed")
+            try:
+                print handle.stdout.read()
+                print handle.stderr.read()
+            except Exception as e:
+                pass
+            raise URDMEError("Compilation of solver failed, return_code={0}".format(return_code))
 
-        if self.report_level >= 1:
+        if self.report_level > 1:
             print handle.stdout.read()
             print handle.stderr.read()
 
@@ -2078,9 +2078,10 @@ class URDMESolver:
 def urdme(model=None, solver='nsm', solver_path="", model_file=None, input_file=None, seed=None, report_level=0):
     """ URDME solver interface.
 
-        TODO: Docs...
+        Similar to model.run() the urdme() function provides an interface that is backwards compatiable with the
+        previous URDME implementation.
 
-        After sucessful execution, urdme returns a dictionary, result, with the following members
+        After sucessful execution, urdme returns a URDMEResults object with the following members:
         U:         the raw copy number output in a matrix with dimension (Ndofs, num_time_points)
         tspan:     the time span vector containing the time points that corresponds to the columns in U
         status:    Sucess if the solver executed without error
@@ -2140,6 +2141,104 @@ class ModelException(Exception):
 
 class InvalidSystemMatrixException(Exception):
     pass
+
+
+class IntervalMeshPeriodicBoundary(dolfin.SubDomain):
+    def __init__(self, a=0.0, b=1.0):
+        """ 1D domain from a to b. """
+        dolfin.SubDomain.__init__(self)
+        self.a = a
+        self.b = b
+
+    def inside(self, x, on_boundary):
+        return not bool((dolfin.near(x[0], self.b)) and on_boundary)
+
+    def map(self, x, y):
+        if dolfin.near(x[0], self.b):
+            y[0] = self.a + (x[0] - self.b)
+
+class SquareMeshPeriodicBoundary(dolfin.SubDomain):
+    """ Sub domain for Periodic boundary condition """
+    def __init__(self, Lx=1.0, Ly=1.0):
+        dolfin.SubDomain.__init__(self)
+        self.Lx = Lx
+        self.Ly = Ly
+
+    def inside(self, x, on_boundary):
+        """ Left boundary is "target domain" G """
+        # return True if on left or bottom boundary AND NOT on one of the two corners (0, 1) and (1, 0)
+        return bool((dolfin.near(x[0], 0) or dolfin.near(x[1], 0)) and
+                (not ((dolfin.near(x[0], 0) and dolfin.near(x[1], 1)) or
+                        (dolfin.near(x[0], 1) and dolfin.near(x[1], 0)))) and on_boundary)
+
+    def map(self, x, y):
+        ''' # Map right boundary G (x) to left boundary H (y) '''
+        if dolfin.near(x[0], self.Lx) and dolfin.near(x[1], self.Ly):
+            y[0] = x[0] - self.Lx
+            y[1] = x[1] - self.Ly
+        elif dolfin.near(x[0], self.Lx):
+            y[0] = x[0] - self.Lx
+            y[1] = x[1]
+        else:   # near(x[1], 1)
+            y[0] = x[0]
+            y[1] = x[1] - self.Ly
+
+class CubeMeshPeriodicBoundary(dolfin.SubDomain):
+    """ Sub domain for Periodic boundary condition """
+    def __init__(self, Lx=1.0, Ly=1.0, Lz=1.0):
+        dolfin.SubDomain.__init__(self)
+        self.Lx = Lx
+        self.Ly = Ly
+        self.Lz = Lz
+
+    def inside(self, x, on_boundary):
+        """ Left boundary is "target domain" G """
+        # return True if on left or bottom boundary AND NOT on one of the two corners (0, 1) and (1, 0)
+        return bool(
+                (dolfin.near(x[0], 0) or dolfin.near(x[1], 0) or dolfin.near(x[3], 0))
+                and (not (
+                        (dolfin.near(x[0], 1) and dolfin.near(x[1], 0) and dolfin.near(x[1], 0)) or
+                        (dolfin.near(x[0], 0) and dolfin.near(x[1], 1) and dolfin.near(x[1], 0)) or
+                        (dolfin.near(x[0], 0) and dolfin.near(x[1], 0) and dolfin.near(x[1], 1))
+                    ))
+                and on_boundary
+               )
+
+    def map(self, x, y):
+        ''' # Map right boundary G (x) to left boundary H (y) '''
+        if dolfin.near(x[0], self.Lx) and dolfin.near(x[1], self.Ly) and dolfin.near(x[2], self.Lz):
+            y[0] = x[0] - self.Lx
+            y[1] = x[1] - self.Ly
+            y[2] = x[2] - self.Lz
+        elif dolfin.near(x[0], self.Lx) and dolfin.near(x[1], self.Ly):
+            y[0] = x[0] - self.Lx
+            y[1] = x[1] - self.Ly
+            y[2] = x[2]
+        elif dolfin.near(x[0], self.Lx) and dolfin.near(x[2], self.Lz):
+            y[0] = x[0] - self.Lx
+            y[1] = x[1]
+            y[2] = x[2] - self.Lz
+        elif dolfin.near(x[1], self.Ly) and dolfin.near(x[2], self.Lz):
+            y[0] = x[0]
+            y[1] = x[1] - self.Ly
+            y[2] = x[2] - self.Lz
+        elif dolfin.near(x[0], self.Lx):
+            y[0] = x[0] - self.Lx
+            y[1] = x[1]
+            y[2] = x[2]
+        elif dolfin.near(x[1], self.Ly):
+            y[0] = x[0]
+            y[1] = x[1] - self.Ly
+            y[2] = x[2]
+        elif dolfin.near(x[2], self.Lz):
+            y[0] = x[0]
+            y[1] = x[1]
+            y[2] = x[2] - self.Lz
+        else:
+            y[0] = x[0]
+            y[1] = x[1]
+            y[2] = x[2]
+
 
 
 

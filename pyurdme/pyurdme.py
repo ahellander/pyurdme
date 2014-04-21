@@ -1854,8 +1854,8 @@ class URDMESolver:
         # Write the propensity file
         self.propfilename = self.model_name + '_pyurdme_generated_model'
         if self.model_file == None:
+            prop_file_name=self.solver_dir + self.propfilename + '.c'
             if self.report_level > 1:
-                prop_file_name=self.solver_dir + self.propfilename + '.c'
                 print "Creating propensity file {0}".format(prop_file_name)
             self.createPropensityFile(file_name=prop_file_name)
         else:

@@ -1967,9 +1967,12 @@ class URDMESolver:
             print outfile.name
             print return_code
             if self.report_level >= 1:
-                print handle.stderr.read(), handle.stdout.read()
+                try:
+                    print handle.stderr.read(), handle.stdout.read()
+                except Exception as e:
+                    pass
             print "urdme_solver_cmd = {0}".format(urdme_solver_cmd)
-            raise URDMEError("Solver execution failed")
+            raise URDMEError("Solver execution failed, return code = {0}".format(return_code))
 
         #if self.report_level >= 1:
         #    print handle.stdout.read()

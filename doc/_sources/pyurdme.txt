@@ -1,0 +1,54 @@
+pyurdme package
+===============
+
+Submodules
+----------
+
+pyurdme.gmsh module
+-------------------
+
+.. automodule:: pyurdme.gmsh
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+pyurdme.model module
+--------------------
+
+.. automodule:: pyurdme.model
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+pyurdme.nemsolver module
+------------------------
+
+.. automodule:: pyurdme.nemsolver
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+pyurdme.nsmsolver module
+------------------------
+
+.. automodule:: pyurdme.nsmsolver
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+pyurdme.pyurdme module
+----------------------
+
+.. automodule:: pyurdme.pyurdme
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+
+Module contents
+---------------
+
+.. automodule:: pyurdme
+    :members:
+    :undoc-members:
+    :show-inheritance:

@@ -1,7 +1,9 @@
 #!/usr/bin/env python
-import pyurdme
-from pyurdme.nsmsolver import NSMSolver
+import math
+import matplotlib.pyplot as plt
 import numpy
+import pyurdme
+
 
 class CoralReef(pyurdme.URDMEModel):
     """ Model developed by Briggs and Drawert 3/31/2014, based on a 
@@ -20,67 +22,57 @@ class CoralReef(pyurdme.URDMEModel):
         self.addSpecies([Coral, MA, Coral_m, MA_m, Turf])
 
         # Parameters
-        phi_c  = pyurdme.Parameter(name="phi_c", expression=0.001) #1/year
-        phi_m  = pyurdme.Parameter(name="phi_m", expression=0.0001) #1/year
-        g_tc  = pyurdme.Parameter(name="g_tc", expression=0.1) #1/year
+        phi_c = pyurdme.Parameter(name="phi_c", expression=0.0011) #1/year
+        phi_m = pyurdme.Parameter(name="phi_m", expression=0.001) #1/year
+        g_tc = pyurdme.Parameter(name="g_tc", expression=0.1) #1/year
         g_tm = pyurdme.Parameter(name="g_tm", expression=0.2) #1/year
-        Gamma  = pyurdme.Parameter(name="Gamma", expression=0.05)
+        Gamma = pyurdme.Parameter(name="Gamma", expression=0.05)
         dc = pyurdme.Parameter(name="dc", expression=0.05) #1/year
-        dm = pyurdme.Parameter(name="dm", expression=0.2) #1/year
-        psi_g = pyurdme.Parameter(name="psi_g", expression=0.0)
-        #
+        dm = pyurdme.Parameter(name="dm", expression=1.0) #1/year
+        #dm = pyurdme.Parameter(name="dm", expression=0.2) #1/year
+        phi_g = pyurdme.Parameter(name="psi_g", expression=0.0)
+        # Death rate of mobile propgules.  Combine with diffusion to determine spread.
         mu_c = pyurdme.Parameter(name="mu_c", expression=1.0) #1/year
         mu_m = pyurdme.Parameter(name="mu_m", expression=1.0) #1/year
-        self.addParameter([phi_c, phi_m, g_tc , g_tm , Gamma, dc, dm, psi_g, mu_c , mu_m])
+        # mobile propogules destroyed by estabilished 
+        alpha_c = pyurdme.Parameter(name="alpha_c", expression=0.1) #1/year
+        alpha_m = pyurdme.Parameter(name="alpha_m", expression=0.5) #1/year
+        # Production of mobile propogules
+        R_c = pyurdme.Parameter(name="R_c", expression=1.0) #1/year
+        R_m = pyurdme.Parameter(name="R_m", expression=1.0) #1/year
+
+        self.addParameter([phi_c, phi_m, g_tc, g_tm, Gamma, dc, dm, phi_g, mu_c, mu_m, alpha_c, alpha_m, R_c, R_m])
+                
 
         # Reactions:
-
-        # Propagule Recruitment
-        # T -> C  : phi_c
-        # T -> MA : phi_m
-        if version > 1:
-            R0 = pyurdme.Reaction(name="R0", reactants={}, products={Coral_m:1}, rate=phi_c)
-            R1 = pyurdme.Reaction(name="R1", reactants={}, products={MA_m:1}, rate=phi_m)
-        else:
-            R0 = pyurdme.Reaction(name="R0", reactants={Turf:1}, products={Coral:1}, rate=phi_c)
-            R1 = pyurdme.Reaction(name="R1", reactants={Turf:1}, products={MA:1}, rate=phi_m)
-        
-        # Death rates
         # C -> T : dc
-        R3 = pyurdme.Reaction(name="R3", reactants={Coral:1}, products={Turf:1}, rate=dc)
+        self.addReaction(pyurdme.Reaction(name="R3", reactants={Coral:1}, products={Turf:1}, rate=dc))
         # MA -> T : dm
-        R4 = pyurdme.Reaction(name="R4", reactants={MA:1}, products={Turf:1}, rate=dm)
-
-        # Growth
-        # T + C_m -> C : g_tc * exp(-1*psi_g*MA*100)
-        R5 = pyurdme.Reaction(name="R5", reactants={Turf:1, Coral_m:1}, products={Coral:1}, propensity_function="Turf * Coral_m * g_tc * exp(-1.0 * psi_g * MA * 100)/vol")
-        # T + MA_m -> MA : g_tm
-        R6  = pyurdme.Reaction(name="R6", reactants={Turf:1, MA_m:1}, products={MA:1}, propensity_function="Turf * MA_m * g_tm / vol")
-        if version > 1:
-            # MA_m + C -> 2MA : Gamma*g_tm
-            R7 = pyurdme.Reaction(name="R7", reactants={Coral:1}, products={MA_m:1}, propensity_function="MA_m * Coral * Gamma * g_tm / vol")
-        else:
-            # MA + C -> 2MA : Gamma*g_tm
-            R7 = pyurdme.Reaction(name="R7", reactants={Coral:1}, products={MA:1}, propensity_function="MA * Coral * Gamma * g_tm / vol")
-
-        # Movement, working in meters
-        # C -> C + C_m : mu_c + g_tc * exp(-1*psi_g*MA*100)
-        R8 = pyurdme.Reaction(name="R8", reactants={}, products={Coral_m:1}, propensity_function="Coral * (mu_c + g_tc * exp(-1.0 * psi_g * MA * 100))")
-        # C_m -> 0 :  mu_c
-        R9 = pyurdme.Reaction(name="R9", reactants={Coral_m:1}, products={}, rate=mu_c)
-        # MA -> MA + MA_m : g_tc + mu_m 
-        R10 = pyurdme.Reaction(name="R10", reactants={}, products={MA_m:1}, propensity_function="MA * (g_tc + mu_m)")
-        # MA_m -> 0 :  mu_m
-        R11 = pyurdme.Reaction(name="R11", reactants={MA_m:1},  products={}, rate=mu_m)
-        self.addReaction([R0, R1, R3, R4, R5, R6, R7, R8, R9, R10, R11])
-
-        if version > 1:
-            # C_m + MA_m -> 0
-            R12 = pyurdme.Reaction(name="R12", reactants={MA_m:1,Coral_m:1},  products={}, propensity_function="(mu_c + mu_m) * MA_m * Coral_m / vol")
-            self.addReaction([R12])
-
-
-
+        self.addReaction(pyurdme.Reaction(name="R4", reactants={MA:1}, products={Turf:1}, rate=dm))
+        # T + C_m -> C : phi_c
+        self.addReaction(pyurdme.Reaction(name="R5", reactants={Turf:1, Coral_m:1}, products={Coral:1}, rate=phi_c))
+        # T + MA_m -> MA : phi_m
+        self.addReaction(pyurdme.Reaction(name="R6", reactants={Turf:1, MA_m:1}, products={MA:1}, rate=phi_m))
+        # C + T -> 2C : g_tc * exp(-1.0 * psi_g * MA / 100)
+        self.addReaction(pyurdme.Reaction(name="R7", reactants={Turf:1, Coral:1}, products={Coral:2}, propensity_function="g_tc*Turf*Coral*exp(-1.0 * psi_g * MA / Space_per_voxel)/vol"))
+        # MA + T -> 2MA : g_tm
+        self.addReaction(pyurdme.Reaction(name="R8", reactants={Turf:1, MA:1}, products={MA:2}, rate=g_tm))
+        # C + MA -> 2MA : Gamma * g_tm
+        self.addReaction(pyurdme.Reaction(name="R9", reactants={Coral:1, MA:1}, products={MA:2}, propensity_function="g_tm*Gamma*Coral*MA/vol"))
+        # C -> C + C_m : R_c
+        self.addReaction(pyurdme.Reaction(name="R10", reactants={Coral:1}, products={Coral:1, Coral_m:1}, rate=R_c))
+        # MA -> MA + MA_m : R_m
+        self.addReaction(pyurdme.Reaction(name="R11", reactants={MA:1}, products={MA:1, MA_m:1}, rate=R_m))
+        # C_m -> 0 : mu_c
+        self.addReaction(pyurdme.Reaction(name="R12", reactants={Coral_m:1}, products={}, rate=mu_c))
+        # MA_m -> 0 : mu_m
+        self.addReaction(pyurdme.Reaction(name="R13", reactants={MA_m:1},  products={}, rate=mu_m))
+        # MA + C_m -> MA : alpha_c
+        self.addReaction(pyurdme.Reaction(name="R14", reactants={MA:1, Coral_m:1},  products={MA:1}, rate=alpha_c))
+        # C + MA_m -> C : alpha_m
+        self.addReaction(pyurdme.Reaction(name="R15", reactants={Coral:1, MA_m:1},  products={Coral:1}, rate=alpha_m))
+ 
+        
 
         # A unit square
         # each grid point is 10cm x 10cm, domain is 5m x 5m
@@ -89,11 +81,22 @@ class CoralReef(pyurdme.URDMEModel):
         # Place the A molecules in the voxel nearest the center of the square
         #self.placeNear({Coral:100}, point=[10,10])
         
-        self.distributeUniformly({Turf:100})
-        self.placeNear({Coral:100}, point=[1,1])
-        self.placeNear({Turf:0}, point=[1,1])
-        self.placeNear({MA:100}, point=[4,4])
-        self.placeNear({Turf:0}, point=[4,4])
+        Space_per_voxel = 10
+        self.addParameter(pyurdme.Parameter(name="Space_per_voxel", expression=Space_per_voxel)) #1/year
+        
+                          
+        if True:
+            # Start with two colonys
+            self.distributeUniformly({Turf:Space_per_voxel})
+            self.placeNear({Coral:Space_per_voxel}, point=[1,1])
+            self.placeNear({Turf:0}, point=[1,1])
+            self.placeNear({MA:Space_per_voxel}, point=[4,4])
+            self.placeNear({Turf:0}, point=[4,4])
+        else:
+            # Every voxel is the same
+            self.distributeUniformly({Turf:0})
+            self.distributeUniformly({Coral:Space_per_voxel-1})
+            self.distributeUniformly({MA:1})
 
 
         for vndx in range(self.u0.shape[1]):
@@ -108,8 +111,41 @@ class CoralReef(pyurdme.URDMEModel):
         #self.timespan(numpy.linspace(0,5,72)) #5 years, by months
         self.timespan(numpy.linspace(0,11,66)) #10 years, by 2 months
 
+
 if __name__ == "__main__":
-    reef = CoralReef()
-    sol = NSMSolver(reef, report_level=1)
-    result = sol.run()
+    model = CoralReef()
+    result = model.run(report_level=1)
+    print "Writing PavaView compatable output to 'output_coral' directory"
     result.toVTK(species='Coral',folder_name="output_coral")
+
+    x_vals = model.mesh.coordinates()[:, 0]
+    y_vals = model.mesh.coordinates()[:, 1]
+    C_vals = result.getSpecies("Coral")
+    MA_vals = result.getSpecies("MA")
+    Turf_vals = result.getSpecies("Turf")
+    num_vox = len(x_vals)    
+
+    plt.figure(figsize=(12,6), dpi=100)
+    tndx = -1 #show end timepoint
+    tval = model.tspan[tndx]
+    plt.subplot(1,3,1)
+    heatmap, xedges, yedges = numpy.histogram2d(x=x_vals, y=y_vals, weights=C_vals[tndx,:], bins=int(math.sqrt(num_vox)))
+    plt.imshow(heatmap)
+    cb = plt.colorbar()
+    cb.set_label('Coral population')
+    plt.title('t={0}'.format(tval))
+    plt.subplot(1,3,2)
+    heatmap, xedges, yedges = numpy.histogram2d(x=x_vals, y=y_vals, weights=MA_vals[tndx,:], bins=int(math.sqrt(num_vox)))
+    plt.imshow(heatmap)
+    cb = plt.colorbar()
+    cb.set_label('MA population')
+    plt.title('t={0}'.format(tval))
+    plt.subplot(1,3,3)
+    heatmap, xedges, yedges = numpy.histogram2d(x=x_vals, y=y_vals, weights=Turf_vals[tndx,:], bins=int(math.sqrt(num_vox)))
+    plt.imshow(heatmap)
+    cb = plt.colorbar()
+    cb.set_label('Free Turf')
+    plt.title('t={0}'.format(tval))
+    plt.show()
+
+

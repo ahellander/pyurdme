@@ -35,7 +35,7 @@ class polarisome_1D(pyurdme.URDMEModel):
         pyurdme.URDMEModel.__init__(self,model_name)
 
         default_D = 0.0053
-        fast_D = 100*default_D
+        fast_D = 1000*default_D
         # Species
         Bni1c = pyurdme.Species(name="Bni1c",  diffusion_constant=fast_D)
         Bni1m = pyurdme.Species(name="Bni1m",  diffusion_constant=default_D)

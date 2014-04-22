@@ -1854,8 +1854,8 @@ class URDMESolver:
         # Write the propensity file
         self.propfilename = self.model_name + '_pyurdme_generated_model'
         if self.model_file == None:
+            prop_file_name=self.solver_dir + self.propfilename + '.c'
             if self.report_level > 1:
-                prop_file_name=self.solver_dir + self.propfilename + '.c'
                 print "Creating propensity file {0}".format(prop_file_name)
             self.createPropensityFile(file_name=prop_file_name)
         else:
@@ -1967,9 +1967,12 @@ class URDMESolver:
             print outfile.name
             print return_code
             if self.report_level >= 1:
-                print handle.stderr.read(), handle.stdout.read()
+                try:
+                    print handle.stderr.read(), handle.stdout.read()
+                except Exception as e:
+                    pass
             print "urdme_solver_cmd = {0}".format(urdme_solver_cmd)
-            raise URDMEError("Solver execution failed")
+            raise URDMEError("Solver execution failed, return code = {0}".format(return_code))
 
         #if self.report_level >= 1:
         #    print handle.stdout.read()

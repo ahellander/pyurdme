@@ -20,7 +20,11 @@ from model import *
 
 import inspect
 
-import IPython.display
+try:
+    # This is only needed if we are running in an Ipython Notebook
+    import IPython.display
+except:
+    pass
 
 try:
     import h5py
@@ -31,7 +35,7 @@ try:
     import dolfin
     dolfin.parameters["linear_algebra_backend"] = "uBLAS"
 except:
-    raise Exception("PyURDME requires FeniCS/dolfin.")
+    raise Exception("PyURDME requires FeniCS/Dolfin.")
 
 import pickle
 import json

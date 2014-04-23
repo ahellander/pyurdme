@@ -15,7 +15,6 @@ import numpy
 import scipy.io
 import scipy.sparse
 
-import gmsh
 from model import *
 
 import inspect
@@ -1080,10 +1079,6 @@ class URDMEMesh(dolfin.Mesh):
             ret.addPeriodicBoundaryCondition(periodic)
         return ret
 
-
-
-
-
     #@classmethod
     #def unitCircle(cls, nx,ny):
     #    """ Unit Square of with nx,ny points in the respective axes. """
@@ -1097,17 +1092,6 @@ class URDMEMesh(dolfin.Mesh):
     #    return Mesh(mesh)'t
 
 
-
-    @classmethod
-    def read_gmsh_mesh(cls, meshfile):
-        """ Read a Gmsh mesh from file. """
-        mr = GmshMeshReceiverBase()
-        try:
-            mesh = read_gmsh(mr, filename=meshfile)
-        except:
-            raise MeshImportError("Failed to import mesh: " + filename)
-
-        return mesh
 
     @classmethod
     def read_dolfin_mesh(cls, filename=None, colors = []):

@@ -243,7 +243,6 @@ urdme_model *read_model(char *file)
 	model->dsize = mxGetM(data);
     model->data = (double *)malloc(model->dsize*model->Ncells*sizeof(double));
     memcpy(model->data,(double *)mxGetPr(data),model->dsize*model->Ncells*sizeof(double));
-	//model->data  = mxGetPr(data);
     mxDestroyArray(data);
 	
     /* Maximum number of solutions defaults to one. */
@@ -296,11 +295,7 @@ void read_solution(urdme_model *model, char*file){
 /* Utility function. Initialize the solution field of the urdme_model struct. */
 void init_sol(urdme_model *model, int nsolmax)
 {
-	//int i;
 	model->nsolmax = nsolmax;
-	//model->U = (int**)malloc(model->nsolmax*sizeof(int *));
-	//for (i=0;i<nsolmax;i++)
-	//	model->U[i]=NULL;
 	model->nsol = 0;
 	
 }
@@ -337,7 +332,7 @@ int destroy_model(urdme_model *model)
     free(model->u0);
 	free(model->sd);
     free(model->data);
-	free(model->U);
+	//free(model->U);
     
     for (i=0; i<model->num_extra_args; i++)
       if (model->extra_args[i]!=NULL){

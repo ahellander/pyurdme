@@ -92,10 +92,11 @@ typedef struct{
      
      */
 	
+    
+    
+    // Deprecated
 	int **U;
-    
-    
-    
+
 	/* Maximal number of solutions (set when U is allocated), defaults to one. */ 
 	int nsolmax;
 	/* Current number of stored solutions. */ 

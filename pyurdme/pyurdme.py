@@ -15,12 +15,15 @@ import numpy
 import scipy.io
 import scipy.sparse
 
-import gmsh
 from model import *
 
 import inspect
 
-import IPython.display
+try:
+    # This is only needed if we are running in an Ipython Notebook
+    import IPython.display
+except:
+    pass
 
 try:
     import h5py
@@ -31,7 +34,7 @@ try:
     import dolfin
     dolfin.parameters["linear_algebra_backend"] = "uBLAS"
 except:
-    raise Exception("PyURDME requires FeniCS/dolfin.")
+    raise Exception("PyURDME requires FeniCS/Dolfin.")
 
 import pickle
 import json
@@ -573,9 +576,7 @@ class URDMEModel(Model):
         positive_mass = 0.0
         total_mass = 0.0
 
-#try:
-#           sd = self.sd
-#        except:
+
         sd = self.subdomainVector(self.subdomains)
         sd_vec_dof = numpy.zeros(self.mesh.getNumDofVoxels())
         vertex_to_dof = dolfin.vertex_to_dof_map(self.mesh.FunctionSpace())
@@ -1070,10 +1071,6 @@ class URDMEMesh(dolfin.Mesh):
             ret.addPeriodicBoundaryCondition(periodic)
         return ret
 
-
-
-
-
     #@classmethod
     #def unitCircle(cls, nx,ny):
     #    """ Unit Square of with nx,ny points in the respective axes. """
@@ -1087,17 +1084,6 @@ class URDMEMesh(dolfin.Mesh):
     #    return Mesh(mesh)'t
 
 
-
-    @classmethod
-    def read_gmsh_mesh(cls, meshfile):
-        """ Read a Gmsh mesh from file. """
-        mr = GmshMeshReceiverBase()
-        try:
-            mesh = read_gmsh(mr, filename=meshfile)
-        except:
-            raise MeshImportError("Failed to import mesh: " + filename)
-
-        return mesh
 
     @classmethod
     def read_dolfin_mesh(cls, filename=None, colors = []):
@@ -1596,7 +1582,7 @@ class URDMEResult(dict):
                 hiy = hix;
                 hiz = hix*is3d
                 
-                for particle in range(particles):
+                for particle in range(int(particles)):
                     x.append((coordinates[i,0]+random.uniform(-1,1)*hix))
                     y.append((coordinates[i,1]+random.uniform(-1,1)*hiy))
                     z.append((coordinates[i,2]+random.uniform(-1,1)*hiz))

@@ -1988,6 +1988,8 @@ class URDMESolver:
             print "urdme_solver_cmd = {0}".format(urdme_solver_cmd)
             raise URDMEError("Solver execution failed")
 
+
+
         if return_code != 0:
             print outfile.name
             print return_code

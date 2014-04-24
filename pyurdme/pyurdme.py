@@ -170,41 +170,40 @@ class URDMEModel(Model):
             except Exception as e:
                 raise Exception("Error unpickling model, could not recreate the subdomain functions"+str(e))
     
-        self.meshextend()
+        self.create_extended_mesh()
 
-
-    def addDataFunction(self, data_function):
+    def add_data_function(self, data_function):
         """ Add a URDMEDataFunction object to this object. """
         if isinstance(data_function, URDMEDataFunction):
             self.listOfDataFunctions.append(data_function)
         else:
             raise Exception("data_function not of type URDMEDataFunction")
 
-    def __initializeSpeciesMap(self):
+    def __initialize_species_map(self):
         i = 0
         self.species_map = {}
         for S in self.listOfSpecies:
             self.species_map[S] = i
             i = i + 1
 
-    def speciesMap(self):
+    def get_species_map(self):
         """ Get the species map, name to index. """
         if not hasattr(self, 'species_map'):
-            self.__initializeSpeciesMap()
+            self.__initialize_species_map()
 
         return self.species_map
 
-    def addSubDomain(self, subdomain):
+    def add_subdomain(self, subdomain):
         if not subdomain.dim() in self.subdomains.keys():
             self.subdomains[subdomain.dim()] = subdomain
         else:
             raise ModelException("Failed to add subdomain function of dim "+str(subdomain.dim())+". Only one subdomain function of a given dimension is allowed.")
 
-    def createStoichiometricMatrix(self):
+    def create_stoichiometric_matrix(self):
         """ Generate a stoichiometric matrix in sparse CSC format. """
 
         if not hasattr(self, 'species_map'):
-            self.__initializeSpeciesMap()
+            self.__initialize_species_map()
         if self.getNumReactions() > 0:
             ND = numpy.zeros((self.getNumSpecies(), self.getNumReactions()))
             for i, r in enumerate(self.listOfReactions):
@@ -223,7 +222,7 @@ class URDMEModel(Model):
 
         return N
 
-    def createDependencyGraph(self):
+    def create_dependency_graph(self):
         """ Construct the sparse dependency graph. """
         # We cannot safely generate a dependency graph (without attempting to analyze the propensity string itself)
         # if the model contains custom propensities.
@@ -235,7 +234,7 @@ class URDMEModel(Model):
     
         if mass_action_model:
             GF = numpy.zeros((self.getNumReactions(), self.getNumReactions() + self.getNumSpecies()))
-            species_map = self.speciesMap()
+            species_map = self.get_species_map()
             
             involved_species = []
             reactants = []
@@ -303,7 +302,7 @@ class URDMEModel(Model):
 
         subdomain = dolfin.MeshFunction("size_t", self.mesh, self.mesh.topology().dim()-1)
         subdomain.set_all(1)
-        self.addSubDomain(subdomain)
+        self.add_subdomain(subdomain)
 
     def _initialize_species_to_subdomains(self):
         """ Initialize the species mapping to subdomains. The default
@@ -343,21 +342,21 @@ class URDMEModel(Model):
 
 
     def restrict(self, species, subdomains):
+        """ Restrict the diffusion of a species to a subdomain. """
         self.species_to_subdomains[species] = subdomains
 
 
-    def subdomainVector(self, subdomains={}):
+
+    def get_subdomain_vector(self, subdomains={}):
         """ Create the 'sd' vector. 'subdomains' is a dolfin FacetFunction,
             and if no subdomain input is specified, they voxels default to
             subdomain 1. """
-
-
-        # TODO: We need to make sure that the highest dimension is applied
-        #       first, otherwise the cell level will overwrite all markings
-        #       applied on boundaries.
+        # We need to make sure that the highest dimension is applied
+        # first, otherwise the cell level will overwrite all markings
+        # applied on boundaries.
 
         if not hasattr(self,'xmesh'):
-            self.meshextend()
+            self.create_extended_mesh()
 
         self.mesh.init()
 
@@ -378,21 +377,20 @@ class URDMEModel(Model):
         self.sd = sd.flatten()
         return self.sd
 
-
-    def initializeInitialValue(self):
+    def initialize_initial_condition(self):
         """ Create all-zeros inital condition matrix. """
         ns = self.getNumSpecies()
         if self.xmesh == None:
-            self.meshextend()
+            self.create_extended_mesh()
         nv = self.mesh.get_num_voxels()
         self.u0 = numpy.zeros((ns, nv))
 
-    def meshextend(self):
+    def create_extended_mesh(self):
         """ Extend the primary mesh with information about the degrees of freedom. """
 
         xmesh = URDMEXmesh()
         # Construct a species map (dict mapping model species name to an integer index)
-        species_map = self.speciesMap()
+        species_map = self.get_species_map()
         # Initialize the function spaces and dof maps.
         for spec in self.listOfSpecies:
             species = self.listOfSpecies[spec]
@@ -409,19 +407,19 @@ class URDMEModel(Model):
 
 
     # Some utility routines to set initial conditions
-    def scatter(self, spec_init, subdomains=None):
+    def set_initial_condition_scatter(self, spec_init, subdomains=None):
         """ Scatter an initial number of molecules over the voxels in a subdomain. """
 
         if not hasattr(self,"u0"):
-            self.initializeInitialValue()
+            self.initialize_initial_condition()
 
         if not hasattr(self, 'xmesh'):
-            self.meshextend()
+            self.create_extended_mesh()
 
         self._initialize_species_to_subdomains()
 
         if not hasattr(self, 'sd'):
-            self.subdomainVector(self.subdomains)
+            self.get_subdomain_vector(self.subdomains)
 
         for species in spec_init:
 
@@ -430,7 +428,7 @@ class URDMEModel(Model):
 
             spec_name = species.name
             num_spec = spec_init[species]
-            species_map = self.speciesMap()
+            species_map = self.get_species_map()
             specindx = species_map[spec_name]
 
             sd = self.sd
@@ -441,22 +439,22 @@ class URDMEModel(Model):
 
             ltab = len(table)
             if ltab == 0:
-                raise ModelException("scatter: No voxel in the given subdomains "+str(subdomains)+", check subdomain marking.")
+                raise ModelException("set_initial_condition_scatter: No voxel in the given subdomains "+str(subdomains)+", check subdomain marking.")
 
             for mol in range(num_spec):
                 vtx = numpy.random.randint(0, ltab)
                 ind = table[vtx]
                 self.u0[specindx, ind] += 1
 
-    def distributeUniformly(self, spec_init):
+    def set_initial_condition_distribute_uniformly(self, spec_init):
         """ Place the same number of molecules of the species in each voxel. """
         if not hasattr(self, "u0"):
-            self.initializeInitialValue()
+            self.initialize_initial_condition()
 
         if not hasattr(self, 'xmesh'):
-            self.meshextend()
+            self.create_extended_mesh()
 
-        species_map = self.speciesMap()
+        species_map = self.get_species_map()
         num_voxels = self.mesh.get_num_voxels()
         for spec in spec_init:
             spec_name = spec.name
@@ -466,14 +464,14 @@ class URDMEModel(Model):
                 self.u0[specindx, ndx] = num_spec
     
     
-    def placeNear(self, spec_init, point=None):
+    def set_initial_condition_place_near(self, spec_init, point=None):
         """ Place all molecules of kind species in the voxel nearest a given point. """
 
         if not hasattr(self, "u0"):
-            self.initializeInitialValue()
+            self.initialize_initial_condition()
 
         if not hasattr(self, 'xmesh'):
-            self.meshextend()
+            self.create_extended_mesh()
 
         coords = self.mesh.get_voxels()
         shape = coords.shape
@@ -488,7 +486,7 @@ class URDMEModel(Model):
             dist = numpy.sqrt(numpy.sum((coords-reppoint)**2, axis=1))
             ix = numpy.argmin(dist)
 
-            species_map = self.speciesMap()
+            species_map = self.get_species_map()
             specindx = species_map[spec_name]
             #dofind = self.xmesh.vertex_to_dof_map[spec_name][ix]
             #ix = (dofind - specindx) / len(species_map)
@@ -496,9 +494,8 @@ class URDMEModel(Model):
 
 
 
-    def createSystemMatrix(self):
-        """
-            Create the system (diffusion) matrix for input to the URDME solvers. The matrix
+    def create_system_matrix(self):
+        """ Create the system (diffusion) matrix for input to the URDME solvers. The matrix
             is built by concatenating the individually assembled matrices for each of the species,
             and multiplying with the lumped mass matrix (which define the volume of the voxels).
 
@@ -564,7 +561,7 @@ class URDMEModel(Model):
         total_mass = 0.0
 
 
-        sd = self.subdomainVector(self.subdomains)
+        sd = self.get_subdomain_vector(self.subdomains)
         sd_vec_dof = numpy.zeros(self.mesh.get_num_dof_voxels())
         vertex_to_dof = dolfin.vertex_to_dof_map(self.mesh.get_function_space())
         for ndx, sd_val in enumerate(sd):
@@ -655,8 +652,7 @@ class URDMEModel(Model):
             D = urdme_solver_data["D"]
             raise InvalidSystemMatrixException("Invalid diffusion matrix. The sum of the columns does not sum to zero. " + str(maxcolsum) + str(colsum[0,maxcolsum]))
 
-
-    def connectivityMatrix(self):
+    def create_connectivity_matrix(self):
         """ Assemble a connectivity matrix in CCS format. """
         
         fs = self.mesh.get_function_space()
@@ -667,40 +663,11 @@ class URDMEModel(Model):
         rows, cols, vals = K.data()
         Kcrs = scipy.sparse.csc_matrix((vals, cols, rows))
         return Kcrs
-        #
-        ## Permutation dolfin dof -> URDME dof
-        #Kdok = Kcrs.todok()
-        #
-        #nv  = self.mesh.num_vertices()
-        #S = scipy.sparse.dok_matrix((nv,nv))
-        #
-        #dof2vtx = dolfin.vertex_to_dof_map(fs)
-        #
-        #for entries in Kdok.items():
-        #
-        #    ind = entries[0]
-        #    ir = ind[0]
-        #    ij = ind[1]
-        #
-        #    # Permutation to make the matrix ordering match that of sd, u0. (Dolfin dof -> URDME dof)
-        #    ir = dof2vtx[ind[0]]
-        #    ij = dof2vtx[ind[1]]
-        #
-        #    val = entries[1]
-        #
-        #
-        #    S[ir,ij] = val
-        #
-        #
-        #
-        #C = S.tocsc()
-        #return C
 
-
-    def solverData(self):
+    def get_solver_datastructure(self):
         """ Return the datastructures needed by the URDME solvers.
 
-           solverData creates and populates a dictionary, urdme_solver_data,
+           get_solver_datastructure() creates and populates a dictionary, urdme_solver_data,
            containing the mandatory input data structures of the core NSM solver in URDME
            that is derived from the model. The data strucyures are
 
@@ -718,21 +685,18 @@ class URDMEModel(Model):
            K - a (Nvoxel x Nvoxel) connectivity matrix
 
         """
-
-
         urdme_solver_data = {}
-        
         num_species = self.getNumSpecies()
 
         # Stoichimetric matrix
-        N = self.createStoichiometricMatrix()
+        N = self.create_stoichiometric_matrix()
         urdme_solver_data['N'] = N
         # Dependency Graph
-        G = self.createDependencyGraph()
+        G = self.create_dependency_graph()
         urdme_solver_data['G']  = G
 
         # Volume vector
-        result =  self.createSystemMatrix()
+        result =  self.create_system_matrix()
         vol = result['vol']
         urdme_solver_data['dofvolumes'] = vol
 
@@ -755,7 +719,7 @@ class URDMEModel(Model):
         # Subdomain vector
         # convert to dof ordering
         sd_vec_dof = numpy.zeros(num_dofvox)
-        for ndx, sd_val in enumerate(self.subdomainVector(self.subdomains)):
+        for ndx, sd_val in enumerate(self.get_subdomain_vector(self.subdomains)):
             sd_vec_dof[vertex_to_dof[ndx]] = sd_val
         urdme_solver_data['sd'] = sd_vec_dof
         
@@ -775,7 +739,7 @@ class URDMEModel(Model):
         urdme_solver_data['data'] = data
 
         if not hasattr(self,'u0'):
-            self.initializeInitialValue()
+            self.initialize_initial_condition()
 
         # Initial Conditions, convert to dof ordering
         u0_dof = numpy.zeros((num_species, num_dofvox))
@@ -810,7 +774,7 @@ class URDMEModel(Model):
         urdme_solver_data['p'] = p_dof
 
         # Connectivity matrix
-        urdme_solver_data['K'] = self.connectivityMatrix()
+        urdme_solver_data['K'] = self.create_connectivity_matrix()
 
         urdme_solver_data['report']=0
 
@@ -826,7 +790,7 @@ class URDMEModel(Model):
             """
 
         if self.xmesh == None:
-            self.meshextend()
+            self.create_extended_mesh()
 
         self._initialize_species_to_subdomains()
 
@@ -902,6 +866,23 @@ class URDMEModel(Model):
 
         return sol.run(number_of_trajectories=number_of_trajectories, seed=seed)
 
+
+    # Old function names for backwards compatablity
+    addDataFunction = add_data_function
+    speciesMap = get_species_map
+    __initializeSpeciesMap = __initialize_species_map
+    addSubDomain = add_subdomain
+    createStoichiometricMatrix = create_stoichiometric_matrix
+    createDependencyGraph = create_dependency_graph
+    subdomainVector = get_subdomain_vector
+    initializeInitialValue = initialize_initial_condition
+    meshextend = create_extended_mesh
+    scatter = set_initial_condition_scatter
+    distributeUniformly = set_initial_condition_distribute_uniformly
+    placeNear = set_initial_condition_place_near
+    createSystemMatrix = create_system_matrix
+    connectivityMatrix = create_connectivity_matrix
+    solverData = get_solver_datastructure
 
 
 class URDMEMesh(dolfin.Mesh):
@@ -1377,7 +1358,7 @@ class URDMEResult(dict):
         else:
             spec_name = species
         
-        species_map = self.model.speciesMap()
+        species_map = self.model.get_species_map()
         num_species = self.model.getNumSpecies()
         spec_indx = species_map[spec_name]
         
@@ -1845,7 +1826,7 @@ class URDMESolver:
 
     def serialize(self, filename=None, report_level=0, sopts=None):
         """ Write the datastructures needed by the the core URDME solvers to a .mat input file. """
-        urdme_solver_data = self.model.solverData()
+        urdme_solver_data = self.model.get_solver_datastructure()
         urdme_solver_data['report'] = report_level
         if sopts is None:
             urdme_solver_data['sopts'] = self.sopts

@@ -918,7 +918,11 @@ class URDMEModel(Model):
 
 
 class URDMEMesh(dolfin.Mesh):
-    """ A URDME mesh extends the Dolfin mesh class. """
+    """ A URDME mesh extends the Dolfin mesh class. 
+
+        Provides wrappers around dolfins built-in simple geometries/mesh generation function.
+        These following methods will all give regular meshes that will produce discretizations that are equivalent to Cartesian grids.
+    """
 
     def __init__(self, mesh=None):
         self.constrained_domain = None
@@ -926,11 +930,12 @@ class URDMEMesh(dolfin.Mesh):
         self.function_space = None
         self.num_dof_voxels = None
 
-
-    def addPeriodicBoundaryCondition(self, domain):
+    def add_periodic_boundary_condition(self, domain):
+        """ Add a periodic boundary mapping object (a subclass of dolfin.SubDomain). """
         self.constrained_domain = domain
 
-    def FunctionSpace(self):
+    def get_function_space(self):
+        """ Get the FunctionSpace dolfin object for this mesh. """
         if self.function_space is not None:
             return self.function_space
         else:
@@ -941,27 +946,24 @@ class URDMEMesh(dolfin.Mesh):
             self.function_space = fs
             return fs
 
-    def getNumVoxels(self):
+    def get_num_voxels(self):
+        """ Get the number of voxels in the vertex ordering. """
         return self.num_vertices()
 
-    def setNumDofVoxels(self, num):
+    def set_num_dof_voxels(self, num):
+        """ Set the number of voxels in the DOF ordering. """
         self.num_dof_voxels = num
 
-    def getNumDofVoxels(self):
+    def get_num_dof_voxels(self):
+        """ Get the number of voxels in the DOF ordering. """
         if self.num_dof_voxels is None:
             raise URDMEError('NumDofVoxels is not set')
         return self.num_dof_voxels
 
-    def getVoxels(self):
+    def get_voxels(self):
+        """ return the (x,y,z) coordinate of each voxel. """
         return self.coordinates()
 
-    """  Wrappers around dolfins built-in simple geometries/meshes.
-
-        These following methods will all give regular meshes that will produce discretizations that are
-        equivalent to Cartesian grids.
-
-    """
-    
     def meshSize(self):
         """ Estimate of mesh size at each vertex. """
         coordinates = self.coordinates()
@@ -985,9 +987,8 @@ class URDMEMesh(dolfin.Mesh):
 
         return vtxh
 
-
-    def normalizedCoordinates(self):
-        """ Return vertex coordinates centered at origo. """
+    def get_normalized_coordinates(self):
+        """ Return vertex coordinates centered at origin. """
         
         # Compute mesh centroid
         vtx = self.coordinates()
@@ -999,8 +1000,8 @@ class URDMEMesh(dolfin.Mesh):
 
         return normalized_vtx
 
-    def scaledNormalizedCoordinates(self):
-        """ Return vertex coordinates scaled to the interval (-1,1) and centered at origo. """
+    def get_scaled_normalized_coordinates(self):
+        """ Return vertex coordinates scaled to the interval (-1,1) and centered at origin. """
         # Scale the verices so the max dimension is in the range (-1,1) to be compatible with the browser display
         vtx = self.coordinates()
         maxvtx = numpy.max(numpy.amax(vtx,axis=0))
@@ -1017,7 +1018,7 @@ class URDMEMesh(dolfin.Mesh):
         
         return factor, normalized_vtx
     
-    def scaledCoordinates(self):
+    def get_scaled_coordinates(self):
         """ Return vertex coordinates scaled to the interval (-1,1). """
         # Scale the verices so the max dimension is in the range (-1,1) to be compatible with the browser display
         vtx = self.coordinates()
@@ -1025,23 +1026,24 @@ class URDMEMesh(dolfin.Mesh):
         factor = 1/maxvtx
         return factor, factor*vtx
 
-
     @classmethod
-    def unitIntervalMesh(cls, nx, periodic=False):
+    def generate_unit_interval_mesh(cls, nx, periodic=False):
+        """ Unit Interval (1D) of with nx points in the axes. """
         return cls.IntervalMesh(nx=nx, a=0, b=1, periodic=periodic)
     
     @classmethod
-    def unitSquareMesh(cls, nx, ny, periodic=False):
-        """ Unit Square of with nx,ny points in the respective axes. """
+    def generate_unit_square_mesh(cls, nx, ny, periodic=False):
+        """ Unit Square (2D) of with nx, ny points in the respective axes. """
         return cls.SquareMesh(L=1, nx=nx, ny=ny, periodic=periodic)
 
     @classmethod
-    def unitCubeMesh(cls, nx, ny, nz, periodic=False):
-        """ Unit Cube of with nx,ny points in the respective axes. """
+    def generate_unit_cube_mesh(cls, nx, ny, nz, periodic=False):
+        """ Unit Cube (3D) of with nx, ny, nz points in the respective axes. """
         return cls.CubeMesh(nx=nx, ny=ny, nz=nz, periodic=periodic)
 
     @classmethod
-    def IntervalMesh(cls, nx, a, b, periodic=False):
+    def generate_interval_mesh(cls, nx, a, b, periodic=False):
+        """ Interval (1D) of with nx points in the axes, and side length L. """
         mesh = dolfin.IntervalMesh(nx, a, b)
         ret = URDMEMesh(mesh)
         if isinstance(periodic, bool) and periodic:
@@ -1051,8 +1053,8 @@ class URDMEMesh(dolfin.Mesh):
         return ret
 
     @classmethod
-    def SquareMesh(cls, L, nx, ny, periodic=False):
-        """ Regular mesh of a square with side length L. """
+    def generate_square_mesh(cls, L, nx, ny, periodic=False):
+        """ Unit Square (2D) of with nx, ny points in the respective axes, and side length L. """
         mesh = dolfin.RectangleMesh(0, 0, L, L, nx, ny)
         ret = URDMEMesh(mesh)
         if isinstance(periodic, bool) and periodic:
@@ -1062,8 +1064,8 @@ class URDMEMesh(dolfin.Mesh):
         return ret
 
     @classmethod
-    def CubeMesh(cls, L, nx, ny, nz, periodic=False):
-        """ Cube with nx,ny points in the respective axes. """
+    def generate_cube_mesh(cls, L, nx, ny, nz, periodic=False):
+        """ Unit Cube (3D) of with nx, ny, nz points in the respective axes, and side length L. """
         mesh = dolfin.BoxMesh(0, 0, 0, L, L, L, nx, ny, nz)
         ret = URDMEMesh(mesh)
         if isinstance(periodic, bool) and periodic:
@@ -1071,20 +1073,6 @@ class URDMEMesh(dolfin.Mesh):
         elif isinstance(periodic, dolfin.SubDomain):
             ret.addPeriodicBoundaryCondition(periodic)
         return ret
-
-    #@classmethod
-    #def unitCircle(cls, nx,ny):
-    #    """ Unit Square of with nx,ny points in the respective axes. """
-    #    mesh = dolfin.UnitCircleMesh(nx,ny)
-    #    return Mesh(mesh)
-
-    #@classmethod
-    #def unitSphere(cls, nx,ny):
-    #    """ Unit Square of with nx,ny points in the respective axes. """
-    #    mesh = dolfin.UnitSquareMesh(nx,ny)
-    #    return Mesh(mesh)'t
-
-
 
     @classmethod
     def read_dolfin_mesh(cls, filename=None, colors = []):
@@ -1097,11 +1085,10 @@ class URDMEMesh(dolfin.Mesh):
         except Exception as e:
             raise MeshImportError("Failed to import mesh: " + filename+"\n" + str(e))
 
-    def toTHREEJs(self, colors = None):
+    def export_to_three_js(self, colors = None):
         """ return a Json string of the mesh in THREE Js format. 
             
             If a colors list is specified, it should have the num_voxels entries
-            
         """
         document = {}
         document["metadata"] = {"formatVersion":3}
@@ -1120,7 +1107,6 @@ class URDMEMesh(dolfin.Mesh):
         else:
             # 3D
             num_elements = self.num_facets()
-
 
         materials = [ {
                      "DbgColor" : 15658734,
@@ -1141,8 +1127,6 @@ class URDMEMesh(dolfin.Mesh):
         self.init(2,0)
         connectivity = self.topology()(2,0)
         faces = []
-        
-       
         
         for i in range(num_elements):
             face = connectivity(i)
@@ -1192,6 +1176,28 @@ class URDMEMesh(dolfin.Mesh):
         else:
             IPython.display.display(IPython.display.HTML(html+hstr))
 
+
+
+    # Old function names for backwards compatability
+    toTHREEJs = export_to_three_js
+    unitIntervalMesh = generate_unit_interval_mesh
+    unitSquareMesh = generate_unit_square_mesh
+    unitCubeMesh = generate_unit_cube_mesh
+    IntervalMesh = generate_interval_mesh
+    SquareMesh = generate_square_mesh
+    CubeMesh = generate_cube_mesh
+    normalizedCoordinates = get_normalized_coordinates
+    scaledNormalizedCoordinates = get_scaled_normalized_coordinates
+    scaledCoordinates = get_scaled_coordinates
+    addPeriodicBoundaryCondition = add_periodic_boundary_condition
+    FunctionSpace = get_function_space
+    getNumVoxels = get_num_voxels
+    setNumDofVoxels = set_num_dof_voxels
+    getNumDofVoxels = get_num_dof_voxels
+    getVoxels = get_voxels
+
+
+
 class URDMEXmesh():
     """ Extended mesh object.
 
@@ -1222,7 +1228,7 @@ class URDMEResult(dict):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def __eq__(self, other, verbose=True):
+    def __eq__(self, other, verbose=False):
         try:
             tspan = self.get_timespan()
             if numpy.any(tspan != other.get_timespan()):
@@ -2009,10 +2015,8 @@ class URDMESolver:
                 
         return result_list
 
-    # Old function name for backwards compatablility.
-    run_ensemble = run
 
-    def createPropensityFile(self, file_name=None):
+    def create_propensity_file(self, file_name=None):
         """ Generate the C propensity file that is used to compile the URDME solvers.
             Only mass action propensities are supported.
 
@@ -2095,6 +2099,9 @@ class URDMESolver:
         propfile.write(propfilestr)
         propfile.close()
 
+    # Old function name for backwards compatablility.
+    run_ensemble = run
+    createPropensityFile = create_propensity_file
 
 
 def urdme(model=None, solver='nsm', solver_path="", model_file=None, input_file=None, seed=None, report_level=0):

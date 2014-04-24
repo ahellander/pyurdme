@@ -27,9 +27,7 @@ class SimpleDiffusion(pyurdme.URDMEModel):
         # Place the A molecules in the voxel nearest the center of the square
         #self.placeNear({A:10000},point=[0.5,0.5])
         self.scatter({A:10000})
-        
         self.timespan(numpy.linspace(0,5,200))
-
 
 
 
@@ -56,23 +54,25 @@ class TestSolverFunctionality(unittest.TestCase):
     
     
     def test_same_seed(self):
-        """ Test that the output is the same if the same seed is used.  """
+        """ Test that the output is the same if the same seed is used, edxplicit solver creation  """
         solver = pyurdme.nsmsolver.NSMSolver(self.model)
         result1 = solver.run(seed=1)
         result2 = solver.run(seed=1)
-        A1 = result1.getSpecies("A")
-        A2 = result2.getSpecies("A")
-        
-        self.assertFalse((A1-A2).any())
-
+        self.assertEqual(result1,result2)
+    
+    def test_same_seed2(self):
+        """ Test that the output is the same if the same seed is used, use model.run()  """
+    
+        result1 = self.model.run(seed=1)
+        result2 = self.model.run(seed=1)
+        self.assertEqual(result1,result2)
+    
     def test_different_seeds(self):
         """ Test that the output is different if different seeds are used. """
         solver = pyurdme.nsmsolver.NSMSolver(self.model)
         result1 = solver.run(seed=1)
         result2 = solver.run(seed=100)
-        A1 = result1.getSpecies("A")
-        A2 = result2.getSpecies("A")
-        self.assertTrue((A1-A2).any())
+        self.assertTrue(result1 != result2)
 
 
     def test_default_seed(self):
@@ -80,9 +80,11 @@ class TestSolverFunctionality(unittest.TestCase):
         solver = pyurdme.nsmsolver.NSMSolver(self.model)
         result1 = solver.run()
         result2 = solver.run()
-        A1 = result1.getSpecies("A")
-        A2 = result2.getSpecies("A")
-        self.assertTrue((A1-A2).any())
+        self.assertTrue(result1 != result2)
+
+
+    def test_run_aggregate(self):
+        """ cccxxxyyy """
 
 
 if __name__ == '__main__':

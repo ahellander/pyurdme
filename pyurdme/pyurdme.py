@@ -1218,6 +1218,19 @@ class URDMEResult(dict):
         if filename is not None and loaddata:
             self.read_solution()
 
+    def __eq__(self, other):
+        try:
+            tspan = self.get_timespan()
+            if numpy.any(tspan != other.get_timespan()):
+                return False
+            for t in tspan:
+                for sname in self.model.listOfSpecies:
+                    if numpy.any(self.get_species(sname, timepoints=t) != other.get_species(sname, timepoints=t)):
+                        return False
+            return True
+        except ValueError:
+            return False
+
 
     def get_endtime_model(self):
         """ Return a URDME model object with the initial conditions set to the final time point of the
@@ -1230,7 +1243,7 @@ class URDMEResult(dict):
         # set the initial conditions 
         model2.u0 = numpy.zeros(self.model.u0.shape)
         for s, sname in enumerate(self.model.listOfSpecies):
-            model2.u0[s,:] = self.getSpecies(sname, timepoints=-1)
+            model2.u0[s,:] = self.get_species(sname, timepoints=-1)
         return model2
 
 
@@ -1273,7 +1286,7 @@ class URDMEResult(dict):
         for k,v in state.items():
             self.__dict__[k] = v
 
-    def reorderDofToVoxel(self, M, num_species=None):
+    def _reorder_dof_to_voxel(self, M, num_species=None):
         """ Reorder the colums of M from dof ordering to vertex ordering. """
         
         fs = self.model.mesh.FunctionSpace()
@@ -1330,13 +1343,22 @@ class URDMEResult(dict):
         resultfile.close()
         
         # Reorder the dof from dof ordering to voxel ordering
-        U = self.reorderDofToVoxel(U)
+        U = self._reorder_dof_to_voxel(U)
 
         self.U = U
         self.tspan = tspan
         self.data_is_loaded = True
- 
-    def getSpecies(self, species, timepoints="all", concentration=False):
+    
+    def get_timespan(self):
+        if self.tspan is not None:
+            resultfile = h5py.File(self.filename, 'r')
+            tspan = resultfile['tspan']
+            tspan = numpy.array(tspan).flatten()
+            resultfile.close()
+            self.tspan = tspan
+        return self.tspan
+    
+    def get_species(self, species, timepoints="all", concentration=False):
         """ Returns a slice (view) of the output matrix U that contains one species for the timepoints
             specified by the time index array. The default is to return all timepoints. 
             
@@ -1372,7 +1394,7 @@ class URDMEResult(dict):
             Uslice = self._copynumber_to_concentration(Uslice)
         
         # Reorder the dof from dof ordering to voxel ordering
-        Uslice = self.reorderDofToVoxel(Uslice, num_species=1)
+        Uslice = self._reorder_dof_to_voxel(Uslice, num_species=1)
         
         # Make sure we return 1D slices as flat arrays
         dims = numpy.shape(Uslice)
@@ -1381,6 +1403,7 @@ class URDMEResult(dict):
         
         resultfile.close()
         return Uslice
+
             
     def __setattr__(self, k, v):
         if k in self.keys():
@@ -1422,7 +1445,7 @@ class URDMEResult(dict):
 
 
     def _initialize_sol(self):
-        """ Initialize the sol variable. This is a helper function to toVTK. """
+        """ Initialize the sol variable. This is a helper function for export_to_vtk(). """
         
         # Create Dolfin Functions for all the species
         sol = {}
@@ -1446,7 +1469,7 @@ class URDMEResult(dict):
                 func = dolfin.Function(fs)
                 func_vector = func.vector()
 
-                S = self.getSpecies(spec, [j])
+                S = self.get_species(spec, [j])
 
                 for voxel in range(numvox):
                     ix  = vertex_to_dof_map[voxel]
@@ -1468,9 +1491,9 @@ class URDMEResult(dict):
         self.sol = sol
         self.sol_initialized = True
         return sol
-            
     
-    def toVTK(self, species, folder_name):
+    
+    def export_to_vtk(self, species, folder_name):
         """ Dump the trajectory to a collection of vtk files in the folder folder_name (created if non-existant). """
         
         self._initialize_sol()
@@ -1486,7 +1509,7 @@ class URDMEResult(dict):
                 func_vector[dof] = solvector[dof]
             fd << func
 
-    def toXYZ(self, filename, species=None, file_format="VMD"):
+    def export_to_xyx(self, filename, species=None, file_format="VMD"):
         """ Dump the solution attached to a model as a xyz file. This format can be
             read by e.g. VMD, Jmol and Paraview. """
 
@@ -1539,11 +1562,8 @@ class URDMEResult(dict):
                 outfile.close()
 
 
-
-    def printParticlejs(self,species,time_index):
-    
+    def export_to_particle_js(self,species,time_index):
         import random
-        
         with open(os.path.dirname(os.path.abspath(__file__))+"/data/three.js_templates/particles.html",'r') as fd:
             template = fd.read()
         
@@ -1571,7 +1591,7 @@ class URDMEResult(dict):
         
         for j,spec in enumerate(species):
             
-            timeslice = self.getSpecies(spec, 0)
+            timeslice = self.get_species(spec, 0)
             #timeslice = US[time_index,:]
             ns = numpy.sum(timeslice)
             total_num_particles += ns
@@ -1604,7 +1624,7 @@ class URDMEResult(dict):
         return docstr
 
 
-    def toTHREEJs(self, species, time_index):
+    def export_to_three_js(self, species, time_index):
         """ Return a json serialized document that can 
             be read and visualized by three.js.
         """
@@ -1638,7 +1658,7 @@ class URDMEResult(dict):
     def _compute_solution_colors(self,species, time_index):
         """ Create a color list for species at time. """
         
-        timeslice = self.getSpecies(species,time_index, concentration = True)
+        timeslice = self.get_species(species,time_index, concentration = True)
         import matplotlib.cm
         
         # Get RGB color map proportinal to the concentration.
@@ -1678,6 +1698,17 @@ class URDMEResult(dict):
         
         html = '<div id="'+displayareaid+'" class="cell"></div>'
         IPython.display.display(IPython.display.HTML(html+hstr))
+
+
+    # Old function names for backwards compatablility
+    # TODO: remove
+    getSpecies = get_species
+    reorderDofToVoxel = _reorder_dof_to_voxel
+    toVTK = export_to_vtk
+    toXYZ = export_to_xyx
+    printParticlejs = export_to_particle_js
+    toTHREEJs = export_to_three_js
+
 
 
 class URDMESolver:

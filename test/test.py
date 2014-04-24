@@ -22,21 +22,39 @@ class SimpleDiffusion(pyurdme.URDMEModel):
         self.addSpecies([A])
         
         # A unit square
-        self.mesh = pyurdme.URDMEMesh.unitSquareMesh(40,40)
+        self.mesh = pyurdme.URDMEMesh.unitSquareMesh(10,10)
         
         # Place the A molecules in the voxel nearest the center of the square
-        self.placeNear({A:10000},point=[0.5,0.5])
+        #self.placeNear({A:10000},point=[0.5,0.5])
+        self.scatter({A:10000})
         
         self.timespan(numpy.linspace(0,5,200))
 
 
 
 
-class TestSolverFunctions(unittest.TestCase):
+class TestSolverFunctionality(unittest.TestCase):
 
     def setUp(self):
         self.model = SimpleDiffusion()
-
+    
+    
+    def test_solver_io(self):
+        """ Test that the initial value in the solver output file is the same as the input initial value. """
+        model = SimpleDiffusion()
+        result = model.run()
+        A = result.getSpecies("A",0)
+        self.assertFalse((A-model.u0).any())
+    
+    def test_no_events(self):
+        """ Test that nothing happens if the diffusion is set to zero. """
+        model = SimpleDiffusion()
+        model.listOfSpecies["A"].diffusion_constant = 0.0
+        result = model.run()
+        A = result.getSpecies("A")
+        self.assertFalse((numpy.mean(A,axis=0)-model.u0).any())
+    
+    
     def test_same_seed(self):
         """ Test that the output is the same if the same seed is used.  """
         solver = pyurdme.nsmsolver.NSMSolver(self.model)
@@ -54,17 +72,17 @@ class TestSolverFunctions(unittest.TestCase):
         result2 = solver.run(seed=100)
         A1 = result1.getSpecies("A")
         A2 = result2.getSpecies("A")
-        self.assertFalse((A1-A2).any())
+        self.assertTrue((A1-A2).any())
 
 
-    def test_default_seeds(self):
+    def test_default_seed(self):
         """ Test that the output is different if no seed is given (default set on C level). """
         solver = pyurdme.nsmsolver.NSMSolver(self.model)
         result1 = solver.run()
         result2 = solver.run()
         A1 = result1.getSpecies("A")
         A2 = result2.getSpecies("A")
-        self.assertFalse((A1-A2).any())
+        self.assertTrue((A1-A2).any())
 
 
 if __name__ == '__main__':

@@ -344,6 +344,26 @@ int destroy_model(urdme_model *model)
 	return 0;
 }
 
+
+/* Return a handle to a HDF5 file. */
+hid_t get_output_file(char *outfile)
+{
+    
+    herr_t status;
+    hid_t h5_output_file;
+    h5_output_file = H5Fcreate(outfile,H5F_ACC_TRUNC, H5P_DEFAULT,H5P_DEFAULT);
+    if (h5_output_file == NULL){
+        printf("Fatal error. Failed to open HDF5 file.");
+        exit(-1);
+    }
+    return h5_output_file;
+    
+}
+
+
+
+
+
 /*
  Print the result trajectory that is attached to urdme_model to a mat/hdf5 file.
  The output trajectory will be stored in a variable/dataset named "U".
@@ -351,7 +371,7 @@ int destroy_model(urdme_model *model)
 int dump_results(urdme_model* model, char *filename, char *type){
     /* IN PYURDME, THIS IS NEVER CALLED. IT IS ALWAYS USING HDF5. */
     
-    int Ndofs,tlen,nsol,i;
+    int Ndofs,tlen,nsol;
     int *U;
     U = model->U[0];
     
@@ -474,7 +494,7 @@ int dump_results(urdme_model* model, char *filename, char *type){
 #elif defined(OUTPUT_HDF5)
     /* Write the result as a HDF5 dataset/file */
     
-    hid_t h5_output_file,h5_dataset;
+    hid_t h5_output_file;
     herr_t status;
     h5_output_file = H5Fcreate(filename,H5F_ACC_TRUNC, H5P_DEFAULT,H5P_DEFAULT);
     if (h5_output_file == NULL){

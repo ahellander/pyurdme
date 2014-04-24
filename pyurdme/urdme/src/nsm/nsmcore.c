@@ -18,10 +18,10 @@
 #include "hdf5.h"
 #include "hdf5_hl.h"
 
-
+/* Flush buffer to the hdf5 file. */
 int flush_solution_to_file(hid_t trajectory_dataset,int *buffer,int column_offset, int num_columns, int col_size)
 {
-
+    
     /* This  is the column offset in the hdf5 datafile. */
     hsize_t start[2];
     hsize_t count[2];
@@ -65,6 +65,8 @@ int flush_solution_to_file(hid_t trajectory_dataset,int *buffer,int column_offse
     H5Sclose(file_dataspace);
     return(0);
 }
+
+
 
 void nsm_core(const size_t *irD,const size_t *jcD,const double *prD,
               const int *u0,

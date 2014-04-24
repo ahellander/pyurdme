@@ -24,6 +24,7 @@
 #include "read_matfile.h"
 #endif
 
+
 /* 
  
 Input:
@@ -152,13 +153,7 @@ int main(int argc, char *argv[])
     
 	/* Open a file handle to the output file. We will store output of the core solvers as hdf5 datasets. */
     hid_t h5_output_file;
-    herr_t status;
-    h5_output_file = H5Fcreate(outfile,H5F_ACC_TRUNC, H5P_DEFAULT,H5P_DEFAULT);
-    if (h5_output_file == NULL){
-        printf("Fatal error. Failed to open file to store output.");
-        exit(-1);
-    }
-    
+    h5_output_file = get_output_file(outfile);
     
 	/* Call nsm-solver: get a trajectory and add it to the output file. . */
     nsm(model, h5_output_file);

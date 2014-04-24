@@ -26,6 +26,9 @@
 #include "matrix.h"
 #endif
 
+#include "hdf5.h"
+#include "hdf5_hl.h"
+
 /*
  
  URDME model struct. 
@@ -63,7 +66,7 @@ typedef struct{
 	/* Connectivity matrix (sparse CCS) */
 	size_t* irK;
 	size_t* jcK;
-	int *prK;
+	double *prK;
 	
 	/* Dependency graph (sparse CCS) */
 	size_t* irG;
@@ -136,5 +139,7 @@ int destroy_model(urdme_model *model);
 int dump_results(urdme_model* model, char *filename, char *type);
 
 void debug_print_model(urdme_model* model);
+
+hid_t get_output_file(char *filename);
 
 #endif

@@ -32,7 +32,13 @@ double *parameters = NULL;
 #include "matrix.h"
 #endif
 
-/* 
+
+/* This is the maximal buffer size we use to store the solution before writing to file. */
+const size_t MAX_BUFFER_SIZE = 8388608; // 8 MB
+
+
+
+/*
  
    Read model input file (.mat format) and initialize urdme model struct. 
    If any of the required fields (for the nsm solver) is missing, 
@@ -344,6 +350,16 @@ int destroy_model(urdme_model *model)
 	return 0;
 }
 
+/* Get an initialized urdme_output_writer */
+urdme_output_writer *get_urdme_output_writer(hid_t file)
+{
+    urdme_output_writer *writer;
+    writer = (urdme_output_writer *)malloc(sizeof(urdme_output_writer));
+    
+    writer->datatype = H5Tcopy(H5T_NATIVE_INT);
+    return writer;
+    
+}
 
 /* Return a handle to a HDF5 file. */
 hid_t get_output_file(char *outfile)
@@ -360,7 +376,27 @@ hid_t get_output_file(char *outfile)
     
 }
 
+void create_dataset(hid_t file)
+{
+    
+}
 
+/* Write tspan to the file */
+void write_tspan(hid_t file, urdme_model *model)
+{
+    
+    herr_t status;
+    hsize_t dataset_dims[2]; /* dataset dimensions */
+    
+    dataset_dims[0] = 1;
+    dataset_dims[1] = model->tlen;
+    status = H5LTmake_dataset(file,"/tspan",2,dataset_dims,H5T_NATIVE_DOUBLE,model->tspan);
+    if (status != 0){
+        printf("Failed to write tspan vector HDF5 file.");
+        exit(-1);
+    }
+    
+}
 
 
 

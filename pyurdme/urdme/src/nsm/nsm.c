@@ -157,7 +157,6 @@ int main(int argc, char *argv[])
     
 	/* Call nsm-solver: get a trajectory and add it to the output file. . */
     nsm(model, h5_output_file);
-    /* Add tspan to the output file. */
     
 	H5Fclose(h5_output_file);
 	
@@ -198,6 +197,9 @@ void nsm(void *data, hid_t output_file){
 			 model->vol, model->data, model->sd, model->Ncells,
 			 model->Mspecies, model->Mreactions, model->dsize, report_level, output_file,
 			 model->irK, model->jcK, model->prK);
+    
+    /* Write the timspan vector to the output file */
+    write_tspan(output_file,model);
 	
 		
 }

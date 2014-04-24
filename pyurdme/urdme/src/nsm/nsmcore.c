@@ -193,13 +193,6 @@ void nsm_core(const size_t *irD,const size_t *jcD,const double *prD,
     hsize_t dataset_dims[2]; /* dataset dimensions */
     hsize_t chunk_dims[2];
     
-    dataset_dims[0] = 1;
-    dataset_dims[1] = tlen;
-    status = H5LTmake_dataset(output_file,"/tspan",2,dataset_dims,H5T_NATIVE_DOUBLE,tspan);
-    if (status != 0){
-        printf("Failed to write tspan vector HDF5 file.");
-        exit(-1);
-    }
     
     hid_t trajectory_dataset, datatype,trajectory_dataspace;
     datatype = H5Tcopy(H5T_NATIVE_INT);
@@ -292,8 +285,10 @@ void nsm_core(const size_t *irD,const size_t *jcD,const double *prD,
     }
     initialize_heap(rtimes,node,heap,Ncells);
     int total_columns_written = 0;
+    
     /* Main loop. */
     for (;;) {
+        
         /* Get the subvolume in which the next event occurred.
          This subvolume is on top of the heap. */
         told = tt;
@@ -303,11 +298,16 @@ void nsm_core(const size_t *irD,const size_t *jcD,const double *prD,
         /* Store solution if the global time counter tt has passed the
          next time is tspan. */
         if (tt >= tspan[it] || isinf(tt)) {
-	  
+            
             for (; it < tlen && (tt >= tspan[it] || isinf(tt)); it++) {
                 
-                if (report)
+                if (report){
                     report(tspan[it],tspan[0],tspan[tlen-1],total_diffusion,total_reactions,0,report_level);
+                }
+                
+                /* The below will all be replaced with something like */
+                // writer = get_urdme_output_writer(model,output_file);
+                // write_state(writer,xx)
                 
                 
                 /* Write to the buffer */
@@ -319,9 +319,9 @@ void nsm_core(const size_t *irD,const size_t *jcD,const double *prD,
                 
                 
                 num_columns_since_flush++;
-
+                
                 if (num_columns_since_flush == num_columns){
-
+                    
                     status = flush_solution_to_file(trajectory_dataset,buffer,chunk_indx*num_columns,num_columns_since_flush,Ndofs);
                     if (status){
                         printf("Failed to flush buffer to file.");
@@ -338,14 +338,14 @@ void nsm_core(const size_t *irD,const size_t *jcD,const double *prD,
             /* If the simulation has reached the final time, exit. */
             if (it >= tlen){
                 /* Flush the buffer */
-		
-		if (num_columns_since_flush > 0){
-		  status = flush_solution_to_file(trajectory_dataset,buffer,chunk_indx*num_columns,num_columns_since_flush,Ndofs);
-		  if (status){
-                    printf("Failed to flush buffer to file.\n");
-                    exit(-1);
-		  }
-		}
+                
+                if (num_columns_since_flush > 0){
+                    status = flush_solution_to_file(trajectory_dataset,buffer,chunk_indx*num_columns,num_columns_since_flush,Ndofs);
+                    if (status){
+                        printf("Failed to flush buffer to file.\n");
+                        exit(-1);
+                    }
+                }
                 total_columns_written += num_columns_since_flush;
                 break;
             }

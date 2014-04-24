@@ -130,6 +130,17 @@ typedef struct{
 	
 } urdme_model;
 
+/* Struct to hold variables used for incremental IO of trajectory data during the simulation. */
+typedef struct{
+    hid_t trajectory_dataset;
+    hid_t datatype;
+    hid_t trajectory_dataspace;
+
+} urdme_output_writer;
+
+/* Return an initialized urdme_outpur_writer */
+urdme_output_writer *get_urdme_output_writer(hid_t file);
+
 urdme_model *read_model(char *file);
 
 void read_solution(urdme_model *model, char*file);
@@ -141,5 +152,7 @@ int dump_results(urdme_model* model, char *filename, char *type);
 void debug_print_model(urdme_model* model);
 
 hid_t get_output_file(char *filename);
+void write_tspan(hid_t file, urdme_model *model);
+
 
 #endif

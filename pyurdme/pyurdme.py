@@ -830,14 +830,6 @@ class URDMEModel(Model):
         return urdme_solver_data
 
 
-    def serialize(self, filename=None, report_level=0):
-        """ Write the datastructures needed by the the core URDME solvers to a .mat input file. """
-        urdme_solver_data = self.solverData()
-        urdme_solver_data['report'] = report_level
-        self.validate(urdme_solver_data)
-        scipy.io.savemat(filename, urdme_solver_data, oned_as='column')
-
-
     def assemble(self):
         """  Assemble the mass and stiffness matrices using Dolfin.
 
@@ -1691,7 +1683,7 @@ class URDMEResult(dict):
 class URDMESolver:
     """ Abstract class for URDME solvers. """
 
-    def __init__(self, model, solver_path=None, report_level=0, model_file=None):
+    def __init__(self, model, solver_path=None, report_level=0, model_file=None, sopts=None):
         """ Constructor. """
         if not isinstance(model, URDMEModel):
             raise URDMEError("URDMEsolver constructors must take a URDMEModel as an argument.")
@@ -1708,6 +1700,10 @@ class URDMESolver:
         self.delete_infile = False
         self.model_name = self.model.name
         self.solver_base_dir = None
+        if sopts is None:
+            self.sopts = [0,0,0]
+        else:
+            self.sopts = sopts
 
         # For the remote execution
         self.temp_urdme_root = None
@@ -1758,7 +1754,7 @@ class URDMESolver:
         # Get the input file
         input_file = tmproot+'/model_input.mat'
         ret['input_file'] = os.path.basename(input_file)
-        self.model.serialize(filename=input_file, report_level=self.report_level)
+        self.serialize(filename=input_file, report_level=self.report_level)
         ##
         origwd = os.getcwd()
         os.chdir(tmproot)
@@ -1796,7 +1792,6 @@ class URDMESolver:
         self.infile_name = self.temp_urdme_root+'/'+state['input_file']
 
 
-
     def __del__(self):
         """ Deconstructor.  Removes the compiled solver."""
         if self.delete_infile:
@@ -1814,6 +1809,19 @@ class URDMESolver:
                 shutil.rmtree(self.temp_urdme_root)
             except OSError as e:
                 print "Could not delete '{0}'".format(self.temp_urdme_root)
+
+
+    def serialize(self, filename=None, report_level=0, sopts=None):
+        """ Write the datastructures needed by the the core URDME solvers to a .mat input file. """
+        urdme_solver_data = self.model.solverData()
+        urdme_solver_data['report'] = report_level
+        if sopts is None:
+            urdme_solver_data['sopts'] = self.sopts
+        else:
+            urdme_solver_data['sopts'] = sopts
+        
+        self.model.validate(urdme_solver_data)
+        scipy.io.savemat(filename, urdme_solver_data, oned_as='column')
 
 
     def compile(self):
@@ -1918,7 +1926,7 @@ class URDMESolver:
                 infile = tempfile.NamedTemporaryFile(delete=False)
 
                 # Write the model to an input file in .mat format
-                self.model.serialize(filename=infile, report_level=self.report_level)
+                self.serialize(filename=infile, report_level=self.report_level)
                 infile.close()
                 self.infile_name = infile.name
                 #self.delete_infile = True

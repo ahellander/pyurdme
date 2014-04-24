@@ -72,7 +72,7 @@ class TestSolverFunctionality(unittest.TestCase):
         solver = pyurdme.nsmsolver.NSMSolver(self.model)
         result1 = solver.run(seed=1)
         result2 = solver.run(seed=100)
-        self.assertTrue(result1 != result2)
+        self.assertNotEqual(result1,result2)
 
 
     def test_default_seed(self):
@@ -80,7 +80,7 @@ class TestSolverFunctionality(unittest.TestCase):
         solver = pyurdme.nsmsolver.NSMSolver(self.model)
         result1 = solver.run()
         result2 = solver.run()
-        self.assertTrue(result1 != result2)
+        self.assertNotEqual(result1,result2)
 
 
     def test_run_aggregate(self):

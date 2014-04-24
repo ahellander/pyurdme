@@ -889,11 +889,12 @@ class URDMEModel(Model):
 
         return {'K':stiffness_matrices, 'M':mass_matrices}
 
-    def run(self, solver='nsm', seed=None, report_level=0):
+    def run(self, solver='nsm', number_of_trajectories=1, seed=None, report_level=0):
         """ Simulate the model.
         
         Args:
             solver: A str or class type that is a subclass of URDMESolver.  Default: NSM solver.
+            number_of_trajectories: How many trajectories should be run.
             seed: An int, the random seed given to the solver.
             report_level: An int, Level of output from the solver: 0, 1, or 2. Default: 0.
         Returns:
@@ -912,7 +913,7 @@ class URDMEModel(Model):
         else:
             raise URDMEError("solver argument to urdme() must be a string or a URDMESolver class object.")
 
-        return sol.run(seed)
+        return sol.run(number_of_trajectories=number_of_trajectories, seed=seed)
 
 
 
@@ -1218,17 +1219,23 @@ class URDMEResult(dict):
         if filename is not None and loaddata:
             self.read_solution()
 
-    def __eq__(self, other):
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __eq__(self, other, verbose=True):
         try:
             tspan = self.get_timespan()
             if numpy.any(tspan != other.get_timespan()):
+                if verbose: print "tspan does not match"
                 return False
             for t in tspan:
                 for sname in self.model.listOfSpecies:
                     if numpy.any(self.get_species(sname, timepoints=t) != other.get_species(sname, timepoints=t)):
+                        if verbose: print "Species {0} does not match at t={1}".format(sname, t)
                         return False
             return True
-        except ValueError:
+        except ValueError as e:
+            if verbose: print "value error: {0}".format(e)
             return False
 
 
@@ -1918,35 +1925,21 @@ class URDMESolver:
         self.is_compiled = True
 
 
-    def run_ensemble(self, number_of_trajectories, seed=None, input_file=None, loaddata=False):
-        """ Run multiple simulations of the model.
-
-        number_of_trajectories: How many trajectories should be run.
-        seed: the random number seed.
-        input_file: the filename of the solver input data file .
-        loaddata: boolean, should the result object load the data into memory on creation.
-
-        Returns:
-            A list of URDMEResult objects.
-        """
-        result = []
-        for ndx in range(number_of_trajectories):
-            if seed is None:
-                result.append(self.run(input_file=input_file, loaddata=loaddata))
-            else:
-                result.append(self.run(seed=seed+ndx, input_file=input_file, loaddata=loaddata))
-        return result
-
-    def run(self, seed=None, input_file=None, loaddata=False):
+    def run(self, number_of_trajectories=1, seed=None, input_file=None, loaddata=False):
         """ Run one simulation of the model.
 
-        seed: the random number seed.
+        number_of_trajectories: How many trajectories should be run.
+        seed: the random number seed (incimented by one for multiple runs).
         input_file: the filename of the solver input data file .
         loaddata: boolean, should the result object load the data into memory on creation.
 
         Returns:
             URDMEResult object.
+                or, if number_of_trajectories > 1
+            a list of URDMEResult objects
         """
+        if number_of_trajectories > 1:
+            result_list = []
         # Check if compiled, call compile() if not.
         if not self.is_compiled:
             self.compile()
@@ -1973,52 +1966,51 @@ class URDMESolver:
 
         # Execute the solver
         urdme_solver_cmd = [self.solver_dir + self.propfilename + '.' + self.NAME, self.infile_name, outfile.name]
-        if seed is not None:
-            urdme_solver_cmd.append(str(seed))
-        if self.report_level >= 1:
-            print 'cmd: {0}\n'.format(urdme_solver_cmd)
-        try:
-            if self.report_level >= 1:  #stderr & stdout to the terminal
-                handle = subprocess.Popen(urdme_solver_cmd)
-            else:
-                handle = subprocess.Popen(urdme_solver_cmd, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
-            return_code = handle.wait()
-        except OSError as e:
-            print "Error, execution of solver raised an exception: {0}".format(e)
-            print "urdme_solver_cmd = {0}".format(urdme_solver_cmd)
-            raise URDMEError("Solver execution failed")
-
-
-
-        if return_code != 0:
-            print outfile.name
-            print return_code
+        for run_ndx in range(number_of_trajectories):
+            if seed is not None:
+                urdme_solver_cmd.append(str(seed+run_ndx))
             if self.report_level >= 1:
-                try:
-                    print handle.stderr.read(), handle.stdout.read()
-                except Exception as e:
-                    pass
-            print "urdme_solver_cmd = {0}".format(urdme_solver_cmd)
-            raise URDMEError("Solver execution failed, return code = {0}".format(return_code))
+                print 'cmd: {0}\n'.format(urdme_solver_cmd)
+            try:
+                if self.report_level >= 1:  #stderr & stdout to the terminal
+                    handle = subprocess.Popen(urdme_solver_cmd)
+                else:
+                    handle = subprocess.Popen(urdme_solver_cmd, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+                return_code = handle.wait()
+            except OSError as e:
+                print "Error, execution of solver raised an exception: {0}".format(e)
+                print "urdme_solver_cmd = {0}".format(urdme_solver_cmd)
+                raise URDMEError("Solver execution failed")
 
-        #if self.report_level >= 1:
-        #    print handle.stdout.read()
-        #   print handle.stderr.read()
-
-        #Load the result from the hdf5 output file.
-        try:
-            result = URDMEResult(self.model, outfile.name, loaddata=loaddata)
-            result["Status"] = "Sucess"
-            return result
-        except Exception as e:
-            exc_info = sys.exc_info()
-            # Clean up
-            #if self.delete_infile:
-            #    os.remove(self.infile_name)
-            os.remove(outfile.name)
-            raise exc_info[1], None, exc_info[2]
+            if return_code != 0:
+                print outfile.name
+                print return_code
+                if self.report_level >= 1:
+                    try:
+                        print handle.stderr.read(), handle.stdout.read()
+                    except Exception as e:
+                        pass
+                print "urdme_solver_cmd = {0}".format(urdme_solver_cmd)
+                raise URDMEError("Solver execution failed, return code = {0}".format(return_code))
 
 
+            #Load the result from the hdf5 output file.
+            try:
+                result = URDMEResult(self.model, outfile.name, loaddata=loaddata)
+                result["Status"] = "Sucess"
+                if number_of_trajectories > 1:
+                    result_list.append(result)
+                else:
+                    return result
+            except Exception as e:
+                exc_info = sys.exc_info()
+                os.remove(outfile.name)
+                raise exc_info[1], None, exc_info[2]
+                
+        return result_list
+
+    # Old function name for backwards compatablility.
+    run_ensemble = run
 
     def createPropensityFile(self, file_name=None):
         """ Generate the C propensity file that is used to compile the URDME solvers.

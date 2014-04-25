@@ -1247,7 +1247,6 @@ class URDMEResult(dict):
         return model2
 
 
-
     def __getstate__(self):
         """ Used by pickle to get state when pickling. We need to read the contents of the
         output file since we can't pickel file objects. """

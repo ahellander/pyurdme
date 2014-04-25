@@ -5,4 +5,4 @@ setup(name="pyurdme",
       author="Andreas Hellander, Brian Drawert",
       author_email="andreas.hellander@gmail.com",
       packages=['pyurdme'],
-      package_data={'pyurdme':['data/*.c','data/three.js_templates/*','urdme/AUTHORS','urdme/LICENCE','urdme/bin/*','urdme/build/*','urdme/include/*','urdme/src/*.c','urdme/src/nsm/*']})
+      package_data={'pyurdme':['data/*.c','data/three.js_templates/js/*','data/three.js_templates/*.html','urdme/AUTHORS','urdme/LICENCE','urdme/bin/*','urdme/build/*','urdme/include/*','urdme/src/*.c','urdme/src/nsm/*']})

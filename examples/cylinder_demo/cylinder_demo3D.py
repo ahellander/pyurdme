@@ -11,16 +11,15 @@ import numpy
 # Global Constants
 MAX_X_DIM = 5.0
 MIN_X_DIM = -5.0
-TOL = 1e-1 
+TOL = 1e-9
 
 
 class Edge1(dolfin.SubDomain):
     def inside(self, x, on_boundary):
-        return on_boundary and x[0] > (MAX_X_DIM - TOL)
-
+        return on_boundary and dolfin.near(x[0], MAX_X_DIM)
 class Edge2(dolfin.SubDomain):
     def inside(self, x, on_boundary):
-        return on_boundary and x[0] < (MIN_X_DIM + TOL)
+        return on_boundary and dolfin.near(x[0], MIN_X_DIM)
 
 class cylinderDemo3D(pyurdme.URDMEModel):
     def __init__(self, model_name="cylinder_demo3d"):
@@ -28,9 +27,6 @@ class cylinderDemo3D(pyurdme.URDMEModel):
 
         # System constants
         D_const = 0.1
-        k_react = pyurdme.Parameter(name="k_react", expression=1)
-        k_creat = pyurdme.Parameter(name="k_creat", expression=200)
-        self.addParameter([k_react, k_creat])
         
         # Define Species
         A = pyurdme.Species(name="A", diffusion_constant=D_const)
@@ -46,14 +42,29 @@ class cylinderDemo3D(pyurdme.URDMEModel):
         # Define Subdomains
         subdomains = dolfin.MeshFunction("size_t", self.mesh, self.mesh.topology().dim()-1)
         subdomains.set_all(1)
+        
         # Mark the boundary points
         Edge1().mark(subdomains,2)
         Edge2().mark(subdomains,3)
+        
         self.addSubDomain(subdomains)
+        data = self.solverData()
+        vol = data['vol']
+        sd = data['sd']
+        left = numpy.sum(vol[sd == 2])
+        right = numpy.sum(vol[sd == 3])
+    
+        k_react = pyurdme.Parameter(name="k_react", expression=1.0)
+        
+        k_creat1 = pyurdme.Parameter(name="k_creat", expression=100/right)
+        k_creat2 = pyurdme.Parameter(name="k_creat", expression=100/left)
+        
+        self.addParameter([k_react, k_creat1,k_creat2])
+
         
         # Define Reactions
-        R1 = pyurdme.Reaction(name="R1", reactants=None, products={A:1}, rate=k_creat, restrict_to=2)
-        R2 = pyurdme.Reaction(name="R2", reactants=None, products={B:1}, rate=k_creat, restrict_to=3)
+        R1 = pyurdme.Reaction(name="R1", reactants=None, products={A:1}, rate=k_creat1, restrict_to=2)
+        R2 = pyurdme.Reaction(name="R2", reactants=None, products={B:1}, rate=k_creat2, restrict_to=3)
         R3 = pyurdme.Reaction(name="R3", reactants={A:1, B:1}, products=None, rate=k_react)
         self.addReaction([R1, R2, R3])
 
@@ -61,7 +72,9 @@ class cylinderDemo3D(pyurdme.URDMEModel):
         self.timespan(range(200))
 
 
+
 if __name__ == "__main__":
+    
     model = cylinderDemo3D()
     result = pyurdme.urdme(model, report_level=1)
     
@@ -78,8 +91,20 @@ if __name__ == "__main__":
 
     # Plot of the time-average spatial concentration.
     x_vals = model.mesh.coordinates()[:, 0]
-    A_vals = numpy.mean(result.getSpecies("A", concentration=True), axis=0)
-    B_vals = numpy.mean(result.getSpecies("B", concentration=True), axis=0)
+    A_vals = numpy.sum(result.getSpecies("A", concentration=True), axis=0)
+    B_vals = numpy.sum(result.getSpecies("B", concentration=True), axis=0)
+
+    A_sum = numpy.sum(result.getSpecies("A"), axis=1)
+    B_sum = numpy.sum(result.getSpecies("B"), axis=1)
+    print A_sum
+    print B_sum
+    data = model.solverData()
+    vol = data['vol']
+    sd = data['sd']
+    print numpy.sum(vol[sd == 2])
+    print numpy.sum(vol[sd == 3])
+
+
     plt.plot(x_vals,A_vals,'.r',x_vals,B_vals,'.b')
     plt.legend(['A', 'B'])
     plt.show()

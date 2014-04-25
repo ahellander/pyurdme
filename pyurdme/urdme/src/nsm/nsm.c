@@ -155,9 +155,17 @@ int main(int argc, char *argv[])
     hid_t h5_output_file;
     h5_output_file = get_output_file(outfile);
     
-	/* Call nsm-solver: get a trajectory and add it to the output file. . */
-    nsm(model, h5_output_file);
+    /* Get a writer to write the outpur trajectory. */
+    urdme_output_writer *writer;
+    writer = get_urdme_output_writer(model,h5_output_file);
+
     
+	/* Call nsm-solver: get a trajectory and add it to the output file. . */
+    nsm(model, writer);
+    
+    /* Write the timspan vector to the output file */
+    write_tspan(h5_output_file,model);
+
 	H5Fclose(h5_output_file);
 	
     
@@ -176,7 +184,7 @@ int main(int argc, char *argv[])
 }
 
 /* Wrapper for the NSM solver. */
-void nsm(void *data, hid_t output_file){
+void nsm(void *data, urdme_output_writer *writer){
     
 	/* Unpack input */
 	urdme_model* model;
@@ -195,11 +203,9 @@ void nsm(void *data, hid_t output_file){
 			 model->irN, model->jcN, model->prN, model->irG,
 			 model->jcG, model->tspan, model->tlen, 
 			 model->vol, model->data, model->sd, model->Ncells,
-			 model->Mspecies, model->Mreactions, model->dsize, report_level, output_file,
-			 model->irK, model->jcK, model->prK);
+			 model->Mspecies, model->Mreactions, model->dsize, report_level,
+			 model->irK, model->jcK, model->prK, writer);
     
-    /* Write the timspan vector to the output file */
-    write_tspan(output_file,model);
 	
 		
 }

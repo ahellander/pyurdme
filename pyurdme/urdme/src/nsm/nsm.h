@@ -9,8 +9,9 @@
 
 #include "hdf5.h"
 #include "hdf5_hl.h"
+#include "matmodel.h"
 
-void nsm(void *data, hid_t output_file);
+void nsm(void *data, urdme_output_writer *writer);
 void nsm_core(const size_t *irD,const size_t *jcD,const double *prD,
               const int *u0,
               const size_t *irN,const size_t *jcN,const int *prN,
@@ -19,7 +20,7 @@ void nsm_core(const size_t *irD,const size_t *jcD,const double *prD,
               const double *vol,const double *data,const int *sd,
               const size_t Ncells,
               const size_t Mspecies,const size_t Mreactions,
-              const size_t dsize,int report_level, hid_t output_file,
-			  const size_t *irK,const size_t *jcK,const double *prK);
+              const size_t dsize,int report_level,
+			  const size_t *irK,const size_t *jcK,const double *prK, urdme_output_writer *writer);
 
 #endif /* __nsm_h */

@@ -14,7 +14,6 @@
 #include "nsm.h"
 #include "binheap.h"
 #include "report.h"
-#include "outputwriter.h"
 
 #include "hdf5.h"
 #include "hdf5_hl.h"

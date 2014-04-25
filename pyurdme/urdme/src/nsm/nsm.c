@@ -151,32 +151,34 @@ int main(int argc, char *argv[])
 	init_sol(model,nt);
     //model->nsol=0
     
-	/* Open a file handle to the output file. We will store output of the core solvers as hdf5 datasets. */
-    hid_t h5_output_file;
-    h5_output_file = get_output_file(outfile);
+  
+    /* Get a writer to store the output trajectory on a hdf5 file. */
+    urdme_output_writer *writer;
+    writer = get_urdme_output_writer(model,outfile);
     
 	/* Call nsm-solver: get a trajectory and add it to the output file. . */
-    nsm(model, h5_output_file);
+    nsm(model, writer);
     
-	H5Fclose(h5_output_file);
-	
-    
+    /* Write the timespan vector to the output file */
+    write_tspan(writer,model);
+
     /* free memory allocated by mxGetVariable. */
     mxDestroyArray(mxreport);
 	mxDestroyArray(mxseed);
     mxDestroyArray(mxparameters);
 
     matClose(input_file);
-
     free(parameters);
-	destroy_model(model);
+    
+    destroy_output_writer(writer);
+    destroy_model(model);
 	
 	return(0);
 	
 }
 
 /* Wrapper for the NSM solver. */
-void nsm(void *data, hid_t output_file){
+void nsm(void *data, urdme_output_writer *writer){
     
 	/* Unpack input */
 	urdme_model* model;
@@ -195,11 +197,9 @@ void nsm(void *data, hid_t output_file){
 			 model->irN, model->jcN, model->prN, model->irG,
 			 model->jcG, model->tspan, model->tlen, 
 			 model->vol, model->data, model->sd, model->Ncells,
-			 model->Mspecies, model->Mreactions, model->dsize, report_level, output_file,
-			 model->irK, model->jcK, model->prK);
+			 model->Mspecies, model->Mreactions, model->dsize, report_level,
+			 model->irK, model->jcK, model->prK, writer);
     
-    /* Write the timspan vector to the output file */
-    write_tspan(output_file,model);
 	
 		
 }

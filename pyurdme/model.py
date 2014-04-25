@@ -1,18 +1,12 @@
-""" 
-    This module describes a model of a well-mixed biochemical system, via the Model class.
+""" This module describes a model of a well-mixed biochemical system, via the Model class.
     Model objects should not be instantiated by an application. Instead, use StochKitModel 
     in 'stochkit.py', which extends Model with StochKit2 specific serialization. Refer to 
-    'stochkit.py' for examples of its use. 
+    'stochkit.py' in the StochSS project for examples of its use.
     
     Raises: SpeciesError, ParameterError, ReactionError
-    
-    Contact: Andreas Hellander
-    
 """
 from collections import OrderedDict
-#import quantities as pq
 
-#molar = pq.Unit
 
 class Model():
     """ Representation of a well mixed biochemical model. Interfaces to solvers in StochSS
@@ -40,23 +34,23 @@ class Model():
         # evaluation of expressions in the scope of the model.
         self.namespace = OrderedDict([])
 
-    def updateNamespace(self):
+    def update_namespace(self):
         """ Create a dict with flattened parameter and species objects. """
         for param in self.listOfParameters:
             self.namespace[param]=self.listOfParameters[param].value
         # Dictionary of expressions that can be evaluated in the scope of this model.
         self.expressions = {}
-
-    def getSpecies(self, sname):
+    
+    def get_species(self, sname):
         return self.listOfSpecies[sname]
     
-    def getNumSpecies(self):
+    def get_num_species(self):
         return len(self.listOfSpecies)
     
-    def getAllSpecies(self):
+    def get_all_species(self):
         return self.listOfSpecies
 
-    def addSpecies(self, obj):
+    def add_species(self, obj):
         """ 
             Add a species to listOfSpecies. Accepts input either as a single Species object, or
             as a list of Species objects.
@@ -70,25 +64,24 @@ class Model():
                 if S.name in self.listOfSpecies:
                     raise ModelError("Can't add species. A species with that name already exists.")
                 self.listOfSpecies[S.name] = S;
-    
-    def deleteSpecies(self, obj):
+
+    def delete_species(self, obj):
         self.listOfSpecies.pop(obj)        
          
-    def deleteAllSpecies(self):
+    def delete_all_species(self):
         self.listOfSpecies.clear()
 
-    def getParameter(self,pname):
+    def get_parameter(self,pname):
         try:
             return self.listOfParameters[pname]
         except:
             raise ModelError("No parameter named "+pname)
 
-    def getAllParameters(self):
+    def get_all_parameters(self):
         return self.listOfParameters
     
-    def addParameter(self,params):
-        """ 
-            Add Paramter(s) to listOfParamters. Input can be either a single
+    def add_parameter(self,params):
+        """ Add Paramter(s) to listOfParamters. Input can be either a single
             paramter object or a list of Parameters.
         """
         # TODO, make sure that you don't overwrite an existing parameter??
@@ -101,29 +94,29 @@ class Model():
             else:
                 raise
 
-    def deleteParameter(self, obj):
+    def delete_parameter(self, obj):
         self.listOfParameters.pop(obj)
 
-    def setParameter(self,pname,expression):
+    def set_parameter(self,pname,expression):
         """ Set the expression of an existing paramter. """
         p = self.listOfParameters[pname]
         p.expression = expression
         p.evaluate()
         
-    def resolveParameters(self):
+    def resolve_parameters(self):
         """ Attempt to resolve all parameter expressions to scalar floats. This
             methods must be called before exporting the model. """
-        self.updateNamespace()
+        self.update_namespace()
         for param in self.listOfParameters:
             try:
                 self.listOfParameters[param].evaluate(self.namespace)
             except:
                 raise ParameterError("Could not resolve Parameter expression "+param + "to a scalar value.")
     
-    def deleteAllParameters(self):
+    def delete_all_parameters(self):
         self.listOfParameters.clear()
 
-    def addReaction(self,reacs):
+    def add_reaction(self,reacs):
         """ Add reactions to model. Input can be single instance, a list of instances
             or a dict with name,instance pairs. """
         
@@ -139,23 +132,51 @@ class Model():
         else:
             raise
 
-    def getReaction(self, rname):
+    def get_reaction(self, rname):
         return reactions[rname]
 
-    def getNumReactions(self):
+    def get_num_reactions(self):
         return len(self.listOfReactions)
 
-    def getAllReactions(self):
+    def get_all_reactions(self):
         return self.listOfReactions
     
-    def deleteReaction(self, obj):
+    def delete_reaction(self, obj):
         self.listOfReactions.pop(obj)
         
-    def deleteAllReactions(self):
+    def delete_all_reactions(self):
         self.listOfReactions.clear()
 
-    def _cmp_(self,other):
-        """ Compare """
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __eq__(self, other):
+        return (self.listOfParameters == other.listOfParameters and \
+            self.listOfSpecies == other.listOfSpecies and \
+            self.listOfReactions == other.listOfReactions and \
+            self.name == other.name)
+
+    # Old function names for backwards compatablity
+    updateNamespace = update_namespace
+    getSpecies = get_species
+    getNumSpecies = get_num_species
+    getAllSpecies = get_all_species
+    addSpecies = add_species
+    deleteSpecies = delete_species
+    deleteAllSpecies = delete_all_species
+    getParameter = get_parameter
+    getAllParameters = get_all_parameters
+    addParameter = add_parameter
+    deleteParameter = delete_parameter
+    setParameter = set_parameter
+    resolveParameters = resolve_parameters
+    deleteAllParameters = delete_all_parameters
+    addReaction = add_reaction
+    getReaction = get_reaction
+    getNumReactions = get_num_reactions
+    getAllReactions = get_all_reactions
+    deleteReaction = delete_reaction
+    deleteAllReactions = delete_all_reactions
 
     
 
@@ -208,7 +229,7 @@ class Parameter():
         except:
             self.value = None
             
-    def setExpression(self,expression):
+    def set_expression(self,expression):
         self.expression = expression
         # We allow expression to be passed in as a non-string type. Invalid strings
         # will be caught below. It is perfectly fine to give a scalar value as the expression.
@@ -220,6 +241,9 @@ class Parameter():
             raise TypeError
     
         self.evaluate()
+        
+    # Old function names for backwards compatablity
+    setExpression = set_expression
 
 class Reaction():
     """ 
@@ -301,10 +325,8 @@ class Reaction():
 
         self.restrict_to = restrict_to
                 
-    def createMassAction(self):
-        """ 
-            Create a mass action propensity function given
-            self.reactants and a single parameter value.
+    def create_mass_action(self):
+        """ Create a mass action propensity function given self.reactants and a single parameter value.
         """
         # We support zeroth, first and second order propensities only.
         # There is no theoretical justification for higher order propensities.
@@ -338,21 +360,29 @@ class Reaction():
 
         self.propensity_function = propensity_function + ';'
             
-    def setType(self,type):
+    def set_type(self,type):
         if type not in {'mass-action','customized'}:
             raise ReactionError("Invalid reaction type.")
         self.type = type
     
-    def addReactant(self,S,stoichiometry):
+    def add_reactant(self,S,stoichiometry):
         if stoichiometry <= 0:
             raise ReactionError("Reaction "+self.name+"Stoichiometry must be a positive integer.")
         self.reactants[S.name]=stoichiometry
 
-    def addProduct(self,S,stoichiometry):
+    def add_product(self,S,stoichiometry):
         self.products[S.name]=stoichiometry
 
-    def Annotate(self,annotation):
+    def annotate(self,annotation):
         self.annotation = annotation
+
+    # Old function names for backwards compatablity
+    createMassAction = create_mass_action
+    setType = set_type
+    addReactant = add_reactant
+    addProduct = add_product
+    Annotate = annotate
+
 
 # Module exceptions
 class ModelError(Exception):

@@ -133,6 +133,8 @@ typedef struct{
 /* Struct to hold variables used for incremental IO of trajectory data during the simulation. */
 typedef struct{
     
+    hid_t output_file;
+    
     hid_t trajectory_dataset;
     hid_t datatype;
     hid_t trajectory_dataspace;
@@ -156,13 +158,9 @@ typedef struct{
     int Ncells;
     int Mspecies;
     
-    
-    
 
 } urdme_output_writer;
 
-/* Return an initialized urdme_outpur_writer */
-urdme_output_writer *get_urdme_output_writer(urdme_model *model, hid_t file);
 
 urdme_model *read_model(char *file);
 
@@ -174,15 +172,14 @@ int dump_results(urdme_model* model, char *filename, char *type);
 
 void debug_print_model(urdme_model* model);
 
+
+urdme_output_writer *get_urdme_output_writer(urdme_model *model, char* filename);
 hid_t get_output_file(char *filename);
-void write_tspan(hid_t file, urdme_model *model);
+void write_tspan(urdme_output_writer *writer, urdme_model *model);
 int flush_buffer(urdme_output_writer *writer);
 int write_state(urdme_output_writer *writer, int *xx);
 int flush_solution_to_file(hid_t trajectory_dataset,int *buffer,int column_offset, int num_columns, int col_size);
 void destroy_output_writer(urdme_output_writer *writer);
-urdme_output_writer *get_urdme_output_writer(urdme_model *model, hid_t file);
-
-
 
 
 

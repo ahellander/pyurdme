@@ -151,33 +151,27 @@ int main(int argc, char *argv[])
 	init_sol(model,nt);
     //model->nsol=0
     
-	/* Open a file handle to the output file. We will store output of the core solvers as hdf5 datasets. */
-    hid_t h5_output_file;
-    h5_output_file = get_output_file(outfile);
-    
-    /* Get a writer to write the outpur trajectory. */
+  
+    /* Get a writer to store the output trajectory on a hdf5 file. */
     urdme_output_writer *writer;
-    writer = get_urdme_output_writer(model,h5_output_file);
-
+    writer = get_urdme_output_writer(model,outfile);
     
 	/* Call nsm-solver: get a trajectory and add it to the output file. . */
     nsm(model, writer);
     
-    /* Write the timspan vector to the output file */
-    write_tspan(h5_output_file,model);
+    /* Write the timespan vector to the output file */
+    write_tspan(writer,model);
 
-	H5Fclose(h5_output_file);
-	
-    
     /* free memory allocated by mxGetVariable. */
     mxDestroyArray(mxreport);
 	mxDestroyArray(mxseed);
     mxDestroyArray(mxparameters);
 
     matClose(input_file);
-
     free(parameters);
-	destroy_model(model);
+    
+    destroy_output_writer(writer);
+    destroy_model(model);
 	
 	return(0);
 	

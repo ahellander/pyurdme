@@ -351,10 +351,14 @@ int destroy_model(urdme_model *model)
 }
 
 /* Get an initialized urdme_output_writer */
-urdme_output_writer *get_urdme_output_writer(urdme_model *model, hid_t file)
+urdme_output_writer *get_urdme_output_writer(urdme_model *model, char *filename)
 {
     urdme_output_writer *writer;
     writer = (urdme_output_writer *)malloc(sizeof(urdme_output_writer));
+
+    
+    /* Open a file handle to the output file. */
+    writer->output_file = get_hdf5_file(filename);
     
     writer->datatype = H5Tcopy(H5T_NATIVE_INT);
     
@@ -382,13 +386,13 @@ urdme_output_writer *get_urdme_output_writer(urdme_model *model, hid_t file)
     
     
     writer->trajectory_dataspace = H5Screate_simple(2, writer->dataset_dims, NULL);
-    hid_t plist = H5Pcreate(H5P_DATASET_CREATE);
+    writer->plist = H5Pcreate(H5P_DATASET_CREATE);
     H5Pset_chunk(writer->plist,2,writer->chunk_dims);
    
     /* Uncommenting this line would enable zlib compression of the file. */
     //status = H5Pset_deflate (plist, 4);
 
-    writer->trajectory_dataset = H5Dcreate2(file, "/U", writer->datatype, writer->trajectory_dataspace, H5P_DEFAULT,writer->plist,H5P_DEFAULT);
+    writer->trajectory_dataset = H5Dcreate2(writer->output_file, "/U", writer->datatype, writer->trajectory_dataspace, H5P_DEFAULT,writer->plist,H5P_DEFAULT);
 
     writer->Ncells = model->Ncells;
     writer->Mspecies = model->Mspecies;
@@ -401,6 +405,10 @@ urdme_output_writer *get_urdme_output_writer(urdme_model *model, hid_t file)
 /* Deallocate the writer. */
 void destroy_output_writer(urdme_output_writer *writer)
 {
+    
+    /* Close the file */
+    H5Fclose(writer->output_file);
+    
     /* Close the datasets */
     H5Sclose(writer->trajectory_dataspace);
     H5Dclose(writer->trajectory_dataset);
@@ -410,27 +418,22 @@ void destroy_output_writer(urdme_output_writer *writer)
 }
 
 /* Return a handle to a HDF5 file. */
-hid_t get_output_file(char *outfile)
+hid_t get_hdf5_file(char *filename)
 {
     
     herr_t status;
-    hid_t h5_output_file;
-    h5_output_file = H5Fcreate(outfile,H5F_ACC_TRUNC, H5P_DEFAULT,H5P_DEFAULT);
-    if (h5_output_file == NULL){
+    hid_t h5_file;
+    h5_file = H5Fcreate(filename,H5F_ACC_TRUNC, H5P_DEFAULT,H5P_DEFAULT);
+    if (h5_file == NULL){
         printf("Fatal error. Failed to open HDF5 file.");
         exit(-1);
     }
-    return h5_output_file;
-    
-}
-
-void create_dataset(hid_t file)
-{
+    return h5_file;
     
 }
 
 /* Write tspan to the file */
-void write_tspan(hid_t file, urdme_model *model)
+void write_tspan(urdme_output_writer *writer, urdme_model *model)
 {
     
     herr_t status;
@@ -438,7 +441,7 @@ void write_tspan(hid_t file, urdme_model *model)
     
     dataset_dims[0] = 1;
     dataset_dims[1] = model->tlen;
-    status = H5LTmake_dataset(file,"/tspan",2,dataset_dims,H5T_NATIVE_DOUBLE,model->tspan);
+    status = H5LTmake_dataset(writer->output_file,"/tspan",2,dataset_dims,H5T_NATIVE_DOUBLE,model->tspan);
     if (status != 0){
         printf("Failed to write tspan vector HDF5 file.");
         exit(-1);
@@ -462,7 +465,6 @@ int write_state(urdme_output_writer *writer, int *xx)
     
     if (writer->num_columns_since_flush == writer->num_columns){
         
-       // status = flush_solution_to_file(writer->trajectory_dataset,writer->buffer,chunk_indx*num_columns,num_columns_since_flush,Ndofs);
         status = flush_buffer(writer);
         if (status){
             return -1;
@@ -520,15 +522,13 @@ int flush_solution_to_file(hid_t trajectory_dataset,int *buffer,int column_offse
     hid_t mem_space = H5Screate_simple(2, mem_dims, NULL);
     
     hid_t file_dataspace = H5Dget_space(trajectory_dataset);
-    //  if (file_dataspace == NULL){
-    //      printf("Failed to get the dataspace of the dataset.");
-    //      return(-1);
-    //  }
+
     status =H5Sselect_hyperslab(file_dataspace, H5S_SELECT_SET, start, NULL,count,block);
     if (status){
         printf("Failed to select hyperslab.");
         return -1;
     }
+    
     status = H5Dwrite(trajectory_dataset, H5T_NATIVE_INT, mem_space,file_dataspace,H5P_DEFAULT,buffer);
     if (status){
         printf("Failed to write to the dataset.");

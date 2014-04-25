@@ -204,8 +204,8 @@ class URDMEModel(Model):
 
         if not hasattr(self, 'species_map'):
             self.__initialize_species_map()
-        if self.getNumReactions() > 0:
-            ND = numpy.zeros((self.getNumSpecies(), self.getNumReactions()))
+        if self.get_num_reactions() > 0:
+            ND = numpy.zeros((self.get_num_species(), self.get_num_reactions()))
             for i, r in enumerate(self.listOfReactions):
                 R = self.listOfReactions[r]
                 reactants = R.reactants
@@ -218,7 +218,7 @@ class URDMEModel(Model):
 
             N = scipy.sparse.csc_matrix(ND)
         else:
-            N = numpy.zeros((self.getNumSpecies(), self.getNumReactions()))
+            N = numpy.zeros((self.get_num_species(), self.get_num_reactions()))
 
         return N
 
@@ -229,11 +229,11 @@ class URDMEModel(Model):
         mass_action_model = True
         for name,reaction in self.listOfReactions.items():
             if not reaction.massaction:
-                GF = numpy.ones((self.getNumReactions(), self.getNumReactions() + self.getNumSpecies()))
+                GF = numpy.ones((self.get_num_reactions(), self.get_num_reactions() + self.get_num_species()))
                 mass_action_model = False
     
         if mass_action_model:
-            GF = numpy.zeros((self.getNumReactions(), self.getNumReactions() + self.getNumSpecies()))
+            GF = numpy.zeros((self.get_num_reactions(), self.get_num_reactions() + self.get_num_species()))
             species_map = self.get_species_map()
             
             involved_species = []
@@ -279,7 +279,7 @@ class URDMEModel(Model):
             
             for i,reac in enumerate(reaction_to_reaction):
                 for r in reac:
-                    GF[r,self.getNumSpecies()+i] = 1
+                    GF[r,self.get_num_species()+i] = 1
 
                 
         try:
@@ -379,7 +379,7 @@ class URDMEModel(Model):
 
     def initialize_initial_condition(self):
         """ Create all-zeros inital condition matrix. """
-        ns = self.getNumSpecies()
+        ns = self.get_num_species()
         if self.xmesh == None:
             self.create_extended_mesh()
         nv = self.mesh.get_num_voxels()
@@ -686,7 +686,7 @@ class URDMEModel(Model):
 
         """
         urdme_solver_data = {}
-        num_species = self.getNumSpecies()
+        num_species = self.get_num_species()
 
         # Stoichimetric matrix
         N = self.create_stoichiometric_matrix()
@@ -1279,7 +1279,7 @@ class URDMEResult(dict):
             num_timepoints = M.shape[0]
         num_vox = self.model.mesh.get_num_voxels()
         if num_species is None:
-            num_species = self.model.getNumSpecies()
+            num_species = self.model.get_num_species()
         num_dofs = num_vox*num_species
         C = numpy.zeros((num_timepoints, num_dofs), dtype=numpy.float64)
 
@@ -1359,7 +1359,7 @@ class URDMEResult(dict):
             spec_name = species
         
         species_map = self.model.get_species_map()
-        num_species = self.model.getNumSpecies()
+        num_species = self.model.get_num_species()
         spec_indx = species_map[spec_name]
         
         resultfile = h5py.File(self.filename, 'r')
@@ -2004,8 +2004,8 @@ class URDMESolver:
 
         propfilestr = propfilestr.replace("__DEFINE_SPECIES__", speciesdef)
 
-        propfilestr = propfilestr.replace("__NUMBER_OF_REACTIONS__", str(self.model.getNumReactions()))
-        propfilestr = propfilestr.replace("__NUMBER_OF_SPECIES__", str(self.model.getNumSpecies()))
+        propfilestr = propfilestr.replace("__NUMBER_OF_REACTIONS__", str(self.model.get_num_reactions()))
+        propfilestr = propfilestr.replace("__NUMBER_OF_SPECIES__", str(self.model.get_num_species()))
         propfilestr = propfilestr.replace("__NUMBER_OF_VOXELS__", str(self.model.mesh.get_num_voxels()))
 
         # Create defines for the DataFunctions.

@@ -130,6 +130,16 @@ typedef struct{
 	
 } urdme_model;
 
+
+urdme_model *read_model(char *file);
+void read_solution(urdme_model *model, char*file);
+void init_sol(urdme_model *model, int nsolmax);
+int destroy_model(urdme_model *model);
+int dump_results(urdme_model* model, char *filename, char *type);
+void debug_print_model(urdme_model* model);
+
+
+
 /* Struct to hold variables used for incremental IO of trajectory data during the simulation. */
 typedef struct{
     
@@ -158,20 +168,8 @@ typedef struct{
     int Ncells;
     int Mspecies;
     
-
+    
 } urdme_output_writer;
-
-
-urdme_model *read_model(char *file);
-
-void read_solution(urdme_model *model, char*file);
-void init_sol(urdme_model *model, int nsolmax);
-
-int destroy_model(urdme_model *model);
-int dump_results(urdme_model* model, char *filename, char *type);
-
-void debug_print_model(urdme_model* model);
-
 
 urdme_output_writer *get_urdme_output_writer(urdme_model *model, char* filename);
 hid_t get_output_file(char *filename);
@@ -180,8 +178,6 @@ int flush_buffer(urdme_output_writer *writer);
 int write_state(urdme_output_writer *writer, int *xx);
 int flush_solution_to_file(hid_t trajectory_dataset,int *buffer,int column_offset, int num_columns, int col_size);
 void destroy_output_writer(urdme_output_writer *writer);
-
-
 
 
 #endif

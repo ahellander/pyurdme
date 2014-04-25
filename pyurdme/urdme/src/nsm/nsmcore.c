@@ -14,6 +14,7 @@
 #include "nsm.h"
 #include "binheap.h"
 #include "report.h"
+#include "outputwriter.h"
 
 #include "hdf5.h"
 #include "hdf5_hl.h"
@@ -135,9 +136,9 @@ void nsm_core(const size_t *irD,const size_t *jcD,const double *prD,
     
     ReportFun report;
     if (report_level)
-    report = &reportFun1;
+        report = &reportFun1;
     else
-    report = NULL;
+        report = NULL;
     
     /* Set xx to the initial state. xx will always hold the current solution. */
     xx = (int *)malloc(Ndofs*sizeof(int));
@@ -385,7 +386,7 @@ void nsm_core(const size_t *irD,const size_t *jcD,const double *prD,
         if (errcode) {
             /* Report the error that occurred. */
             if (report)
-            report(tt,tspan[0],tspan[tlen-1],total_diffusion,total_reactions,errcode,report_level);
+                report(tt,tspan[0],tspan[tlen-1],total_diffusion,total_reactions,errcode,report_level);
             /* Cannot continue. Clear this solution and exit. */
             break;
         }

@@ -1941,6 +1941,7 @@ class URDMESolver:
         # Execute the solver
         urdme_solver_cmd = [self.solver_dir + self.propfilename + '.' + self.NAME, self.infile_name, outfile.name]
         for run_ndx in range(number_of_trajectories):
+            
             if seed is not None:
                 urdme_solver_cmd.append(str(seed+run_ndx))
             if self.report_level >= 1:
@@ -2104,7 +2105,7 @@ def urdme(model=None, solver='nsm', solver_path="", model_file=None, input_file=
         raise URDMEError("solver argument to urdme() must be a string or a URDMESolver class object.")
 
     sol.compile()
-    return sol.run(seed, input_file=input_file)
+    return sol.run(seed=seed, input_file=input_file)
 
 
 class URDMEDataFunction():

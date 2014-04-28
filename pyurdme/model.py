@@ -1,10 +1,8 @@
-""" This module describes a model of a well-mixed biochemical system, via the Model class.
-    Model objects should not be instantiated by an application. Instead, use StochKitModel 
-    in 'stochkit.py', which extends Model with StochKit2 specific serialization. Refer to 
-    'stochkit.py' in the StochSS project for examples of its use.
+""" 
+    This module defines a model of a well mixed biochemical reaction network.
     
-    Raises: SpeciesError, ParameterError, ReactionError
 """
+
 from collections import OrderedDict
 
 
@@ -36,6 +34,7 @@ class Model():
 
     def update_namespace(self):
         """ Create a dict with flattened parameter and species objects. """
+        
         for param in self.listOfParameters:
             self.namespace[param]=self.listOfParameters[param].value
         # Dictionary of expressions that can be evaluated in the scope of this model.
@@ -52,7 +51,7 @@ class Model():
 
     def add_species(self, obj):
         """ 
-            Add a species to listOfSpecies. Accepts input either as a single Species object, or
+            Add a Species to listOfSpecies. Accepts input either as a single Species object, or
             as a list of Species objects.
         """
         if isinstance(obj, Species):
@@ -66,6 +65,7 @@ class Model():
                 self.listOfSpecies[S.name] = S;
 
     def delete_species(self, obj):
+        """ Remove a Species from model.listOfSpecies. """
         self.listOfSpecies.pop(obj)        
          
     def delete_all_species(self):
@@ -81,8 +81,8 @@ class Model():
         return self.listOfParameters
     
     def add_parameter(self,params):
-        """ Add Paramter(s) to listOfParamters. Input can be either a single
-            paramter object or a list of Parameters.
+        """ Add Parameter(s) to model.listOfParameters. Input can be either a single
+            Parameter object or a list of Parameter objects.
         """
         # TODO, make sure that you don't overwrite an existing parameter??
         if type(params).__name__=='list':
@@ -104,8 +104,8 @@ class Model():
         p.evaluate()
         
     def resolve_parameters(self):
-        """ Attempt to resolve all parameter expressions to scalar floats. This
-            methods must be called before exporting the model. """
+        """ Attempt to resolve all parameter expressions to scalar floating point values. 
+            Must be called prior to exporting the model.  """
         self.update_namespace()
         for param in self.listOfParameters:
             try:
@@ -117,7 +117,7 @@ class Model():
         self.listOfParameters.clear()
 
     def add_reaction(self,reacs):
-        """ Add reactions to model. Input can be single instance, a list of instances
+        """ Add Reaction(s) to the model. Input can be single instance, a list of instances
             or a dict with name,instance pairs. """
         
         # TODO, make sure that you cannot overwrite an existing parameter
@@ -178,10 +178,9 @@ class Model():
     deleteReaction = delete_reaction
     deleteAllReactions = delete_all_reactions
 
-    
 
 class Species():
-    """ Chemical species. """
+    """ Model of a biochemical species. """
     
     def __init__(self,name="",diffusion_constant=None,reaction_radius=None,dimension=3):
         # A species has a name (string) and an initial value (positive integer)
@@ -198,12 +197,12 @@ class Species():
 
 class Parameter():
     """ 
-        A parameter can be given as an expression (function) or directly as a value (scalar).
-        If given an expression, it should be understood as evaluable in the namespace
-        of a parent Model.
+        Model of a rate paramter. 
+        A parameter can be given as a String expression (function) or directly as a scalar value.
+        If given a String expression, it should be evaluable in the namespace of a parent Model.
+        
     """
-    # AH: Should the parameter, being evaluable, be implemented as a Functor object?
-
+    
     def __init__(self,name="",expression=None,value=None):
 
         self.name = name        
@@ -253,9 +252,10 @@ class Parameter():
 
 class Reaction():
     """ 
-        Models a reaction. A reaction has its own dictinaries of species (reactants and products) and parameters.
-        The reaction's propensity function needs to be evaluable (and result in a non-negative scalar value)
-        in the namespace defined by the union of those dicts.
+        Models a biochemical reaction. A reaction conatains dictinaries of species (reactants and products) and parameters.
+        The reaction's propensity function needs to be evaluable and result in a non-negative scalar value
+        in the namespace defined by the union of its Reactant, Product and Parameter dictionaries.
+        
     """
 
     def __init__(self, name = "", reactants = {}, products = {}, propensity_function=None, massaction=None, rate=None, annotation=None,restrict_to=None):
@@ -265,14 +265,19 @@ class Reaction():
             Input: 
                 name:                       string that the model is referenced by
                 parameters:                 a list of parameter instances
-                propensity_function:         string with the expression for the reaction's propensity
-                reactants:                  List of (species,stoiciometry) tuples
-                product:                    List of (species,stoiciometry) tuples
+                propensity_function:        String with the expression for the reaction's propensity
+                reactants:                  List of (species,stoichiometry) tuples
+                product:                    List of (species,stoichiometry) tuples
                 annotation:                 Description of the reaction (meta)
             
                 massaction True,{False}     is the reaction of mass action type or not?
                 rate                        if mass action, rate is a reference to a parameter instance.
             
+            If massaction is set to true, propensity_function is not a valid argument. Instead, the 
+            propensity function is constructed automatically. For mass-action, zeroth, first and second
+            order reactions are supported, appemting to used higher orders will result in an error.
+            
+
             Raises: ReactionError
             
         """

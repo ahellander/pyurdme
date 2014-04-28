@@ -5,6 +5,7 @@ from examples.simple_diffusion import simple_diffusion
 import pyurdme.nsmsolver
 
 import numpy
+import pickle
 import unittest
 
 class SimpleDiffusion(pyurdme.URDMEModel):
@@ -83,8 +84,23 @@ class TestSolverFunctionality(unittest.TestCase):
         self.assertNotEqual(result1,result2)
 
 
-    def test_run_aggregate(self):
-        """ cccxxxyyy """
+    def test_pickle(self):
+        """ Test that the model, solver and result objects are pickleable. """
+        sol = pyurdme.nsmsolver.NSMSolver(self.model)
+        sol_str = pickle.dumps(sol)
+        # This could be on a difference python instance
+        sol2 = pickle.loads(sol_str)
+        result2 = sol2.run()
+        result_str = pickle.dumps(result2)
+        # This is back on the original python context
+        result = pickle.loads(result_str)
+        self.assertEqual(result2, result)
+
+
+    def test_run_ensemble(self):
+        """ Test the running of ensembles of runs """
+        result_list = self.model.run(3)
+        self.assertEqual(len(result_list), 3)
 
 
 if __name__ == '__main__':

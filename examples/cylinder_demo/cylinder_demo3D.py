@@ -31,7 +31,7 @@ class cylinderDemo3D(pyurdme.URDMEModel):
         # Define Species
         A = pyurdme.Species(name="A", diffusion_constant=D_const)
         B = pyurdme.Species(name="B", diffusion_constant=D_const)
-        self.addSpecies([A, B])
+        self.add_species([A, B])
         
         # Define Geometry
         pt1 = dolfin.Point(MAX_X_DIM, 0, 0)
@@ -47,8 +47,8 @@ class cylinderDemo3D(pyurdme.URDMEModel):
         Edge1().mark(subdomains,2)
         Edge2().mark(subdomains,3)
         
-        self.addSubDomain(subdomains)
-        data = self.solverData()
+        self.add_subdomain(subdomains)
+        data = self.get_solver_datastructure()
         vol = data['vol']
         sd = data['sd']
         left = numpy.sum(vol[sd == 2])
@@ -56,17 +56,17 @@ class cylinderDemo3D(pyurdme.URDMEModel):
     
         k_react = pyurdme.Parameter(name="k_react", expression=1.0)
         
-        k_creat1 = pyurdme.Parameter(name="k_creat", expression=100/right)
-        k_creat2 = pyurdme.Parameter(name="k_creat", expression=100/left)
+        k_creat1 = pyurdme.Parameter(name="k_creat1", expression=100/right)
+        k_creat2 = pyurdme.Parameter(name="k_creat2", expression=100/left)
         
-        self.addParameter([k_react, k_creat1,k_creat2])
+        self.add_parameter([k_react, k_creat1,k_creat2])
 
         
         # Define Reactions
         R1 = pyurdme.Reaction(name="R1", reactants=None, products={A:1}, rate=k_creat1, restrict_to=2)
         R2 = pyurdme.Reaction(name="R2", reactants=None, products={B:1}, rate=k_creat2, restrict_to=3)
         R3 = pyurdme.Reaction(name="R3", reactants={A:1, B:1}, products=None, rate=k_react)
-        self.addReaction([R1, R2, R3])
+        self.add_reaction([R1, R2, R3])
 
         # Define simulation timespan
         self.timespan(range(200))
@@ -83,22 +83,22 @@ if __name__ == "__main__":
     # just open Aout/trajectory.pvd, then you can animate etc.
     if not os.path.isdir('Aout'):
         print "Writing species 'A' to folder 'Aout'"
-        result.toVTK(species='A',folder_name="Aout")
+        result.export_to_vtk(species='A',folder_name="Aout")
     if not os.path.isdir('Bout'):
         print "Writing species 'B' to folder 'Bout'"
-        result.toVTK(species='B',folder_name="Bout")
+        result.export_to_vtk(species='B',folder_name="Bout")
 
 
     # Plot of the time-average spatial concentration.
     x_vals = model.mesh.coordinates()[:, 0]
-    A_vals = numpy.sum(result.getSpecies("A", concentration=True), axis=0)
-    B_vals = numpy.sum(result.getSpecies("B", concentration=True), axis=0)
+    A_vals = numpy.sum(result.get_species("A", concentration=True), axis=0)
+    B_vals = numpy.sum(result.get_species("B", concentration=True), axis=0)
 
-    A_sum = numpy.sum(result.getSpecies("A"), axis=1)
-    B_sum = numpy.sum(result.getSpecies("B"), axis=1)
+    A_sum = numpy.sum(result.get_species("A"), axis=1)
+    B_sum = numpy.sum(result.get_species("B"), axis=1)
     print A_sum
     print B_sum
-    data = model.solverData()
+    data = model.get_solver_datastructure()
     vol = data['vol']
     sd = data['sd']
     print numpy.sum(vol[sd == 2])

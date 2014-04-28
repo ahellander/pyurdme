@@ -10,7 +10,8 @@ class Model():
     """ Representation of a well mixed biochemical model. Interfaces to solvers in StochSS
         should attempt to extend Model. """
     
-    def __init__(self,name="",volume=1.0):
+    def __init__(self, name="", volume=1.0):
+        """ Create an empty model. """
         
         # The name that the model is referenced by (should be a String)
         self.name = name
@@ -191,6 +192,9 @@ class Species():
     def dim(self):
         return self.dimension
 
+    def __str__(self):
+        return self.name
+
 class Parameter():
     """ 
         Model of a rate paramter. 
@@ -239,6 +243,9 @@ class Parameter():
             raise TypeError
     
         self.evaluate()
+        
+    def __str__(self):
+        return str(self.value)
         
     # Old function names for backwards compatablity
     setExpression = set_expression

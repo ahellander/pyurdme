@@ -929,8 +929,18 @@ class URDMEMesh(dolfin.Mesh):
         return self.num_dof_voxels
 
     def get_voxels(self):
-        """ return the (x,y,z) coordinate of each voxel. """
+        """ Return the (x,y,z) coordinate of each voxel. """
         return self.coordinates()
+
+
+    def closest_vertex(self,x):
+        """ Get index of the vertex in the coordinate list closest to the point x. """
+        coords = self.get_voxels()
+        shape = coords.shape
+        reppoint = numpy.tile(x, (shape[0], 1))
+        dist = numpy.sqrt(numpy.sum((coords-reppoint)**2, axis=1))
+        ix = numpy.argmin(dist)
+        return ix
 
     def get_mesh_size(self):
         """ Estimate of mesh size at each vertex. """
@@ -1868,8 +1878,8 @@ class URDMESolver:
             cmd = " ".join(['cp', self.model_file, self.solver_dir + self.propfilename + '.c'])
             if self.report_level > 1:
                 print cmd
-            subprocess.call(cmd)
-
+            subprocess.call(cmd,shell=True)
+            
         # Build the solver
         makefile = 'Makefile.' + self.NAME
         cmd = " ".join([ 'cd', self.solver_base_dir , ';', 'make', '-f', self.URDME_BUILD + makefile, 'URDME_ROOT=' + self.URDME_ROOT, 'URDME_MODEL=' + self.propfilename])

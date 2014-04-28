@@ -84,17 +84,40 @@ class TestSolverFunctionality(unittest.TestCase):
         self.assertNotEqual(result1,result2)
 
 
-    def test_pickle(self):
+    def test_model_pickle(self):
+        """ Test that the model is picklable. We do not compare models directly, but rather the results after simulation. """
+        model = self.model
+        model_str = pickle.dumps(model)
+        model2 = pickle.loads(model_str)
+        
+        result1 = model.run(seed=1)
+        result2 = model2.run(seed=1)
+        
+        self.assertEqual(result1,result2)
+
+    def test_solver_pickle(self):
         """ Test that the model, solver and result objects are pickleable. """
+       
         sol = pyurdme.nsmsolver.NSMSolver(self.model)
         sol_str = pickle.dumps(sol)
-        # This could be on a difference python instance
+
         sol2 = pickle.loads(sol_str)
-        result2 = sol2.run()
-        result_str = pickle.dumps(result2)
-        # This is back on the original python context
-        result = pickle.loads(result_str)
-        self.assertEqual(result2, result)
+        
+        result1 = sol.run(seed=1)
+        result2 = sol2.run(seed=1)
+    
+        self.assertEqual(result1,result2)
+
+
+
+
+    def test_result_pickle(self):
+        """ Test that the result object is picklable. """
+        sol = pyurdme.nsmsolver.NSMSolver(self.model)
+        result = sol.run(seed=1)
+        result_str = pickle.dumps(result)
+        result2 = pickle.loads(result_str)
+        self.assertEqual(result,result2)
 
 
     def test_run_ensemble(self):

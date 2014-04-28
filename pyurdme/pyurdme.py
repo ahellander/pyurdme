@@ -1878,8 +1878,8 @@ class URDMESolver:
             cmd = " ".join(['cp', self.model_file, self.solver_dir + self.propfilename + '.c'])
             if self.report_level > 1:
                 print cmd
-            subprocess.call(cmd)
-
+            subprocess.call(cmd,shell=True)
+            
         # Build the solver
         makefile = 'Makefile.' + self.NAME
         cmd = " ".join([ 'cd', self.solver_base_dir , ';', 'make', '-f', self.URDME_BUILD + makefile, 'URDME_ROOT=' + self.URDME_ROOT, 'URDME_MODEL=' + self.propfilename])

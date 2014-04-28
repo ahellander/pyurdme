@@ -30,8 +30,7 @@ class simple_diffusion(pyurdme.URDMEModel):
 if __name__ == '__main__':
 
     model = simple_diffusion()
-    #result = model.run()
-    result = pyurdme.urdme(model)
+    result = model.run()
 
     # Dump a snapshot of the state in paraview format. To visualize the solution,
     # open output/trajectory.pvd in ParaView.

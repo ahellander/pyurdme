@@ -44,9 +44,9 @@ nsm: $(OUT)$(URDME_MODEL).nsm
 ###########################################################################
 
 ifeq ($(URDME_LIBMAT),)
-OBJS=nsm.o nsmcore.o report.o binheap.o matmodel.o $(URDME_MODEL).o
+OBJS=nsm.o nsmcore.o report.o binheap.o urdmemodel.o outputwriter.o $(URDME_MODEL).o
 else
-OBJS=nsm.o nsmcore.o report.o binheap.o matmodel.o read_matfile.o $(URDME_MODEL).o
+OBJS=nsm.o nsmcore.o report.o binheap.o urdmemodel.o read_matfile.o outputwriter.o $(URDME_MODEL).o
 endif
 
 DEPS= $(addprefix $(OUT),$(OBJS))
@@ -73,12 +73,15 @@ $(OUT)nsmcore.o: $(SRC)/nsm/nsmcore.c
 $(OUT)report.o: $(SRC)/report.c
 	$(CC) $(CFLAGS) $(SRC)/report.c -o $(OUT)report.o
 
-$(OUT)matmodel.o: $(SRC)/matmodel.c 
-	$(CC) $(CFLAGS) $(SRC)/matmodel.c -o $(OUT)matmodel.o
+$(OUT)urdmemodel.o: $(SRC)/urdmemodel.c
+	$(CC) $(CFLAGS) $(SRC)/urdmemodel.c -o $(OUT)urdmemodel.o
+
+$(OUT)outputwriter.o: $(SRC)/outputwriter.c
+	$(CC) $(CFLAGS) $(SRC)/outputwriter.c -o $(OUT)outputwriter.o
+
 
 $(OUT)read_matfile.o: $(SRC)/read_matfile.c 
 	$(CC) $(CFLAGS) $(SRC)/read_matfile.c -o $(OUT)read_matfile.o
-    
 
 $(OUT)binheap.o: $(SRC)/nsm/binheap.c
 	$(CC) $(CFLAGS) $(SRC)/nsm/binheap.c -o $(OUT)binheap.o

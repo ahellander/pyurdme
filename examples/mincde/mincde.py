@@ -18,18 +18,14 @@ class Cytosol(dolfin.SubDomain):
         return not on_boundary
 
 
-class PheromoneGradient(pyurdme.URDMEDataFunction):
-    def __init__(self, a=0.0, b=1.0, L_min=0, L_max=4, MOLAR=1.0):
-        """ 1D domain from a to b. """
-        pyurdme.URDMEDataFunction.__init__(self, name="PheromoneGradient")
-        self.a = a
-        self.b = b
-        self.L_min = L_min
-        self.L_max = L_max
-        self.MOLAR = MOLAR
+class MeshSize(pyurdme.URDMEDataFunction):
+    def __init__(self,mesh):
+        pyurdme.URDMEDataFunction.__init__(self, name="MeshSize")
+        self.mesh = mesh
+        self.h = mesh.get_mesh_size()
     
     def map(self, x):
-        ret =  ((self.L_max - self.L_min) * 0.5 * (1 + math.cos(0.5*x[0])) + self.L_min) * self.MOLAR
+        ret = self.h[self.mesh.closest_vertex(x)]
         return ret
 
 class mincde(pyurdme.URDMEModel):
@@ -63,14 +59,16 @@ class mincde(pyurdme.URDMEModel):
         self.addSubDomain(boundary)
         
         # Average mesh size to feed into the propensity functions
-
-        hmax = self.mesh.hmax()
-        hmin = self.mesh.hmin()
-        h = (hmax+hmin)/2
+        h = self.mesh.get_mesh_size()
+        self.add_data_function(MeshSize(self.mesh))
+        
+        #hmax = self.mesh.hmax()
+        #hmin = self.mesh.hmin()
+        #h = (hmax+hmin)/2
 
         # Parameters
         NA = pyurdme.Parameter(name="NA",expression="6.022e23")
-        sigma_d  = pyurdme.Parameter(name="sigma_d",expression=2.5e-8/hmin)
+        sigma_d  = pyurdme.Parameter(name="sigma_d",expression="2.5e-8")
         sigma_dD = pyurdme.Parameter(name="sigma_dD",expression="9.0e5/(1000.0*NA)")
         sigma_e  = pyurdme.Parameter(name="sigma_e",expression="5.56e7/(1000.0*NA)")
         sigma_de = pyurdme.Parameter(name="sigma_de",expression=0.7)
@@ -83,7 +81,9 @@ class mincde(pyurdme.URDMEModel):
         boundary = [2]
         
         # Reactions
-        R1 = pyurdme.Reaction(name="R1",reactants={MinD_c_atp:1},products={MinD_m:1},massaction=True,rate=sigma_d, restrict_to=boundary)
+        #R1 = pyurdme.Reaction(name="R1",reactants={MinD_c_atp:1},products={MinD_m:1},massaction=True,rate=sigma_d, restrict_to=boundary)
+        R1 = pyurdme.Reaction(name="R1",reactants={MinD_c_atp:1},products={MinD_m:1},propensity_function="MinD_c_atp*sigma_d/MeshSize", restrict_to=boundary)
+        
         R2 = pyurdme.Reaction(name="R2",reactants={MinD_c_atp:1,MinD_m:1},products={MinD_m:2},massaction=True,rate=sigma_dD)
         R3 = pyurdme.Reaction(name="R3",reactants={MinD_m:1,MinD_e:1},products={MinDE:1},massaction=True,rate=sigma_e)
         R4 = pyurdme.Reaction(name="R4",reactants={MinDE:1},products={MinD_c_adp:1,MinD_e:1},massaction=True,rate=sigma_de)

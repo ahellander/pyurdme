@@ -333,7 +333,6 @@ int destroy_model(urdme_model *model)
     free(model->u0);
 	free(model->sd);
     free(model->data);
-	//free(model->U);
     
     for (i=0; i<model->num_extra_args; i++)
       if (model->extra_args[i]!=NULL){

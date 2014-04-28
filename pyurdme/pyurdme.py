@@ -929,8 +929,18 @@ class URDMEMesh(dolfin.Mesh):
         return self.num_dof_voxels
 
     def get_voxels(self):
-        """ return the (x,y,z) coordinate of each voxel. """
+        """ Return the (x,y,z) coordinate of each voxel. """
         return self.coordinates()
+
+
+    def closest_vertex(self,x):
+        """ Get index of the vertex in the coordinate list closest to the point x. """
+        coords = self.get_voxels()
+        shape = coords.shape
+        reppoint = numpy.tile(x, (shape[0], 1))
+        dist = numpy.sqrt(numpy.sum((coords-reppoint)**2, axis=1))
+        ix = numpy.argmin(dist)
+        return ix
 
     def get_mesh_size(self):
         """ Estimate of mesh size at each vertex. """

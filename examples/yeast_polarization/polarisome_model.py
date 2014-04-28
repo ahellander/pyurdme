@@ -59,7 +59,7 @@ class polarisome_1D(pyurdme.URDMEModel):
         self.addParameter([Bon, Boff, Bfb, Aon, Aoff, Km, Son, Soff]) 
 
         # Add Data Function to model the mating pheromone gradient.
-        self.addDataFunction(Cdc42())
+        self.add_data_function(Cdc42())
 
         # Reactions
         R0 = pyurdme.Reaction(name="R0", reactants={Bni1c:1}, products={Bni1m:1}, propensity_function="Bon*Bni1c*NUM_VOXELS*Cdc42")

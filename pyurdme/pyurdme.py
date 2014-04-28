@@ -840,7 +840,7 @@ class URDMEModel(Model):
 
         return {'K':stiffness_matrices, 'M':mass_matrices}
 
-    def run(self, solver='nsm', number_of_trajectories=1, seed=None, report_level=0):
+    def run(self, number_of_trajectories=1, solver='nsm', seed=None, report_level=0):
         """ Simulate the model.
         
         Args:

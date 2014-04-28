@@ -76,7 +76,7 @@ class G_protein_cycle_1D(pyurdme.URDMEModel):
         self.addParameter([SA,V,k_RL,k_RLm,k_Rs,k_Rd0,k_Rd1,k_G1,k_Ga,k_Gd]) 
 
         # Add Data Function to model the mating pheromone gradient.
-        self.addDataFunction(PheromoneGradient(a=-2*3.14159, b=2*3.14159, MOLAR=MOLAR))
+        self.add_data_function(PheromoneGradient(a=-2*3.14159, b=2*3.14159, MOLAR=MOLAR))
 
         # Reactions
         R0 = pyurdme.Reaction(name="R0", reactants={}, products={R:1}, massaction=True, rate=k_Rs)

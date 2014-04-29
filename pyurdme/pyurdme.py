@@ -628,7 +628,10 @@ class URDMEModel(Model):
 
             D.setdiag(-sumcol.flatten())        
 
-        return {'vol':vol, 'D':D, 'relative_positive_mass':positive_mass/total_mass}
+        if total_mass == 0.0:
+            return {'vol':vol, 'D':D, 'relative_positive_mass':None}
+        else:
+            return {'vol':vol, 'D':D, 'relative_positive_mass':positive_mass/total_mass}
 
 
     def validate(self, urdme_solver_data):

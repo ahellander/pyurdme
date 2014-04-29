@@ -36,7 +36,7 @@ class simple_diffusion2(pyurdme.URDMEModel):
         A = pyurdme.Species(name="A",diffusion_constant=0.1,dimension=2)
         B = pyurdme.Species(name="B",diffusion_constant=0.1,dimension=1)
 
-        self.addSpecies([A,B])
+        self.add_species([A,B])
 
         # A circle
         mesh = dolfin.UnitCircleMesh(20)
@@ -57,29 +57,29 @@ class simple_diffusion2(pyurdme.URDMEModel):
         membrane_patch = MembranePatch()
         membrane_patch.mark(facet_function,3)
         
-        self.addSubDomain(cell_function)
-        self.addSubDomain(facet_function)
+        self.add_subdomain(cell_function)
+        self.add_subdomain(facet_function)
         
         k1 = pyurdme.Parameter(name="k1",expression=100.0)
-        self.addParameter([k1])
+        self.add_parameter([k1])
         
         R1 = pyurdme.Reaction(name="R1",reactants={A:1},products={B:1},massaction=True,rate=k1,restrict_to=3)
-        self.addReaction([R1])
+        self.add_reaction([R1])
         
         # Restrict species B to the membrane subdomain
         self.restrict(species=B,subdomains=[2,3])
         self.timespan(numpy.linspace(0,1,50))
         
         # Place the A molecules in the voxel nearest to the center of the square
-        self.placeNear({A:10000},point=[0,0])
+        self.set_initial_condition_place_near({A:10000},point=[0,0])
 
 if __name__ == '__main__':
     
     model = simple_diffusion2()
-    result = pyurdme.urdme(model)
-    A = result.getSpecies("A")
+    result = model.run()
+    A = result.get_species("A")
     #print numpy.sum(A,axis=1)
-    data = model.solverData()
+    data = model.get_solver_datastructure()
     u0 = model.u0
     print numpy.sum(u0,axis=1)
     ix = numpy.argmax(u0[0,:])
@@ -87,7 +87,7 @@ if __name__ == '__main__':
     c = model.mesh.coordinates()
     x = c[:,0]
     print c[ix,:]
-    dof2vtx = dolfin.dof_to_vertex_map(model.mesh.FunctionSpace())
+    dof2vtx = dolfin.dof_to_vertex_map(model.mesh.get_function_space())
     u0 = data["u0"]
     ixdof = numpy.argmax(u0[0,:])
     print ix, dof2vtx[ixdof]
@@ -99,7 +99,7 @@ if __name__ == '__main__':
     #print numpy.max(x)
     #print numpy.min(x)
     # Dump timeseries in Paraview format
-    result.toVTK(species="B",folder_name="Bout")
-    result.toVTK(species="A",folder_name="Aout")
+    result.export_to_vtk(species="B",folder_name="Bout")
+    result.export_to_vtk(species="A",folder_name="Aout")
 
 

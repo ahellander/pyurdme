@@ -24,6 +24,7 @@
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
     <link rel="top" title="PyURDME 1.0 documentation" href="index.html" />
+    <link rel="next" title="PyURDME Examples" href="examples.html" />
     <link rel="prev" title="Welcome to PyURDME’s documentation!" href="index.html" /> 
   </head>
   <body>
@@ -36,6 +37,9 @@
         <li class="right" >
           <a href="py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
+        <li class="right" >
+          <a href="examples.html" title="PyURDME Examples"
+             accesskey="N">next</a> |</li>
         <li class="right" >
           <a href="index.html" title="Welcome to PyURDME’s documentation!"
              accesskey="P">previous</a> |</li>
@@ -160,58 +164,169 @@ Args:</p>
 <em class="property">class </em><tt class="descclassname">pyurdme.pyurdme.</tt><tt class="descname">URDMEMesh</tt><big>(</big><em>mesh=None</em><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMEMesh"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMEMesh" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">dolfin.cpp.mesh.Mesh</span></tt></p>
 <p>A URDME mesh extends the Dolfin mesh class.</p>
+<p>Provides wrappers around dolfins built-in simple geometries/mesh generation function.
+These following methods will all give regular meshes that will produce discretizations that are equivalent to Cartesian grids.</p>
 <dl class="classmethod">
 <dt id="pyurdme.pyurdme.URDMEMesh.CubeMesh">
-<em class="property">classmethod </em><tt class="descname">CubeMesh</tt><big>(</big><em>L</em>, <em>nx</em>, <em>ny</em>, <em>nz</em>, <em>periodic=False</em><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMEMesh.CubeMesh"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMEMesh.CubeMesh" title="Permalink to this definition">¶</a></dt>
-<dd><p>Cube with nx,ny points in the respective axes.</p>
+<em class="property">classmethod </em><tt class="descname">CubeMesh</tt><big>(</big><em>L</em>, <em>nx</em>, <em>ny</em>, <em>nz</em>, <em>periodic=False</em><big>)</big><a class="headerlink" href="#pyurdme.pyurdme.URDMEMesh.CubeMesh" title="Permalink to this definition">¶</a></dt>
+<dd><p>Unit Cube (3D) of with nx, ny, nz points in the respective axes, and side length L.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="pyurdme.pyurdme.URDMEMesh.FunctionSpace">
-<tt class="descname">FunctionSpace</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMEMesh.FunctionSpace"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMEMesh.FunctionSpace" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<tt class="descname">FunctionSpace</tt><big>(</big><big>)</big><a class="headerlink" href="#pyurdme.pyurdme.URDMEMesh.FunctionSpace" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the FunctionSpace dolfin object for this mesh.</p>
+</dd></dl>
 
 <dl class="classmethod">
 <dt id="pyurdme.pyurdme.URDMEMesh.IntervalMesh">
-<em class="property">classmethod </em><tt class="descname">IntervalMesh</tt><big>(</big><em>nx</em>, <em>a</em>, <em>b</em>, <em>periodic=False</em><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMEMesh.IntervalMesh"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMEMesh.IntervalMesh" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<em class="property">classmethod </em><tt class="descname">IntervalMesh</tt><big>(</big><em>nx</em>, <em>a</em>, <em>b</em>, <em>periodic=False</em><big>)</big><a class="headerlink" href="#pyurdme.pyurdme.URDMEMesh.IntervalMesh" title="Permalink to this definition">¶</a></dt>
+<dd><p>Interval (1D) of with nx points in the axes, and side length L.</p>
+</dd></dl>
 
 <dl class="classmethod">
 <dt id="pyurdme.pyurdme.URDMEMesh.SquareMesh">
-<em class="property">classmethod </em><tt class="descname">SquareMesh</tt><big>(</big><em>L</em>, <em>nx</em>, <em>ny</em>, <em>periodic=False</em><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMEMesh.SquareMesh"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMEMesh.SquareMesh" title="Permalink to this definition">¶</a></dt>
-<dd><p>Regular mesh of a square with side length L.</p>
+<em class="property">classmethod </em><tt class="descname">SquareMesh</tt><big>(</big><em>L</em>, <em>nx</em>, <em>ny</em>, <em>periodic=False</em><big>)</big><a class="headerlink" href="#pyurdme.pyurdme.URDMEMesh.SquareMesh" title="Permalink to this definition">¶</a></dt>
+<dd><p>Unit Square (2D) of with nx, ny points in the respective axes, and side length L.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="pyurdme.pyurdme.URDMEMesh.addPeriodicBoundaryCondition">
-<tt class="descname">addPeriodicBoundaryCondition</tt><big>(</big><em>domain</em><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMEMesh.addPeriodicBoundaryCondition"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMEMesh.addPeriodicBoundaryCondition" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<tt class="descname">addPeriodicBoundaryCondition</tt><big>(</big><em>domain</em><big>)</big><a class="headerlink" href="#pyurdme.pyurdme.URDMEMesh.addPeriodicBoundaryCondition" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add a periodic boundary mapping object (a subclass of dolfin.SubDomain).</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyurdme.pyurdme.URDMEMesh.add_periodic_boundary_condition">
+<tt class="descname">add_periodic_boundary_condition</tt><big>(</big><em>domain</em><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMEMesh.add_periodic_boundary_condition"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMEMesh.add_periodic_boundary_condition" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add a periodic boundary mapping object (a subclass of dolfin.SubDomain).</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyurdme.pyurdme.URDMEMesh.closest_vertex">
+<tt class="descname">closest_vertex</tt><big>(</big><em>x</em><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMEMesh.closest_vertex"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMEMesh.closest_vertex" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get index of the vertex in the coordinate list closest to the point x.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyurdme.pyurdme.URDMEMesh.export_to_three_js">
+<tt class="descname">export_to_three_js</tt><big>(</big><em>colors=None</em><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMEMesh.export_to_three_js"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMEMesh.export_to_three_js" title="Permalink to this definition">¶</a></dt>
+<dd><p>return a Json string of the mesh in THREE Js format.</p>
+<p>If a colors list is specified, it should have the num_voxels entries</p>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="pyurdme.pyurdme.URDMEMesh.generate_cube_mesh">
+<em class="property">classmethod </em><tt class="descname">generate_cube_mesh</tt><big>(</big><em>L</em>, <em>nx</em>, <em>ny</em>, <em>nz</em>, <em>periodic=False</em><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMEMesh.generate_cube_mesh"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMEMesh.generate_cube_mesh" title="Permalink to this definition">¶</a></dt>
+<dd><p>Unit Cube (3D) of with nx, ny, nz points in the respective axes, and side length L.</p>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="pyurdme.pyurdme.URDMEMesh.generate_interval_mesh">
+<em class="property">classmethod </em><tt class="descname">generate_interval_mesh</tt><big>(</big><em>nx</em>, <em>a</em>, <em>b</em>, <em>periodic=False</em><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMEMesh.generate_interval_mesh"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMEMesh.generate_interval_mesh" title="Permalink to this definition">¶</a></dt>
+<dd><p>Interval (1D) of with nx points in the axes, and side length L.</p>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="pyurdme.pyurdme.URDMEMesh.generate_square_mesh">
+<em class="property">classmethod </em><tt class="descname">generate_square_mesh</tt><big>(</big><em>L</em>, <em>nx</em>, <em>ny</em>, <em>periodic=False</em><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMEMesh.generate_square_mesh"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMEMesh.generate_square_mesh" title="Permalink to this definition">¶</a></dt>
+<dd><p>Unit Square (2D) of with nx, ny points in the respective axes, and side length L.</p>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="pyurdme.pyurdme.URDMEMesh.generate_unit_cube_mesh">
+<em class="property">classmethod </em><tt class="descname">generate_unit_cube_mesh</tt><big>(</big><em>nx</em>, <em>ny</em>, <em>nz</em>, <em>periodic=False</em><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMEMesh.generate_unit_cube_mesh"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMEMesh.generate_unit_cube_mesh" title="Permalink to this definition">¶</a></dt>
+<dd><p>Unit Cube (3D) of with nx, ny, nz points in the respective axes.</p>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="pyurdme.pyurdme.URDMEMesh.generate_unit_interval_mesh">
+<em class="property">classmethod </em><tt class="descname">generate_unit_interval_mesh</tt><big>(</big><em>nx</em>, <em>periodic=False</em><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMEMesh.generate_unit_interval_mesh"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMEMesh.generate_unit_interval_mesh" title="Permalink to this definition">¶</a></dt>
+<dd><p>Unit Interval (1D) of with nx points in the axes.</p>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="pyurdme.pyurdme.URDMEMesh.generate_unit_square_mesh">
+<em class="property">classmethod </em><tt class="descname">generate_unit_square_mesh</tt><big>(</big><em>nx</em>, <em>ny</em>, <em>periodic=False</em><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMEMesh.generate_unit_square_mesh"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMEMesh.generate_unit_square_mesh" title="Permalink to this definition">¶</a></dt>
+<dd><p>Unit Square (2D) of with nx, ny points in the respective axes.</p>
+</dd></dl>
 
 <dl class="method">
 <dt id="pyurdme.pyurdme.URDMEMesh.getNumDofVoxels">
-<tt class="descname">getNumDofVoxels</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMEMesh.getNumDofVoxels"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMEMesh.getNumDofVoxels" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<tt class="descname">getNumDofVoxels</tt><big>(</big><big>)</big><a class="headerlink" href="#pyurdme.pyurdme.URDMEMesh.getNumDofVoxels" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the number of voxels in the DOF ordering.</p>
+</dd></dl>
 
 <dl class="method">
 <dt id="pyurdme.pyurdme.URDMEMesh.getNumVoxels">
-<tt class="descname">getNumVoxels</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMEMesh.getNumVoxels"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMEMesh.getNumVoxels" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<tt class="descname">getNumVoxels</tt><big>(</big><big>)</big><a class="headerlink" href="#pyurdme.pyurdme.URDMEMesh.getNumVoxels" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the number of voxels in the vertex ordering.</p>
+</dd></dl>
 
 <dl class="method">
 <dt id="pyurdme.pyurdme.URDMEMesh.getVoxels">
-<tt class="descname">getVoxels</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMEMesh.getVoxels"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMEMesh.getVoxels" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<tt class="descname">getVoxels</tt><big>(</big><big>)</big><a class="headerlink" href="#pyurdme.pyurdme.URDMEMesh.getVoxels" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the (x,y,z) coordinate of each voxel.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyurdme.pyurdme.URDMEMesh.get_function_space">
+<tt class="descname">get_function_space</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMEMesh.get_function_space"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMEMesh.get_function_space" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the FunctionSpace dolfin object for this mesh.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyurdme.pyurdme.URDMEMesh.get_mesh_size">
+<tt class="descname">get_mesh_size</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMEMesh.get_mesh_size"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMEMesh.get_mesh_size" title="Permalink to this definition">¶</a></dt>
+<dd><p>Estimate of mesh size at each vertex.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyurdme.pyurdme.URDMEMesh.get_normalized_coordinates">
+<tt class="descname">get_normalized_coordinates</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMEMesh.get_normalized_coordinates"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMEMesh.get_normalized_coordinates" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return vertex coordinates centered at origin.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyurdme.pyurdme.URDMEMesh.get_num_dof_voxels">
+<tt class="descname">get_num_dof_voxels</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMEMesh.get_num_dof_voxels"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMEMesh.get_num_dof_voxels" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the number of voxels in the DOF ordering.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyurdme.pyurdme.URDMEMesh.get_num_voxels">
+<tt class="descname">get_num_voxels</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMEMesh.get_num_voxels"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMEMesh.get_num_voxels" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the number of voxels in the vertex ordering.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyurdme.pyurdme.URDMEMesh.get_scaled_coordinates">
+<tt class="descname">get_scaled_coordinates</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMEMesh.get_scaled_coordinates"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMEMesh.get_scaled_coordinates" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return vertex coordinates scaled to the interval (-1,1).</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyurdme.pyurdme.URDMEMesh.get_scaled_normalized_coordinates">
+<tt class="descname">get_scaled_normalized_coordinates</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMEMesh.get_scaled_normalized_coordinates"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMEMesh.get_scaled_normalized_coordinates" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return vertex coordinates scaled to the interval (-1,1) and centered at origin.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyurdme.pyurdme.URDMEMesh.get_voxels">
+<tt class="descname">get_voxels</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMEMesh.get_voxels"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMEMesh.get_voxels" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the (x,y,z) coordinate of each voxel.</p>
+</dd></dl>
 
 <dl class="method">
 <dt id="pyurdme.pyurdme.URDMEMesh.meshSize">
-<tt class="descname">meshSize</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMEMesh.meshSize"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMEMesh.meshSize" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">meshSize</tt><big>(</big><big>)</big><a class="headerlink" href="#pyurdme.pyurdme.URDMEMesh.meshSize" title="Permalink to this definition">¶</a></dt>
 <dd><p>Estimate of mesh size at each vertex.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="pyurdme.pyurdme.URDMEMesh.normalizedCoordinates">
-<tt class="descname">normalizedCoordinates</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMEMesh.normalizedCoordinates"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMEMesh.normalizedCoordinates" title="Permalink to this definition">¶</a></dt>
-<dd><p>Return vertex coordinates centered at origo.</p>
+<tt class="descname">normalizedCoordinates</tt><big>(</big><big>)</big><a class="headerlink" href="#pyurdme.pyurdme.URDMEMesh.normalizedCoordinates" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return vertex coordinates centered at origin.</p>
 </dd></dl>
 
 <dl class="classmethod">
@@ -220,51 +335,53 @@ Args:</p>
 <dd><p>Import a mesh in Dolfins native .xml format</p>
 </dd></dl>
 
-<dl class="classmethod">
-<dt id="pyurdme.pyurdme.URDMEMesh.read_gmsh_mesh">
-<em class="property">classmethod </em><tt class="descname">read_gmsh_mesh</tt><big>(</big><em>meshfile</em><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMEMesh.read_gmsh_mesh"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMEMesh.read_gmsh_mesh" title="Permalink to this definition">¶</a></dt>
-<dd><p>Read a Gmsh mesh from file.</p>
-</dd></dl>
-
 <dl class="method">
 <dt id="pyurdme.pyurdme.URDMEMesh.scaledCoordinates">
-<tt class="descname">scaledCoordinates</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMEMesh.scaledCoordinates"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMEMesh.scaledCoordinates" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">scaledCoordinates</tt><big>(</big><big>)</big><a class="headerlink" href="#pyurdme.pyurdme.URDMEMesh.scaledCoordinates" title="Permalink to this definition">¶</a></dt>
 <dd><p>Return vertex coordinates scaled to the interval (-1,1).</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="pyurdme.pyurdme.URDMEMesh.scaledNormalizedCoordinates">
-<tt class="descname">scaledNormalizedCoordinates</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMEMesh.scaledNormalizedCoordinates"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMEMesh.scaledNormalizedCoordinates" title="Permalink to this definition">¶</a></dt>
-<dd><p>Return vertex coordinates scaled to the interval (-1,1) and centered at origo.</p>
+<tt class="descname">scaledNormalizedCoordinates</tt><big>(</big><big>)</big><a class="headerlink" href="#pyurdme.pyurdme.URDMEMesh.scaledNormalizedCoordinates" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return vertex coordinates scaled to the interval (-1,1) and centered at origin.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="pyurdme.pyurdme.URDMEMesh.setNumDofVoxels">
-<tt class="descname">setNumDofVoxels</tt><big>(</big><em>num</em><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMEMesh.setNumDofVoxels"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMEMesh.setNumDofVoxels" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<tt class="descname">setNumDofVoxels</tt><big>(</big><em>num</em><big>)</big><a class="headerlink" href="#pyurdme.pyurdme.URDMEMesh.setNumDofVoxels" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set the number of voxels in the DOF ordering.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyurdme.pyurdme.URDMEMesh.set_num_dof_voxels">
+<tt class="descname">set_num_dof_voxels</tt><big>(</big><em>num</em><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMEMesh.set_num_dof_voxels"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMEMesh.set_num_dof_voxels" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set the number of voxels in the DOF ordering.</p>
+</dd></dl>
 
 <dl class="method">
 <dt id="pyurdme.pyurdme.URDMEMesh.toTHREEJs">
-<tt class="descname">toTHREEJs</tt><big>(</big><em>colors=None</em><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMEMesh.toTHREEJs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMEMesh.toTHREEJs" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">toTHREEJs</tt><big>(</big><em>colors=None</em><big>)</big><a class="headerlink" href="#pyurdme.pyurdme.URDMEMesh.toTHREEJs" title="Permalink to this definition">¶</a></dt>
 <dd><p>return a Json string of the mesh in THREE Js format.</p>
 <p>If a colors list is specified, it should have the num_voxels entries</p>
 </dd></dl>
 
 <dl class="classmethod">
 <dt id="pyurdme.pyurdme.URDMEMesh.unitCubeMesh">
-<em class="property">classmethod </em><tt class="descname">unitCubeMesh</tt><big>(</big><em>nx</em>, <em>ny</em>, <em>nz</em>, <em>periodic=False</em><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMEMesh.unitCubeMesh"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMEMesh.unitCubeMesh" title="Permalink to this definition">¶</a></dt>
-<dd><p>Unit Cube of with nx,ny points in the respective axes.</p>
+<em class="property">classmethod </em><tt class="descname">unitCubeMesh</tt><big>(</big><em>nx</em>, <em>ny</em>, <em>nz</em>, <em>periodic=False</em><big>)</big><a class="headerlink" href="#pyurdme.pyurdme.URDMEMesh.unitCubeMesh" title="Permalink to this definition">¶</a></dt>
+<dd><p>Unit Cube (3D) of with nx, ny, nz points in the respective axes.</p>
 </dd></dl>
 
 <dl class="classmethod">
 <dt id="pyurdme.pyurdme.URDMEMesh.unitIntervalMesh">
-<em class="property">classmethod </em><tt class="descname">unitIntervalMesh</tt><big>(</big><em>nx</em>, <em>periodic=False</em><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMEMesh.unitIntervalMesh"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMEMesh.unitIntervalMesh" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<em class="property">classmethod </em><tt class="descname">unitIntervalMesh</tt><big>(</big><em>nx</em>, <em>periodic=False</em><big>)</big><a class="headerlink" href="#pyurdme.pyurdme.URDMEMesh.unitIntervalMesh" title="Permalink to this definition">¶</a></dt>
+<dd><p>Unit Interval (1D) of with nx points in the axes.</p>
+</dd></dl>
 
 <dl class="classmethod">
 <dt id="pyurdme.pyurdme.URDMEMesh.unitSquareMesh">
-<em class="property">classmethod </em><tt class="descname">unitSquareMesh</tt><big>(</big><em>nx</em>, <em>ny</em>, <em>periodic=False</em><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMEMesh.unitSquareMesh"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMEMesh.unitSquareMesh" title="Permalink to this definition">¶</a></dt>
-<dd><p>Unit Square of with nx,ny points in the respective axes.</p>
+<em class="property">classmethod </em><tt class="descname">unitSquareMesh</tt><big>(</big><em>nx</em>, <em>ny</em>, <em>periodic=False</em><big>)</big><a class="headerlink" href="#pyurdme.pyurdme.URDMEMesh.unitSquareMesh" title="Permalink to this definition">¶</a></dt>
+<dd><p>Unit Square (2D) of with nx, ny points in the respective axes.</p>
 </dd></dl>
 
 </dd></dl>
@@ -277,13 +394,24 @@ Args:</p>
 TODO: Documentiation.</p>
 <dl class="method">
 <dt id="pyurdme.pyurdme.URDMEModel.addDataFunction">
-<tt class="descname">addDataFunction</tt><big>(</big><em>data_function</em><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMEModel.addDataFunction"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMEModel.addDataFunction" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">addDataFunction</tt><big>(</big><em>data_function</em><big>)</big><a class="headerlink" href="#pyurdme.pyurdme.URDMEModel.addDataFunction" title="Permalink to this definition">¶</a></dt>
 <dd><p>Add a URDMEDataFunction object to this object.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="pyurdme.pyurdme.URDMEModel.addSubDomain">
-<tt class="descname">addSubDomain</tt><big>(</big><em>subdomain</em><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMEModel.addSubDomain"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMEModel.addSubDomain" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">addSubDomain</tt><big>(</big><em>subdomain</em><big>)</big><a class="headerlink" href="#pyurdme.pyurdme.URDMEModel.addSubDomain" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pyurdme.pyurdme.URDMEModel.add_data_function">
+<tt class="descname">add_data_function</tt><big>(</big><em>data_function</em><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMEModel.add_data_function"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMEModel.add_data_function" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add a URDMEDataFunction object to this object.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyurdme.pyurdme.URDMEModel.add_subdomain">
+<tt class="descname">add_subdomain</tt><big>(</big><em>subdomain</em><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMEModel.add_subdomain"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMEModel.add_subdomain" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="method">
@@ -297,25 +425,61 @@ the matrices are in CSR format.</p>
 
 <dl class="method">
 <dt id="pyurdme.pyurdme.URDMEModel.connectivityMatrix">
-<tt class="descname">connectivityMatrix</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMEModel.connectivityMatrix"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMEModel.connectivityMatrix" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">connectivityMatrix</tt><big>(</big><big>)</big><a class="headerlink" href="#pyurdme.pyurdme.URDMEModel.connectivityMatrix" title="Permalink to this definition">¶</a></dt>
 <dd><p>Assemble a connectivity matrix in CCS format.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="pyurdme.pyurdme.URDMEModel.createDependencyGraph">
-<tt class="descname">createDependencyGraph</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMEModel.createDependencyGraph"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMEModel.createDependencyGraph" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">createDependencyGraph</tt><big>(</big><big>)</big><a class="headerlink" href="#pyurdme.pyurdme.URDMEModel.createDependencyGraph" title="Permalink to this definition">¶</a></dt>
 <dd><p>Construct the sparse dependency graph.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="pyurdme.pyurdme.URDMEModel.createStoichiometricMatrix">
-<tt class="descname">createStoichiometricMatrix</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMEModel.createStoichiometricMatrix"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMEModel.createStoichiometricMatrix" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">createStoichiometricMatrix</tt><big>(</big><big>)</big><a class="headerlink" href="#pyurdme.pyurdme.URDMEModel.createStoichiometricMatrix" title="Permalink to this definition">¶</a></dt>
 <dd><p>Generate a stoichiometric matrix in sparse CSC format.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="pyurdme.pyurdme.URDMEModel.createSystemMatrix">
-<tt class="descname">createSystemMatrix</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMEModel.createSystemMatrix"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMEModel.createSystemMatrix" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">createSystemMatrix</tt><big>(</big><big>)</big><a class="headerlink" href="#pyurdme.pyurdme.URDMEModel.createSystemMatrix" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create the system (diffusion) matrix for input to the URDME solvers. The matrix
+is built by concatenating the individually assembled matrices for each of the species,
+and multiplying with the lumped mass matrix (which define the volume of the voxels).</p>
+<p>Negative off-diagonal elements in the matrix are set to zero, and the diagonal is renormalized
+in order to assure that the returned matrix is a Markov transition matrix.</p>
+<p>Returns a dictionary containing the volumes of the subvolumes, the system diffusion matrix
+and the fraction of the mass of the negative off-diagonal elements that has been filtered out.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyurdme.pyurdme.URDMEModel.create_connectivity_matrix">
+<tt class="descname">create_connectivity_matrix</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMEModel.create_connectivity_matrix"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMEModel.create_connectivity_matrix" title="Permalink to this definition">¶</a></dt>
+<dd><p>Assemble a connectivity matrix in CCS format.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyurdme.pyurdme.URDMEModel.create_dependency_graph">
+<tt class="descname">create_dependency_graph</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMEModel.create_dependency_graph"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMEModel.create_dependency_graph" title="Permalink to this definition">¶</a></dt>
+<dd><p>Construct the sparse dependency graph.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyurdme.pyurdme.URDMEModel.create_extended_mesh">
+<tt class="descname">create_extended_mesh</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMEModel.create_extended_mesh"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMEModel.create_extended_mesh" title="Permalink to this definition">¶</a></dt>
+<dd><p>Extend the primary mesh with information about the degrees of freedom.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyurdme.pyurdme.URDMEModel.create_stoichiometric_matrix">
+<tt class="descname">create_stoichiometric_matrix</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMEModel.create_stoichiometric_matrix"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMEModel.create_stoichiometric_matrix" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate a stoichiometric matrix in sparse CSC format.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyurdme.pyurdme.URDMEModel.create_system_matrix">
+<tt class="descname">create_system_matrix</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMEModel.create_system_matrix"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMEModel.create_system_matrix" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create the system (diffusion) matrix for input to the URDME solvers. The matrix
 is built by concatenating the individually assembled matrices for each of the species,
 and multiplying with the lumped mass matrix (which define the volume of the voxels).</p>
@@ -327,41 +491,81 @@ and the fraction of the mass of the negative off-diagonal elements that has been
 
 <dl class="method">
 <dt id="pyurdme.pyurdme.URDMEModel.distributeUniformly">
-<tt class="descname">distributeUniformly</tt><big>(</big><em>spec_init</em><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMEModel.distributeUniformly"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMEModel.distributeUniformly" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">distributeUniformly</tt><big>(</big><em>spec_init</em><big>)</big><a class="headerlink" href="#pyurdme.pyurdme.URDMEModel.distributeUniformly" title="Permalink to this definition">¶</a></dt>
 <dd><p>Place the same number of molecules of the species in each voxel.</p>
 </dd></dl>
 
 <dl class="method">
+<dt id="pyurdme.pyurdme.URDMEModel.get_solver_datastructure">
+<tt class="descname">get_solver_datastructure</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMEModel.get_solver_datastructure"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMEModel.get_solver_datastructure" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the datastructures needed by the URDME solvers.</p>
+<p>get_solver_datastructure() creates and populates a dictionary, urdme_solver_data,
+containing the mandatory input data structures of the core NSM solver in URDME
+that is derived from the model. The data strucyures are</p>
+<p>D    - the Diffusion matrix
+N    - the stochiometry matrix
+G    - the dependency graph
+vol  - the volume vector
+sd   - the subdomain vector
+data - the data vector
+u0   - the intial condition</p>
+<p>This data is also returned, unlike in the Matlab URDME interface</p>
+<p>p - the vertex coordinates
+K - a (Nvoxel x Nvoxel) connectivity matrix</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyurdme.pyurdme.URDMEModel.get_species_map">
+<tt class="descname">get_species_map</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMEModel.get_species_map"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMEModel.get_species_map" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the species map, name to index.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyurdme.pyurdme.URDMEModel.get_subdomain_vector">
+<tt class="descname">get_subdomain_vector</tt><big>(</big><em>subdomains={}</em><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMEModel.get_subdomain_vector"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMEModel.get_subdomain_vector" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create the &#8216;sd&#8217; vector. &#8216;subdomains&#8217; is a dolfin FacetFunction,
+and if no subdomain input is specified, they voxels default to
+subdomain 1.</p>
+</dd></dl>
+
+<dl class="method">
 <dt id="pyurdme.pyurdme.URDMEModel.initializeInitialValue">
-<tt class="descname">initializeInitialValue</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMEModel.initializeInitialValue"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMEModel.initializeInitialValue" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">initializeInitialValue</tt><big>(</big><big>)</big><a class="headerlink" href="#pyurdme.pyurdme.URDMEModel.initializeInitialValue" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create all-zeros inital condition matrix.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyurdme.pyurdme.URDMEModel.initialize_initial_condition">
+<tt class="descname">initialize_initial_condition</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMEModel.initialize_initial_condition"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMEModel.initialize_initial_condition" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create all-zeros inital condition matrix.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="pyurdme.pyurdme.URDMEModel.meshextend">
-<tt class="descname">meshextend</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMEModel.meshextend"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMEModel.meshextend" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">meshextend</tt><big>(</big><big>)</big><a class="headerlink" href="#pyurdme.pyurdme.URDMEModel.meshextend" title="Permalink to this definition">¶</a></dt>
 <dd><p>Extend the primary mesh with information about the degrees of freedom.</p>
-<p>TODO: Docs...</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="pyurdme.pyurdme.URDMEModel.placeNear">
-<tt class="descname">placeNear</tt><big>(</big><em>spec_init</em>, <em>point=None</em><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMEModel.placeNear"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMEModel.placeNear" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">placeNear</tt><big>(</big><em>spec_init</em>, <em>point=None</em><big>)</big><a class="headerlink" href="#pyurdme.pyurdme.URDMEModel.placeNear" title="Permalink to this definition">¶</a></dt>
 <dd><p>Place all molecules of kind species in the voxel nearest a given point.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="pyurdme.pyurdme.URDMEModel.restrict">
 <tt class="descname">restrict</tt><big>(</big><em>species</em>, <em>subdomains</em><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMEModel.restrict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMEModel.restrict" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Restrict the diffusion of a species to a subdomain.</p>
+</dd></dl>
 
 <dl class="method">
 <dt id="pyurdme.pyurdme.URDMEModel.run">
-<tt class="descname">run</tt><big>(</big><em>solver='nsm'</em>, <em>seed=None</em>, <em>report_level=0</em><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMEModel.run"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMEModel.run" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">run</tt><big>(</big><em>number_of_trajectories=1</em>, <em>solver='nsm'</em>, <em>seed=None</em>, <em>report_level=0</em><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMEModel.run"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMEModel.run" title="Permalink to this definition">¶</a></dt>
 <dd><p>Simulate the model.</p>
 <dl class="docutils">
 <dt>Args:</dt>
 <dd>solver: A str or class type that is a subclass of URDMESolver.  Default: NSM solver.
+number_of_trajectories: How many trajectories should be run.
 seed: An int, the random seed given to the solver.
 report_level: An int, Level of output from the solver: 0, 1, or 2. Default: 0.</dd>
 <dt>Returns:</dt>
@@ -371,21 +575,33 @@ report_level: An int, Level of output from the solver: 0, 1, or 2. Default: 0.</
 
 <dl class="method">
 <dt id="pyurdme.pyurdme.URDMEModel.scatter">
-<tt class="descname">scatter</tt><big>(</big><em>spec_init</em>, <em>subdomains=None</em><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMEModel.scatter"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMEModel.scatter" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">scatter</tt><big>(</big><em>spec_init</em>, <em>subdomains=None</em><big>)</big><a class="headerlink" href="#pyurdme.pyurdme.URDMEModel.scatter" title="Permalink to this definition">¶</a></dt>
 <dd><p>Scatter an initial number of molecules over the voxels in a subdomain.</p>
 </dd></dl>
 
 <dl class="method">
-<dt id="pyurdme.pyurdme.URDMEModel.serialize">
-<tt class="descname">serialize</tt><big>(</big><em>filename=None</em>, <em>report_level=0</em><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMEModel.serialize"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMEModel.serialize" title="Permalink to this definition">¶</a></dt>
-<dd><p>Write the datastructures needed by the the core URDME solvers to a .mat input file.</p>
+<dt id="pyurdme.pyurdme.URDMEModel.set_initial_condition_distribute_uniformly">
+<tt class="descname">set_initial_condition_distribute_uniformly</tt><big>(</big><em>spec_init</em><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMEModel.set_initial_condition_distribute_uniformly"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMEModel.set_initial_condition_distribute_uniformly" title="Permalink to this definition">¶</a></dt>
+<dd><p>Place the same number of molecules of the species in each voxel.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyurdme.pyurdme.URDMEModel.set_initial_condition_place_near">
+<tt class="descname">set_initial_condition_place_near</tt><big>(</big><em>spec_init</em>, <em>point=None</em><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMEModel.set_initial_condition_place_near"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMEModel.set_initial_condition_place_near" title="Permalink to this definition">¶</a></dt>
+<dd><p>Place all molecules of kind species in the voxel nearest a given point.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyurdme.pyurdme.URDMEModel.set_initial_condition_scatter">
+<tt class="descname">set_initial_condition_scatter</tt><big>(</big><em>spec_init</em>, <em>subdomains=None</em><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMEModel.set_initial_condition_scatter"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMEModel.set_initial_condition_scatter" title="Permalink to this definition">¶</a></dt>
+<dd><p>Scatter an initial number of molecules over the voxels in a subdomain.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="pyurdme.pyurdme.URDMEModel.solverData">
-<tt class="descname">solverData</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMEModel.solverData"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMEModel.solverData" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">solverData</tt><big>(</big><big>)</big><a class="headerlink" href="#pyurdme.pyurdme.URDMEModel.solverData" title="Permalink to this definition">¶</a></dt>
 <dd><p>Return the datastructures needed by the URDME solvers.</p>
-<p>solverData creates and populates a dictionary, urdme_solver_data,
+<p>get_solver_datastructure() creates and populates a dictionary, urdme_solver_data,
 containing the mandatory input data structures of the core NSM solver in URDME
 that is derived from the model. The data strucyures are</p>
 <p>D    - the Diffusion matrix
@@ -402,13 +618,13 @@ K - a (Nvoxel x Nvoxel) connectivity matrix</p>
 
 <dl class="method">
 <dt id="pyurdme.pyurdme.URDMEModel.speciesMap">
-<tt class="descname">speciesMap</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMEModel.speciesMap"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMEModel.speciesMap" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">speciesMap</tt><big>(</big><big>)</big><a class="headerlink" href="#pyurdme.pyurdme.URDMEModel.speciesMap" title="Permalink to this definition">¶</a></dt>
 <dd><p>Get the species map, name to index.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="pyurdme.pyurdme.URDMEModel.subdomainVector">
-<tt class="descname">subdomainVector</tt><big>(</big><em>subdomains={}</em><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMEModel.subdomainVector"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMEModel.subdomainVector" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">subdomainVector</tt><big>(</big><em>subdomains={}</em><big>)</big><a class="headerlink" href="#pyurdme.pyurdme.URDMEModel.subdomainVector" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create the &#8216;sd&#8217; vector. &#8216;subdomains&#8217; is a dolfin FacetFunction,
 and if no subdomain input is specified, they voxels default to
 subdomain 1.</p>
@@ -441,8 +657,33 @@ since the solvers themselves do very limited error checking of the input.</p>
 <dd></dd></dl>
 
 <dl class="method">
+<dt id="pyurdme.pyurdme.URDMEResult.export_to_particle_js">
+<tt class="descname">export_to_particle_js</tt><big>(</big><em>species</em>, <em>time_index</em><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMEResult.export_to_particle_js"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMEResult.export_to_particle_js" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pyurdme.pyurdme.URDMEResult.export_to_three_js">
+<tt class="descname">export_to_three_js</tt><big>(</big><em>species</em>, <em>time_index</em><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMEResult.export_to_three_js"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMEResult.export_to_three_js" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a json serialized document that can 
+be read and visualized by three.js.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyurdme.pyurdme.URDMEResult.export_to_vtk">
+<tt class="descname">export_to_vtk</tt><big>(</big><em>species</em>, <em>folder_name</em><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMEResult.export_to_vtk"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMEResult.export_to_vtk" title="Permalink to this definition">¶</a></dt>
+<dd><p>Dump the trajectory to a collection of vtk files in the folder folder_name (created if non-existant).</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyurdme.pyurdme.URDMEResult.export_to_xyx">
+<tt class="descname">export_to_xyx</tt><big>(</big><em>filename</em>, <em>species=None</em>, <em>file_format='VMD'</em><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMEResult.export_to_xyx"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMEResult.export_to_xyx" title="Permalink to this definition">¶</a></dt>
+<dd><p>Dump the solution attached to a model as a xyz file. This format can be
+read by e.g. VMD, Jmol and Paraview.</p>
+</dd></dl>
+
+<dl class="method">
 <dt id="pyurdme.pyurdme.URDMEResult.getSpecies">
-<tt class="descname">getSpecies</tt><big>(</big><em>species</em>, <em>timepoints='all'</em>, <em>concentration=False</em><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMEResult.getSpecies"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMEResult.getSpecies" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">getSpecies</tt><big>(</big><em>species</em>, <em>timepoints='all'</em>, <em>concentration=False</em><big>)</big><a class="headerlink" href="#pyurdme.pyurdme.URDMEResult.getSpecies" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns a slice (view) of the output matrix U that contains one species for the timepoints
 specified by the time index array. The default is to return all timepoints.</p>
 <p>Data is loaded by slicing directly in the hdf5 dataset, i.e. it the entire
@@ -460,8 +701,25 @@ result object.</p>
 </dd></dl>
 
 <dl class="method">
+<dt id="pyurdme.pyurdme.URDMEResult.get_species">
+<tt class="descname">get_species</tt><big>(</big><em>species</em>, <em>timepoints='all'</em>, <em>concentration=False</em><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMEResult.get_species"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMEResult.get_species" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a slice (view) of the output matrix U that contains one species for the timepoints
+specified by the time index array. The default is to return all timepoints.</p>
+<p>Data is loaded by slicing directly in the hdf5 dataset, i.e. it the entire
+content of the file is not loaded in memory and the U matrix 
+is never added to the object.</p>
+<p>if concentration is False (default), the integer, raw, trajectory data is returned,
+if set to True, the concentration (=copy_number/volume) is returned.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyurdme.pyurdme.URDMEResult.get_timespan">
+<tt class="descname">get_timespan</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMEResult.get_timespan"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMEResult.get_timespan" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
 <dt id="pyurdme.pyurdme.URDMEResult.printParticlejs">
-<tt class="descname">printParticlejs</tt><big>(</big><em>species</em>, <em>time_index</em><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMEResult.printParticlejs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMEResult.printParticlejs" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">printParticlejs</tt><big>(</big><em>species</em>, <em>time_index</em><big>)</big><a class="headerlink" href="#pyurdme.pyurdme.URDMEResult.printParticlejs" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="method">
@@ -472,26 +730,26 @@ result object.</p>
 
 <dl class="method">
 <dt id="pyurdme.pyurdme.URDMEResult.reorderDofToVoxel">
-<tt class="descname">reorderDofToVoxel</tt><big>(</big><em>M</em>, <em>num_species=None</em><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMEResult.reorderDofToVoxel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMEResult.reorderDofToVoxel" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">reorderDofToVoxel</tt><big>(</big><em>M</em>, <em>num_species=None</em><big>)</big><a class="headerlink" href="#pyurdme.pyurdme.URDMEResult.reorderDofToVoxel" title="Permalink to this definition">¶</a></dt>
 <dd><p>Reorder the colums of M from dof ordering to vertex ordering.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="pyurdme.pyurdme.URDMEResult.toTHREEJs">
-<tt class="descname">toTHREEJs</tt><big>(</big><em>species</em>, <em>time_index</em><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMEResult.toTHREEJs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMEResult.toTHREEJs" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">toTHREEJs</tt><big>(</big><em>species</em>, <em>time_index</em><big>)</big><a class="headerlink" href="#pyurdme.pyurdme.URDMEResult.toTHREEJs" title="Permalink to this definition">¶</a></dt>
 <dd><p>Return a json serialized document that can 
 be read and visualized by three.js.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="pyurdme.pyurdme.URDMEResult.toVTK">
-<tt class="descname">toVTK</tt><big>(</big><em>species</em>, <em>folder_name</em><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMEResult.toVTK"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMEResult.toVTK" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">toVTK</tt><big>(</big><em>species</em>, <em>folder_name</em><big>)</big><a class="headerlink" href="#pyurdme.pyurdme.URDMEResult.toVTK" title="Permalink to this definition">¶</a></dt>
 <dd><p>Dump the trajectory to a collection of vtk files in the folder folder_name (created if non-existant).</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="pyurdme.pyurdme.URDMEResult.toXYZ">
-<tt class="descname">toXYZ</tt><big>(</big><em>filename</em>, <em>species=None</em>, <em>file_format='VMD'</em><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMEResult.toXYZ"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMEResult.toXYZ" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">toXYZ</tt><big>(</big><em>filename</em>, <em>species=None</em>, <em>file_format='VMD'</em><big>)</big><a class="headerlink" href="#pyurdme.pyurdme.URDMEResult.toXYZ" title="Permalink to this definition">¶</a></dt>
 <dd><p>Dump the solution attached to a model as a xyz file. This format can be
 read by e.g. VMD, Jmol and Paraview.</p>
 </dd></dl>
@@ -500,7 +758,7 @@ read by e.g. VMD, Jmol and Paraview.</p>
 
 <dl class="class">
 <dt id="pyurdme.pyurdme.URDMESolver">
-<em class="property">class </em><tt class="descclassname">pyurdme.pyurdme.</tt><tt class="descname">URDMESolver</tt><big>(</big><em>model</em>, <em>solver_path=None</em>, <em>report_level=0</em>, <em>model_file=None</em><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMESolver"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMESolver" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><tt class="descclassname">pyurdme.pyurdme.</tt><tt class="descname">URDMESolver</tt><big>(</big><em>model</em>, <em>solver_path=None</em>, <em>report_level=0</em>, <em>model_file=None</em>, <em>sopts=None</em><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMESolver"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMESolver" title="Permalink to this definition">¶</a></dt>
 <dd><p>Abstract class for URDME solvers.</p>
 <dl class="method">
 <dt id="pyurdme.pyurdme.URDMESolver.compile">
@@ -510,36 +768,60 @@ read by e.g. VMD, Jmol and Paraview.</p>
 
 <dl class="method">
 <dt id="pyurdme.pyurdme.URDMESolver.createPropensityFile">
-<tt class="descname">createPropensityFile</tt><big>(</big><em>file_name=None</em><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMESolver.createPropensityFile"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMESolver.createPropensityFile" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">createPropensityFile</tt><big>(</big><em>file_name=None</em><big>)</big><a class="headerlink" href="#pyurdme.pyurdme.URDMESolver.createPropensityFile" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate the C propensity file that is used to compile the URDME solvers.
+Only mass action propensities are supported.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyurdme.pyurdme.URDMESolver.create_propensity_file">
+<tt class="descname">create_propensity_file</tt><big>(</big><em>file_name=None</em><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMESolver.create_propensity_file"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMESolver.create_propensity_file" title="Permalink to this definition">¶</a></dt>
 <dd><p>Generate the C propensity file that is used to compile the URDME solvers.
 Only mass action propensities are supported.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="pyurdme.pyurdme.URDMESolver.run">
-<tt class="descname">run</tt><big>(</big><em>seed=None</em>, <em>input_file=None</em>, <em>loaddata=False</em><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMESolver.run"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMESolver.run" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">run</tt><big>(</big><em>number_of_trajectories=1</em>, <em>seed=None</em>, <em>input_file=None</em>, <em>loaddata=False</em><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMESolver.run"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMESolver.run" title="Permalink to this definition">¶</a></dt>
 <dd><p>Run one simulation of the model.</p>
-<p>seed: the random number seed.
+<p>number_of_trajectories: How many trajectories should be run.
+seed: the random number seed (incimented by one for multiple runs).
 input_file: the filename of the solver input data file .
 loaddata: boolean, should the result object load the data into memory on creation.</p>
 <dl class="docutils">
 <dt>Returns:</dt>
-<dd>URDMEResult object.</dd>
+<dd><dl class="first docutils">
+<dt>URDMEResult object.</dt>
+<dd>or, if number_of_trajectories &gt; 1</dd>
+</dl>
+<p class="last">a list of URDMEResult objects</p>
+</dd>
 </dl>
 </dd></dl>
 
 <dl class="method">
 <dt id="pyurdme.pyurdme.URDMESolver.run_ensemble">
-<tt class="descname">run_ensemble</tt><big>(</big><em>number_of_trajectories</em>, <em>seed=None</em>, <em>input_file=None</em>, <em>loaddata=False</em><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMESolver.run_ensemble"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMESolver.run_ensemble" title="Permalink to this definition">¶</a></dt>
-<dd><p>Run multiple simulations of the model.</p>
+<tt class="descname">run_ensemble</tt><big>(</big><em>number_of_trajectories=1</em>, <em>seed=None</em>, <em>input_file=None</em>, <em>loaddata=False</em><big>)</big><a class="headerlink" href="#pyurdme.pyurdme.URDMESolver.run_ensemble" title="Permalink to this definition">¶</a></dt>
+<dd><p>Run one simulation of the model.</p>
 <p>number_of_trajectories: How many trajectories should be run.
-seed: the random number seed.
+seed: the random number seed (incimented by one for multiple runs).
 input_file: the filename of the solver input data file .
 loaddata: boolean, should the result object load the data into memory on creation.</p>
 <dl class="docutils">
 <dt>Returns:</dt>
-<dd>A list of URDMEResult objects.</dd>
+<dd><dl class="first docutils">
+<dt>URDMEResult object.</dt>
+<dd>or, if number_of_trajectories &gt; 1</dd>
 </dl>
+<p class="last">a list of URDMEResult objects</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyurdme.pyurdme.URDMESolver.serialize">
+<tt class="descname">serialize</tt><big>(</big><em>filename=None</em>, <em>report_level=0</em>, <em>sopts=None</em><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMESolver.serialize"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMESolver.serialize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Write the datastructures needed by the the core URDME solvers to a .mat input file.</p>
 </dd></dl>
 
 </dd></dl>
@@ -568,12 +850,7 @@ stderr:    the standard error stream from the call to the core solver</p>
 </div>
 <div class="section" id="module-pyurdme.model">
 <span id="pyurdme-model-module"></span><h2>pyurdme.model module<a class="headerlink" href="#module-pyurdme.model" title="Permalink to this headline">¶</a></h2>
-<p>This module describes a model of a well-mixed biochemical system, via the Model class.
-Model objects should not be instantiated by an application. Instead, use StochKitModel 
-in &#8216;stochkit.py&#8217;, which extends Model with StochKit2 specific serialization. Refer to 
-&#8216;stochkit.py&#8217; for examples of its use.</p>
-<p>Raises: SpeciesError, ParameterError, ReactionError</p>
-<p>Contact: Andreas Hellander</p>
+<p>This module defines a model of a well mixed biochemical reaction network.</p>
 <dl class="class">
 <dt id="pyurdme.model.Model">
 <em class="property">class </em><tt class="descclassname">pyurdme.model.</tt><tt class="descname">Model</tt><big>(</big><em>name=''</em>, <em>volume=1.0</em><big>)</big><a class="reference internal" href="_modules/pyurdme/model.html#Model"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.model.Model" title="Permalink to this definition">¶</a></dt>
@@ -581,111 +858,223 @@ in &#8216;stochkit.py&#8217;, which extends Model with StochKit2 specific serial
 should attempt to extend Model.</p>
 <dl class="method">
 <dt id="pyurdme.model.Model.addParameter">
-<tt class="descname">addParameter</tt><big>(</big><em>params</em><big>)</big><a class="reference internal" href="_modules/pyurdme/model.html#Model.addParameter"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.model.Model.addParameter" title="Permalink to this definition">¶</a></dt>
-<dd><p>Add Paramter(s) to listOfParamters. Input can be either a single
-paramter object or a list of Parameters.</p>
+<tt class="descname">addParameter</tt><big>(</big><em>params</em><big>)</big><a class="headerlink" href="#pyurdme.model.Model.addParameter" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add Parameter(s) to model.listOfParameters. Input can be either a single
+Parameter object or a list of Parameter objects.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="pyurdme.model.Model.addReaction">
-<tt class="descname">addReaction</tt><big>(</big><em>reacs</em><big>)</big><a class="reference internal" href="_modules/pyurdme/model.html#Model.addReaction"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.model.Model.addReaction" title="Permalink to this definition">¶</a></dt>
-<dd><p>Add reactions to model. Input can be single instance, a list of instances
+<tt class="descname">addReaction</tt><big>(</big><em>reacs</em><big>)</big><a class="headerlink" href="#pyurdme.model.Model.addReaction" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add Reaction(s) to the model. Input can be single instance, a list of instances
 or a dict with name,instance pairs.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="pyurdme.model.Model.addSpecies">
-<tt class="descname">addSpecies</tt><big>(</big><em>obj</em><big>)</big><a class="reference internal" href="_modules/pyurdme/model.html#Model.addSpecies"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.model.Model.addSpecies" title="Permalink to this definition">¶</a></dt>
-<dd><p>Add a species to listOfSpecies. Accepts input either as a single Species object, or
+<tt class="descname">addSpecies</tt><big>(</big><em>obj</em><big>)</big><a class="headerlink" href="#pyurdme.model.Model.addSpecies" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add a Species to listOfSpecies. Accepts input either as a single Species object, or
+as a list of Species objects.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyurdme.model.Model.add_parameter">
+<tt class="descname">add_parameter</tt><big>(</big><em>params</em><big>)</big><a class="reference internal" href="_modules/pyurdme/model.html#Model.add_parameter"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.model.Model.add_parameter" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add Parameter(s) to model.listOfParameters. Input can be either a single
+Parameter object or a list of Parameter objects.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyurdme.model.Model.add_reaction">
+<tt class="descname">add_reaction</tt><big>(</big><em>reacs</em><big>)</big><a class="reference internal" href="_modules/pyurdme/model.html#Model.add_reaction"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.model.Model.add_reaction" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add Reaction(s) to the model. Input can be single instance, a list of instances
+or a dict with name,instance pairs.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyurdme.model.Model.add_species">
+<tt class="descname">add_species</tt><big>(</big><em>obj</em><big>)</big><a class="reference internal" href="_modules/pyurdme/model.html#Model.add_species"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.model.Model.add_species" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add a Species to listOfSpecies. Accepts input either as a single Species object, or
 as a list of Species objects.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="pyurdme.model.Model.deleteAllParameters">
-<tt class="descname">deleteAllParameters</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/pyurdme/model.html#Model.deleteAllParameters"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.model.Model.deleteAllParameters" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">deleteAllParameters</tt><big>(</big><big>)</big><a class="headerlink" href="#pyurdme.model.Model.deleteAllParameters" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="method">
 <dt id="pyurdme.model.Model.deleteAllReactions">
-<tt class="descname">deleteAllReactions</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/pyurdme/model.html#Model.deleteAllReactions"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.model.Model.deleteAllReactions" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">deleteAllReactions</tt><big>(</big><big>)</big><a class="headerlink" href="#pyurdme.model.Model.deleteAllReactions" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="method">
 <dt id="pyurdme.model.Model.deleteAllSpecies">
-<tt class="descname">deleteAllSpecies</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/pyurdme/model.html#Model.deleteAllSpecies"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.model.Model.deleteAllSpecies" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">deleteAllSpecies</tt><big>(</big><big>)</big><a class="headerlink" href="#pyurdme.model.Model.deleteAllSpecies" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="method">
 <dt id="pyurdme.model.Model.deleteParameter">
-<tt class="descname">deleteParameter</tt><big>(</big><em>obj</em><big>)</big><a class="reference internal" href="_modules/pyurdme/model.html#Model.deleteParameter"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.model.Model.deleteParameter" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">deleteParameter</tt><big>(</big><em>obj</em><big>)</big><a class="headerlink" href="#pyurdme.model.Model.deleteParameter" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="method">
 <dt id="pyurdme.model.Model.deleteReaction">
-<tt class="descname">deleteReaction</tt><big>(</big><em>obj</em><big>)</big><a class="reference internal" href="_modules/pyurdme/model.html#Model.deleteReaction"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.model.Model.deleteReaction" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">deleteReaction</tt><big>(</big><em>obj</em><big>)</big><a class="headerlink" href="#pyurdme.model.Model.deleteReaction" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="method">
 <dt id="pyurdme.model.Model.deleteSpecies">
-<tt class="descname">deleteSpecies</tt><big>(</big><em>obj</em><big>)</big><a class="reference internal" href="_modules/pyurdme/model.html#Model.deleteSpecies"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.model.Model.deleteSpecies" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">deleteSpecies</tt><big>(</big><em>obj</em><big>)</big><a class="headerlink" href="#pyurdme.model.Model.deleteSpecies" title="Permalink to this definition">¶</a></dt>
+<dd><p>Remove a Species from model.listOfSpecies.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyurdme.model.Model.delete_all_parameters">
+<tt class="descname">delete_all_parameters</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/pyurdme/model.html#Model.delete_all_parameters"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.model.Model.delete_all_parameters" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="method">
+<dt id="pyurdme.model.Model.delete_all_reactions">
+<tt class="descname">delete_all_reactions</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/pyurdme/model.html#Model.delete_all_reactions"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.model.Model.delete_all_reactions" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pyurdme.model.Model.delete_all_species">
+<tt class="descname">delete_all_species</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/pyurdme/model.html#Model.delete_all_species"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.model.Model.delete_all_species" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pyurdme.model.Model.delete_parameter">
+<tt class="descname">delete_parameter</tt><big>(</big><em>obj</em><big>)</big><a class="reference internal" href="_modules/pyurdme/model.html#Model.delete_parameter"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.model.Model.delete_parameter" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pyurdme.model.Model.delete_reaction">
+<tt class="descname">delete_reaction</tt><big>(</big><em>obj</em><big>)</big><a class="reference internal" href="_modules/pyurdme/model.html#Model.delete_reaction"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.model.Model.delete_reaction" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pyurdme.model.Model.delete_species">
+<tt class="descname">delete_species</tt><big>(</big><em>obj</em><big>)</big><a class="reference internal" href="_modules/pyurdme/model.html#Model.delete_species"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.model.Model.delete_species" title="Permalink to this definition">¶</a></dt>
+<dd><p>Remove a Species from model.listOfSpecies.</p>
+</dd></dl>
+
+<dl class="method">
 <dt id="pyurdme.model.Model.getAllParameters">
-<tt class="descname">getAllParameters</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/pyurdme/model.html#Model.getAllParameters"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.model.Model.getAllParameters" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">getAllParameters</tt><big>(</big><big>)</big><a class="headerlink" href="#pyurdme.model.Model.getAllParameters" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="method">
 <dt id="pyurdme.model.Model.getAllReactions">
-<tt class="descname">getAllReactions</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/pyurdme/model.html#Model.getAllReactions"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.model.Model.getAllReactions" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">getAllReactions</tt><big>(</big><big>)</big><a class="headerlink" href="#pyurdme.model.Model.getAllReactions" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="method">
 <dt id="pyurdme.model.Model.getAllSpecies">
-<tt class="descname">getAllSpecies</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/pyurdme/model.html#Model.getAllSpecies"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.model.Model.getAllSpecies" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">getAllSpecies</tt><big>(</big><big>)</big><a class="headerlink" href="#pyurdme.model.Model.getAllSpecies" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="method">
 <dt id="pyurdme.model.Model.getNumReactions">
-<tt class="descname">getNumReactions</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/pyurdme/model.html#Model.getNumReactions"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.model.Model.getNumReactions" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">getNumReactions</tt><big>(</big><big>)</big><a class="headerlink" href="#pyurdme.model.Model.getNumReactions" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="method">
 <dt id="pyurdme.model.Model.getNumSpecies">
-<tt class="descname">getNumSpecies</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/pyurdme/model.html#Model.getNumSpecies"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.model.Model.getNumSpecies" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">getNumSpecies</tt><big>(</big><big>)</big><a class="headerlink" href="#pyurdme.model.Model.getNumSpecies" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="method">
 <dt id="pyurdme.model.Model.getParameter">
-<tt class="descname">getParameter</tt><big>(</big><em>pname</em><big>)</big><a class="reference internal" href="_modules/pyurdme/model.html#Model.getParameter"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.model.Model.getParameter" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">getParameter</tt><big>(</big><em>pname</em><big>)</big><a class="headerlink" href="#pyurdme.model.Model.getParameter" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="method">
 <dt id="pyurdme.model.Model.getReaction">
-<tt class="descname">getReaction</tt><big>(</big><em>rname</em><big>)</big><a class="reference internal" href="_modules/pyurdme/model.html#Model.getReaction"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.model.Model.getReaction" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">getReaction</tt><big>(</big><em>rname</em><big>)</big><a class="headerlink" href="#pyurdme.model.Model.getReaction" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="method">
 <dt id="pyurdme.model.Model.getSpecies">
-<tt class="descname">getSpecies</tt><big>(</big><em>sname</em><big>)</big><a class="reference internal" href="_modules/pyurdme/model.html#Model.getSpecies"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.model.Model.getSpecies" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">getSpecies</tt><big>(</big><em>sname</em><big>)</big><a class="headerlink" href="#pyurdme.model.Model.getSpecies" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pyurdme.model.Model.get_all_parameters">
+<tt class="descname">get_all_parameters</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/pyurdme/model.html#Model.get_all_parameters"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.model.Model.get_all_parameters" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pyurdme.model.Model.get_all_reactions">
+<tt class="descname">get_all_reactions</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/pyurdme/model.html#Model.get_all_reactions"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.model.Model.get_all_reactions" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pyurdme.model.Model.get_all_species">
+<tt class="descname">get_all_species</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/pyurdme/model.html#Model.get_all_species"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.model.Model.get_all_species" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pyurdme.model.Model.get_num_reactions">
+<tt class="descname">get_num_reactions</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/pyurdme/model.html#Model.get_num_reactions"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.model.Model.get_num_reactions" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pyurdme.model.Model.get_num_species">
+<tt class="descname">get_num_species</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/pyurdme/model.html#Model.get_num_species"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.model.Model.get_num_species" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pyurdme.model.Model.get_parameter">
+<tt class="descname">get_parameter</tt><big>(</big><em>pname</em><big>)</big><a class="reference internal" href="_modules/pyurdme/model.html#Model.get_parameter"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.model.Model.get_parameter" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pyurdme.model.Model.get_reaction">
+<tt class="descname">get_reaction</tt><big>(</big><em>rname</em><big>)</big><a class="reference internal" href="_modules/pyurdme/model.html#Model.get_reaction"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.model.Model.get_reaction" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pyurdme.model.Model.get_species">
+<tt class="descname">get_species</tt><big>(</big><em>sname</em><big>)</big><a class="reference internal" href="_modules/pyurdme/model.html#Model.get_species"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.model.Model.get_species" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="method">
 <dt id="pyurdme.model.Model.resolveParameters">
-<tt class="descname">resolveParameters</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/pyurdme/model.html#Model.resolveParameters"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.model.Model.resolveParameters" title="Permalink to this definition">¶</a></dt>
-<dd><p>Attempt to resolve all parameter expressions to scalar floats. This
-methods must be called before exporting the model.</p>
+<tt class="descname">resolveParameters</tt><big>(</big><big>)</big><a class="headerlink" href="#pyurdme.model.Model.resolveParameters" title="Permalink to this definition">¶</a></dt>
+<dd><p>Attempt to resolve all parameter expressions to scalar floating point values. 
+Must be called prior to exporting the model.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyurdme.model.Model.resolve_parameters">
+<tt class="descname">resolve_parameters</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/pyurdme/model.html#Model.resolve_parameters"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.model.Model.resolve_parameters" title="Permalink to this definition">¶</a></dt>
+<dd><p>Attempt to resolve all parameter expressions to scalar floating point values. 
+Must be called prior to exporting the model.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="pyurdme.model.Model.setParameter">
-<tt class="descname">setParameter</tt><big>(</big><em>pname</em>, <em>expression</em><big>)</big><a class="reference internal" href="_modules/pyurdme/model.html#Model.setParameter"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.model.Model.setParameter" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">setParameter</tt><big>(</big><em>pname</em>, <em>expression</em><big>)</big><a class="headerlink" href="#pyurdme.model.Model.setParameter" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set the expression of an existing paramter.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyurdme.model.Model.set_parameter">
+<tt class="descname">set_parameter</tt><big>(</big><em>pname</em>, <em>expression</em><big>)</big><a class="reference internal" href="_modules/pyurdme/model.html#Model.set_parameter"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.model.Model.set_parameter" title="Permalink to this definition">¶</a></dt>
 <dd><p>Set the expression of an existing paramter.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="pyurdme.model.Model.updateNamespace">
-<tt class="descname">updateNamespace</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/pyurdme/model.html#Model.updateNamespace"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.model.Model.updateNamespace" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">updateNamespace</tt><big>(</big><big>)</big><a class="headerlink" href="#pyurdme.model.Model.updateNamespace" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a dict with flattened parameter and species objects.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyurdme.model.Model.update_namespace">
+<tt class="descname">update_namespace</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/pyurdme/model.html#Model.update_namespace"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.model.Model.update_namespace" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create a dict with flattened parameter and species objects.</p>
 </dd></dl>
 
@@ -700,9 +1089,9 @@ methods must be called before exporting the model.</p>
 <dl class="class">
 <dt id="pyurdme.model.Parameter">
 <em class="property">class </em><tt class="descclassname">pyurdme.model.</tt><tt class="descname">Parameter</tt><big>(</big><em>name=''</em>, <em>expression=None</em>, <em>value=None</em><big>)</big><a class="reference internal" href="_modules/pyurdme/model.html#Parameter"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.model.Parameter" title="Permalink to this definition">¶</a></dt>
-<dd><p>A parameter can be given as an expression (function) or directly as a value (scalar).
-If given an expression, it should be understood as evaluable in the namespace
-of a parent Model.</p>
+<dd><p>Model of a rate paramter. 
+A parameter can be given as a String expression (function) or directly as a scalar value.
+If given a String expression, it should be evaluable in the namespace of a parent Model.</p>
 <dl class="method">
 <dt id="pyurdme.model.Parameter.evaluate">
 <tt class="descname">evaluate</tt><big>(</big><em>namespace={}</em><big>)</big><a class="reference internal" href="_modules/pyurdme/model.html#Parameter.evaluate"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.model.Parameter.evaluate" title="Permalink to this definition">¶</a></dt>
@@ -711,7 +1100,12 @@ of a parent Model.</p>
 
 <dl class="method">
 <dt id="pyurdme.model.Parameter.setExpression">
-<tt class="descname">setExpression</tt><big>(</big><em>expression</em><big>)</big><a class="reference internal" href="_modules/pyurdme/model.html#Parameter.setExpression"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.model.Parameter.setExpression" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">setExpression</tt><big>(</big><em>expression</em><big>)</big><a class="headerlink" href="#pyurdme.model.Parameter.setExpression" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pyurdme.model.Parameter.set_expression">
+<tt class="descname">set_expression</tt><big>(</big><em>expression</em><big>)</big><a class="reference internal" href="_modules/pyurdme/model.html#Parameter.set_expression"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.model.Parameter.set_expression" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 </dd></dl>
@@ -725,34 +1119,59 @@ of a parent Model.</p>
 <dl class="class">
 <dt id="pyurdme.model.Reaction">
 <em class="property">class </em><tt class="descclassname">pyurdme.model.</tt><tt class="descname">Reaction</tt><big>(</big><em>name=''</em>, <em>reactants={}</em>, <em>products={}</em>, <em>propensity_function=None</em>, <em>massaction=None</em>, <em>rate=None</em>, <em>annotation=None</em>, <em>restrict_to=None</em><big>)</big><a class="reference internal" href="_modules/pyurdme/model.html#Reaction"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.model.Reaction" title="Permalink to this definition">¶</a></dt>
-<dd><p>Models a reaction. A reaction has its own dictinaries of species (reactants and products) and parameters.
-The reaction&#8217;s propensity function needs to be evaluable (and result in a non-negative scalar value)
-in the namespace defined by the union of those dicts.</p>
+<dd><p>Models a biochemical reaction. A reaction conatains dictinaries of species (reactants and products) and parameters.
+The reaction&#8217;s propensity function needs to be evaluable and result in a non-negative scalar value
+in the namespace defined by the union of its Reactant, Product and Parameter dictionaries.</p>
 <dl class="method">
 <dt id="pyurdme.model.Reaction.Annotate">
-<tt class="descname">Annotate</tt><big>(</big><em>annotation</em><big>)</big><a class="reference internal" href="_modules/pyurdme/model.html#Reaction.Annotate"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.model.Reaction.Annotate" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">Annotate</tt><big>(</big><em>annotation</em><big>)</big><a class="headerlink" href="#pyurdme.model.Reaction.Annotate" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="method">
 <dt id="pyurdme.model.Reaction.addProduct">
-<tt class="descname">addProduct</tt><big>(</big><em>S</em>, <em>stoichiometry</em><big>)</big><a class="reference internal" href="_modules/pyurdme/model.html#Reaction.addProduct"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.model.Reaction.addProduct" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">addProduct</tt><big>(</big><em>S</em>, <em>stoichiometry</em><big>)</big><a class="headerlink" href="#pyurdme.model.Reaction.addProduct" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="method">
 <dt id="pyurdme.model.Reaction.addReactant">
-<tt class="descname">addReactant</tt><big>(</big><em>S</em>, <em>stoichiometry</em><big>)</big><a class="reference internal" href="_modules/pyurdme/model.html#Reaction.addReactant"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.model.Reaction.addReactant" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">addReactant</tt><big>(</big><em>S</em>, <em>stoichiometry</em><big>)</big><a class="headerlink" href="#pyurdme.model.Reaction.addReactant" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pyurdme.model.Reaction.add_product">
+<tt class="descname">add_product</tt><big>(</big><em>S</em>, <em>stoichiometry</em><big>)</big><a class="reference internal" href="_modules/pyurdme/model.html#Reaction.add_product"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.model.Reaction.add_product" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pyurdme.model.Reaction.add_reactant">
+<tt class="descname">add_reactant</tt><big>(</big><em>S</em>, <em>stoichiometry</em><big>)</big><a class="reference internal" href="_modules/pyurdme/model.html#Reaction.add_reactant"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.model.Reaction.add_reactant" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pyurdme.model.Reaction.annotate">
+<tt class="descname">annotate</tt><big>(</big><em>annotation</em><big>)</big><a class="reference internal" href="_modules/pyurdme/model.html#Reaction.annotate"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.model.Reaction.annotate" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="method">
 <dt id="pyurdme.model.Reaction.createMassAction">
-<tt class="descname">createMassAction</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/pyurdme/model.html#Reaction.createMassAction"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.model.Reaction.createMassAction" title="Permalink to this definition">¶</a></dt>
-<dd><p>Create a mass action propensity function given
-self.reactants and a single parameter value.</p>
+<tt class="descname">createMassAction</tt><big>(</big><big>)</big><a class="headerlink" href="#pyurdme.model.Reaction.createMassAction" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a mass action propensity function given self.reactants and a single parameter value.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyurdme.model.Reaction.create_mass_action">
+<tt class="descname">create_mass_action</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/pyurdme/model.html#Reaction.create_mass_action"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.model.Reaction.create_mass_action" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a mass action propensity function given self.reactants and a single parameter value.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="pyurdme.model.Reaction.setType">
-<tt class="descname">setType</tt><big>(</big><em>type</em><big>)</big><a class="reference internal" href="_modules/pyurdme/model.html#Reaction.setType"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.model.Reaction.setType" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">setType</tt><big>(</big><em>type</em><big>)</big><a class="headerlink" href="#pyurdme.model.Reaction.setType" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pyurdme.model.Reaction.set_type">
+<tt class="descname">set_type</tt><big>(</big><em>type</em><big>)</big><a class="reference internal" href="_modules/pyurdme/model.html#Reaction.set_type"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.model.Reaction.set_type" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 </dd></dl>
@@ -766,7 +1185,7 @@ self.reactants and a single parameter value.</p>
 <dl class="class">
 <dt id="pyurdme.model.Species">
 <em class="property">class </em><tt class="descclassname">pyurdme.model.</tt><tt class="descname">Species</tt><big>(</big><em>name=''</em>, <em>diffusion_constant=None</em>, <em>reaction_radius=None</em>, <em>dimension=3</em><big>)</big><a class="reference internal" href="_modules/pyurdme/model.html#Species"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.model.Species" title="Permalink to this definition">¶</a></dt>
-<dd><p>Chemical species.</p>
+<dd><p>Model of a biochemical species.</p>
 <dl class="method">
 <dt id="pyurdme.model.Species.dim">
 <tt class="descname">dim</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/pyurdme/model.html#Species.dim"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.model.Species.dim" title="Permalink to this definition">¶</a></dt>
@@ -786,7 +1205,7 @@ self.reactants and a single parameter value.</p>
 <p>NSM solver.</p>
 <dl class="class">
 <dt id="pyurdme.nsmsolver.NSMSolver">
-<em class="property">class </em><tt class="descclassname">pyurdme.nsmsolver.</tt><tt class="descname">NSMSolver</tt><big>(</big><em>model</em>, <em>solver_path=None</em>, <em>report_level=0</em>, <em>model_file=None</em><big>)</big><a class="reference internal" href="_modules/pyurdme/nsmsolver.html#NSMSolver"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.nsmsolver.NSMSolver" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><tt class="descclassname">pyurdme.nsmsolver.</tt><tt class="descname">NSMSolver</tt><big>(</big><em>model</em>, <em>solver_path=None</em>, <em>report_level=0</em>, <em>model_file=None</em>, <em>sopts=None</em><big>)</big><a class="reference internal" href="_modules/pyurdme/nsmsolver.html#NSMSolver"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.nsmsolver.NSMSolver" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="#pyurdme.pyurdme.URDMESolver" title="pyurdme.pyurdme.URDMESolver"><tt class="xref py py-class docutils literal"><span class="pre">pyurdme.pyurdme.URDMESolver</span></tt></a></p>
 <p>NSM solver class.</p>
 <dl class="attribute">
@@ -797,44 +1216,6 @@ self.reactants and a single parameter value.</p>
 </dd></dl>
 
 </div>
-<div class="section" id="module-pyurdme.gmsh">
-<span id="pyurdme-gmsh-module"></span><h2>pyurdme.gmsh module<a class="headerlink" href="#module-pyurdme.gmsh" title="Permalink to this headline">¶</a></h2>
-<p>Wrappers for selected Gmsh functionality.</p>
-<dl class="class">
-<dt id="pyurdme.gmsh.GmshMesh">
-<em class="property">class </em><tt class="descclassname">pyurdme.gmsh.</tt><tt class="descname">GmshMesh</tt><big>(</big><em>meshfile=None</em><big>)</big><a class="reference internal" href="_modules/pyurdme/gmsh.html#GmshMesh"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.gmsh.GmshMesh" title="Permalink to this definition">¶</a></dt>
-<dd><dl class="method">
-<dt id="pyurdme.gmsh.GmshMesh.refine">
-<tt class="descname">refine</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/pyurdme/gmsh.html#GmshMesh.refine"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.gmsh.GmshMesh.refine" title="Permalink to this definition">¶</a></dt>
-<dd><p>Refine the mesh</p>
-</dd></dl>
-
-</dd></dl>
-
-<dl class="class">
-<dt id="pyurdme.gmsh.gmshGeometry">
-<em class="property">class </em><tt class="descclassname">pyurdme.gmsh.</tt><tt class="descname">gmshGeometry</tt><big>(</big><em>file=None</em><big>)</big><a class="reference internal" href="_modules/pyurdme/gmsh.html#gmshGeometry"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.gmsh.gmshGeometry" title="Permalink to this definition">¶</a></dt>
-<dd><p>Represent a Gmsh geometry. Wrapper around a Gmesh .geo file.</p>
-</dd></dl>
-
-<dl class="function">
-<dt id="pyurdme.gmsh.importMesh">
-<tt class="descclassname">pyurdme.gmsh.</tt><tt class="descname">importMesh</tt><big>(</big><em>meshfile</em><big>)</big><a class="reference internal" href="_modules/pyurdme/gmsh.html#importMesh"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.gmsh.importMesh" title="Permalink to this definition">¶</a></dt>
-<dd><p>Import a Gmsh .msh file.</p>
-</dd></dl>
-
-<dl class="function">
-<dt id="pyurdme.gmsh.meshinit">
-<tt class="descclassname">pyurdme.gmsh.</tt><tt class="descname">meshinit</tt><big>(</big><em>geometry</em><big>)</big><a class="reference internal" href="_modules/pyurdme/gmsh.html#meshinit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.gmsh.meshinit" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="function">
-<dt id="pyurdme.gmsh.toDolfin">
-<tt class="descclassname">pyurdme.gmsh.</tt><tt class="descname">toDolfin</tt><big>(</big><em>mesh</em><big>)</big><a class="reference internal" href="_modules/pyurdme/gmsh.html#toDolfin"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.gmsh.toDolfin" title="Permalink to this definition">¶</a></dt>
-<dd><p>Serialize a Gmsh mesh to Dolfin format.</p>
-</dd></dl>
-
-<span class="target" id="module-pyurdme"></span></div>
 </div>
 
 
@@ -849,7 +1230,6 @@ self.reactants and a single parameter value.</p>
 <li><a class="reference internal" href="#module-pyurdme.pyurdme">pyurdme module</a></li>
 <li><a class="reference internal" href="#module-pyurdme.model">pyurdme.model module</a></li>
 <li><a class="reference internal" href="#module-pyurdme.nsmsolver">pyurdme.nsmsolver module</a></li>
-<li><a class="reference internal" href="#module-pyurdme.gmsh">pyurdme.gmsh module</a></li>
 </ul>
 </li>
 </ul>
@@ -857,6 +1237,9 @@ self.reactants and a single parameter value.</p>
   <h4>Previous topic</h4>
   <p class="topless"><a href="index.html"
                         title="previous chapter">Welcome to PyURDME&#8217;s documentation!</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="examples.html"
+                        title="next chapter">PyURDME Examples</a></p>
   <h3>This Page</h3>
   <ul class="this-page-menu">
     <li><a href="_sources/pyurdme.txt"
@@ -888,6 +1271,9 @@ self.reactants and a single parameter value.</p>
         <li class="right" >
           <a href="py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
+        <li class="right" >
+          <a href="examples.html" title="PyURDME Examples"
+             >next</a> |</li>
         <li class="right" >
           <a href="index.html" title="Welcome to PyURDME’s documentation!"
              >previous</a> |</li>

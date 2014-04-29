@@ -9,6 +9,7 @@ pyurdme module
     :undoc-members:
     :show-inheritance:
 
+
 pyurdme.model module
 --------------------
 
@@ -25,16 +26,4 @@ pyurdme.nsmsolver module
     :undoc-members:
     :show-inheritance:
 
-pyurdme.gmsh module
--------------------
 
-.. automodule:: pyurdme.gmsh
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-
-.. automodule:: pyurdme
-    :members:
-    :undoc-members:
-    :show-inheritance:

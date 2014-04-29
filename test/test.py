@@ -109,8 +109,6 @@ class TestSolverFunctionality(unittest.TestCase):
         self.assertEqual(result1,result2)
 
 
-
-
     def test_result_pickle(self):
         """ Test that the result object is picklable. """
         sol = pyurdme.nsmsolver.NSMSolver(self.model)

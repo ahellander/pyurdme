@@ -50,7 +50,8 @@
             
   <div class="section" id="welcome-to-pyurdme-s-documentation">
 <h1>Welcome to PyURDME&#8217;s documentation!<a class="headerlink" href="#welcome-to-pyurdme-s-documentation" title="Permalink to this headline">¶</a></h1>
-<p>PyURDME is a rewrite of the original URDME software package in python!</p>
+<p>PyURDME is a general software framework for modeling and simulation of stochastic reaction-diffusion processes on unstructured, tetrahedral (3D) and triangular (2D) meshes. Unstructured meshes allow for a more flexible handling of complex geometries compared to structured, Cartesian meshes. The current core simulation algorithm is based on the mesoscopic reaction-diffusion master equation (RDME) model.</p>
+<p>PyURDME was originally based on the URDME software package in python, it has been completely rewritten and updated.  It depends on the FEniCS libraries for mesh generation and assemply, see <a class="reference external" href="http://fenicsproject.org/">http://fenicsproject.org/</a>.  The core simulation routines are implemetned in C, and requires GCC for compliation.  The default solver is an efficient implementation of the Next Subvolume Method (NSM).</p>
 <p>Contents:</p>
 <div class="toctree-wrapper compound">
 <ul>
@@ -61,9 +62,31 @@
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="examples.html">PyURDME Examples</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="examples.html#simple-diffusion">Simple Diffusion</a></li>
-<li class="toctree-l2"><a class="reference internal" href="examples.html#cylinder-annihilation">Cylinder Annihilation</a></li>
-<li class="toctree-l2"><a class="reference internal" href="examples.html#mind-oscillations-in-e-coli">MinD Oscillations in E. coli</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples_simple_diffusion.html">PyURDME Example: Simple Diffusion</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="examples_simple_diffusion.html#introduction">Introduction</a></li>
+<li class="toctree-l3"><a class="reference internal" href="examples_simple_diffusion.html#code">Code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="examples_cylinder_demo.html">PyURDME Example: Cylinder Annihilation</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="examples_cylinder_demo.html#introduction">Introduction</a></li>
+<li class="toctree-l3"><a class="reference internal" href="examples_cylinder_demo.html#code">Code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="examples_mincde.html">PyURDME Example: MinD Oscillations in E. coli</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="examples_mincde.html#introduction">Introduction</a></li>
+<li class="toctree-l3"><a class="reference internal" href="examples_mincde.html#code">Code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="examples_yeast_polarization.html">PyURDME Example: Cell Polarization in Yeast</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="examples_yeast_polarization.html#introduction">Introduction</a></li>
+<li class="toctree-l3"><a class="reference internal" href="examples_yeast_polarization.html#code">Code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="examples_coral_reef.html">PyURDME Example:  Coral Reef</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="examples_coral_reef.html#introduction">Introduction</a></li>
+<li class="toctree-l3"><a class="reference internal" href="examples_coral_reef.html#code">Code</a></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>

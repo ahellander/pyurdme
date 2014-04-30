@@ -9,9 +9,9 @@ Dependencies
 To use pyurdme, you need to install the following dependencies
 
 - Fenics (http://fenicsproject.org/download)
-..*Debian: apt-get install fenics
-..*Fedora: yum install fenics
-..*OSX: We recommend using the binary installer provided at http://fenicsproject.org/download
+    * Debian: apt-get install fenics
+    * Fedora: yum install fenics
+    * OSX: We recommend using the binary installer provided at http://fenicsproject.org/download
 - numpy, scipy, matplotlib
     Debian: apt-get install python-numpy python-scipy python-matplotlib
     Fedora: yum install python-numpy python-scipy python-matplotlib

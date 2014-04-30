@@ -2155,6 +2155,7 @@ class InvalidSystemMatrixException(Exception):
 
 
 class IntervalMeshPeriodicBoundary(dolfin.SubDomain):
+    """ Subdomain for Periodic boundary conditions on a interval domain. """
     def __init__(self, a=0.0, b=1.0):
         """ 1D domain from a to b. """
         dolfin.SubDomain.__init__(self)
@@ -2169,7 +2170,7 @@ class IntervalMeshPeriodicBoundary(dolfin.SubDomain):
             y[0] = self.a + (x[0] - self.b)
 
 class SquareMeshPeriodicBoundary(dolfin.SubDomain):
-    """ Sub domain for Periodic boundary condition """
+    """ Subdomain for Periodic boundary conditions on a square domain. """
     def __init__(self, Lx=1.0, Ly=1.0):
         dolfin.SubDomain.__init__(self)
         self.Lx = Lx
@@ -2195,7 +2196,7 @@ class SquareMeshPeriodicBoundary(dolfin.SubDomain):
             y[1] = x[1] - self.Ly
 
 class CubeMeshPeriodicBoundary(dolfin.SubDomain):
-    """ Sub domain for Periodic boundary condition """
+    """ Subdomain for Periodic boundary conditions on a cube domain. """
     def __init__(self, Lx=1.0, Ly=1.0, Lz=1.0):
         dolfin.SubDomain.__init__(self)
         self.Lx = Lx

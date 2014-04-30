@@ -1,4 +1,4 @@
-pyurdme package
+PyURDME API
 ===============
 
 pyurdme module

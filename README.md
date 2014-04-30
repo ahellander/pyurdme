@@ -9,18 +9,24 @@ Dependencies
 To use pyurdme, you need to install the following dependencies
 
 - Fenics (http://fenicsproject.org/download)
-   -- Debian: apt-get install fenics
-   -- OSX: We reccomend that you use the binary installer provided at http://fenicsproject.org
-- NumPy (For OSX, http://fonnesbeck.github.io/ScipySuperpack/, provides installers for SciPy,NumPy, Matplotlib)
-- Scipy 
+    Debian: apt-get install fenics
+    Fedora: yum install fenics
+    OSX: We recommend using the binary installer provided at http://fenicsproject.org/download
+- numpy, scipy, matplotlib
+    Debian: apt-get install python-numpy python-scipy python-matplotlib
+    Fedora: yum install python-numpy python-scipy python-matplotlib
+    OSX: We recommend using the installer provided by http://fonnesbeck.github.io/ScipySuperpack/
+
 
 In addition, if you do not use the provided setuptools script, you need to install
+
 - h5py   
 - Jinja2 
-- 
 
 Installation
 =============
+
+pip install https://github.com/ahellander
 
 
 Quick start

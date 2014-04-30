@@ -1,12 +1,11 @@
 pyurdme
 =======
 
-pyurdme is a modeling and simulation toolkit for spatial stochastic simulations. 
+pyurdme is a modeling and simulation toolkit for spatial stochastic simulations. It makes use of a modified version of the core solver of URDME (www.urdme.org) for mesocopic simulations via the Reaction-Diffusion Master Equation (RDME), and builds on Dolfin/FeniCS (http://fenicsproject.org) for geometric modeling, meshing and Finite Element Assembly.   
 
+# Dependencies
 
-Dependencies
-=============
-To install and use pyurdme, you need to install the following dependencies
+To install and use pyurdme, you need to satisfy the following dependencies
 
 - gcc, gfortran (for scipy, matplotlib)
 
@@ -35,19 +34,23 @@ In addition, if you do not use the provided setuptools script, you need to insta
 
 - Jinja2 
 
-
-
-
-Installation
-=============
-
-After satisfying the above dependencies, you can simply  
+Note: We strongly recommend using the appropriate package manager or binary installer for your platform to satisfy the above dependencies. However, we understand that some users prefer a non-system-wide installation of python packages, such as if using virtualenv. If one of the above listed dependencies is not satiesfied, setuptools will try to install it. For numpy, scipy, matplotlib, h5py this involves building from source. Due to the many non-python dependencies, you will likely need to install development versions of certain libraries (such as freetype and libpng). An easy way to satisy the dependencies for Ubuntu is
 
 ```bash
-pip install https://github.com/ahellander/pyurdme/tarball/master
+apt-get build-dep python-numpy python-scipy python-matplotlib
 ```
 
-or if you prefer to download the source
+# Installation
+
+## Ubuntu
+For Ubuntu, we provide a script that will install all dependencies and pyurdme. The install script must be run as root
+```bash
+git clone https://github.com/ahellander/pyurdme
+cd pyurdme
+./install_ubuntu.sh
+```
+
+If you want to manage the dependencies yourself, after installing them do:
 
 ```bash
 git clone https://github.com/ahellander/pyurdme.git
@@ -55,12 +58,13 @@ cd pyurdme
 python setup.py install 
 
 ```
-
-Note: We strongly recommend using the appropriate package manager or binary installer for your platform to satisfy the above dependencies. However, we understand that some users prefer a non-system-wide installation of python packages, such as if using virtualenv. If one of the above listed dependencies is not satiesfied, setuptools will try to install it. For numpy, scipy, matplotlib, h5py this involves building from source. Due to the many non-python dependencies, you will likely need to install development versions of certain libraries (such as freetype and libpng). An easy way to satisy the dependencies for Ubuntu is
+or simply 
 
 ```bash
-apt-get build-dep python-numpy python-scipy python-matplotlib
+pip install https://github.com/ahellander/pyurdme/tarball/master
 ```
+
+## OSX
 
 Quick start
 ==============

@@ -32,7 +32,19 @@ In addition, if you do not use the provided setuptools script, you need to insta
 Installation
 =============
 
+After satisfying the above dependencies,  
+
 pip install https://github.com/ahellander
+
+From source
+=============
+```shell
+git clone https://github.com/ahellander/pyurdme.git
+cd pyurdme
+python setup.py install 
+
+```
+
 
 
 Quick start

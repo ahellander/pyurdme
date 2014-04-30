@@ -1,23 +1,30 @@
 pyurdme
 =======
 
-Python API for URDME solvers.
+pyurdme is a modeling and similation toolkit for spatial stochastic simulations. 
 
 
 Dependencies
 =============
-You will need to install (at least) all the following external packages
+To use pyurdme, you need to install the following dependencies
 
 - Fenics (http://fenicsproject.org/download)
+   -- Debian: apt-get install fenics
+   -- OSX: We reccomend that you use the binary installer provided at http://fenicsproject.org
 - NumPy (For OSX, http://fonnesbeck.github.io/ScipySuperpack/, provides installers for SciPy,NumPy, Matplotlib)
 - Scipy 
-- h5py (pip install h5py)
+
+In addition, if you do not use the provided setuptools script, you need to install
+- h5py   
+- Jinja2 
+- 
+
+Installation
+=============
+
 
 Quick start
 ==============
 
-- Install pyurdme by cloning the repository
-
-- Open a FEniCS terminal
-- In that terminal, cd into the main pyurdme directory and source the file "pyurdme_init" (simply sets the PYTHONPATH)
-- In the same terminal, cd into the examples/simple_diffusion folder and run the file "simple_diffusion.py"
+- Open a terminal (On OSX, by opening FeniCS)
+- CD into the examples/simple_diffusion folder and run the file "simple_diffusion.py"

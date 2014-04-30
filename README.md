@@ -77,6 +77,9 @@ or simply
 pip install https://github.com/ahellander/pyurdme/tarball/master
 ```
 
+## Virtual Machines
+- Coming soon
+
 Quick start
 ==============
 

@@ -3,7 +3,7 @@ pyurdme
 
 pyurdme is a modeling and simulation toolkit for spatial stochastic simulations. It makes use of a modified version of the core solver of URDME (www.urdme.org) for mesocopic simulations via the Reaction-Diffusion Master Equation (RDME), and builds on Dolfin/FeniCS (http://fenicsproject.org) for geometric modeling, meshing and Finite Element Assembly.   
 
-Currently supported (tested) platforms are MacOSX >= 10.8 and Ubunutu >= 12.04.   
+Currently supported (tested) platforms are MacOSX >= 10.8 and Ubuntu >= 12.04.   
 
 # Dependencies
 

@@ -15,7 +15,7 @@ To install and use pyurdme, you need to satisfy the following dependencies. Belo
     * Ubuntu:
         + apt-get install fenics
     * OSX: 
-        + We recommend using the binary installer provided here: http://fenicsproject.org/download
+        + We recommend using the binary installer provided here: http://fenicsproject.org/download/osx_details.html
 - numpy, scipy, matplotlib
    * Ubuntu: 
       + apt-get install python-numpy python-scipy python-matplotlib

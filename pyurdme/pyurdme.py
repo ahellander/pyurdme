@@ -1761,7 +1761,7 @@ class URDMESolver:
         model_file = tmproot+'/'+self.model_name + '_pyurdme_generated_model'+ '.c'
         ret['model_file'] = os.path.basename(model_file)
         if self.model_file == None:
-            self.createPropensityFile(file_name=model_file)
+            self.create_propensity_file(file_name=model_file)
         else:
             subprocess.call('cp '+self.model_file+' '+model_file, shell=True)
         # Get the solver source files
@@ -1876,7 +1876,7 @@ class URDMESolver:
             prop_file_name=self.solver_dir + self.propfilename + '.c'
             if self.report_level > 1:
                 print "Creating propensity file {0}".format(prop_file_name)
-            self.createPropensityFile(file_name=prop_file_name)
+            self.create_propensity_file(file_name=prop_file_name)
         else:
             cmd = " ".join(['cp', self.model_file, self.solver_dir + self.propfilename + '.c'])
             if self.report_level > 1:
@@ -2032,7 +2032,7 @@ class URDMESolver:
         propfilestr = propfilestr.replace("__DEFINE_DATA_FUNCTIONS__", str(data_fn_str))
 
         # Make sure all paramters are evaluated to scalars before we write them to the file.
-        self.model.resolveParameters()
+        self.model.resolve_parameters()
         parameters = ""
         for p in self.model.listOfParameters:
             parameters += "const double " + p + " = " + str(self.model.listOfParameters[p].value) + ";\n"
@@ -2135,7 +2135,7 @@ class URDMEDataFunction():
         Args:
             x: a list of 3 ints.
         Returns:
-            a doubles.
+            a list of floats.
         """
         raise Exception("URDMEDataFunction.map() not implemented.")
 

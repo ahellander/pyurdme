@@ -41,7 +41,7 @@ class MinCDE5R(pyurdme.URDMEModel):
         MinD_e     = pyurdme.Species(name="MinD_e",diffusion_constant=2.5e-12,dimension=3)
         MinDE      = pyurdme.Species(name="MinDE",diffusion_constant=1e-14,dimension=2)
         
-        self.addSpecies([MinD_m,MinD_c_atp,MinD_c_adp,MinD_e,MinDE])
+        self.add_species([MinD_m,MinD_c_atp,MinD_c_adp,MinD_e,MinDE])
         
         # Make sure that we have the correct path to the mesh file even if we are not executing from the basedir.
         basedir = os.path.dirname(os.path.abspath(__file__))
@@ -56,8 +56,8 @@ class MinCDE5R(pyurdme.URDMEModel):
         membrane = Membrane()
         membrane.mark(boundary,2)
         
-        self.addSubDomain(interior)
-        self.addSubDomain(boundary)
+        self.add_subdomain(interior)
+        self.add_subdomain(boundary)
         
         # Average mesh size to feed into the propensity functions
         h = self.mesh.get_mesh_size()
@@ -71,7 +71,7 @@ class MinCDE5R(pyurdme.URDMEModel):
         sigma_de = pyurdme.Parameter(name="sigma_de",expression=0.7)
         sigma_dt = pyurdme.Parameter(name="sigma_dt",expression=0.5)
         
-        self.addParameter([NA,sigma_d,sigma_dD,sigma_e,sigma_de,sigma_dt])
+        self.add_parameter([NA,sigma_d,sigma_dD,sigma_e,sigma_de,sigma_dt])
 
         # List of Physical domain markers that match those in the  Gmsh .geo file.
         interior = [1]
@@ -84,15 +84,15 @@ class MinCDE5R(pyurdme.URDMEModel):
         R4 = pyurdme.Reaction(name="R4",reactants={MinDE:1},products={MinD_c_adp:1,MinD_e:1},massaction=True,rate=sigma_de)
         R5 = pyurdme.Reaction(name="R5",reactants={MinD_c_adp:1},products={MinD_c_atp:1},massaction=True,rate=sigma_dt)
         
-        self.addReaction([R1,R2,R3,R4,R5])
+        self.add_reaction([R1,R2,R3,R4,R5])
         
         # Restrict to boundary
         self.restrict(MinD_m,boundary)
         self.restrict(MinDE,boundary)
         
         # Distribute molecules over the mesh according to their initial values
-        self.scatter({MinD_c_adp:4000})
-        self.scatter({MinD_e:1000})
+        self.set_initial_condition_scatter({MinD_c_adp:4000})
+        self.set_initial_condition_scatter({MinD_e:1000})
 
         self.timespan(range(900))
 

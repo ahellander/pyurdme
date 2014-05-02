@@ -16,7 +16,7 @@ setup(name="pyurdme",
       author_email=["andreas.hellander@gmail.com", "briandrawert@gmail.com"],
       license = "GPL",
       keywords = "pyurdme, urdme, spatial stochastic simulation, rdme",
-      url = "http://pyurdme.org",
+      url = "http://www.pyurdme.org",
       download_url = "https://github.com/pyurdme/pyurdme/tarball/master/1.0.0"
       
       )

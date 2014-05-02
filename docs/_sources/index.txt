@@ -8,13 +8,14 @@ Welcome to PyURDME's documentation!
 
 PyURDME is a general software framework for modeling and simulation of stochastic reaction-diffusion processes on unstructured, tetrahedral (3D) and triangular (2D) meshes. Unstructured meshes allow for a more flexible handling of complex geometries compared to structured, Cartesian meshes. The current core simulation algorithm is based on the mesoscopic reaction-diffusion master equation (RDME) model.
 
-PyURDME was originally based on the URDME software package in python, it has been completely rewritten and updated.  It depends on the FEniCS libraries for mesh generation and assemply, see http://fenicsproject.org/.  The core simulation routines are implemetned in C, and requires GCC for compliation.  The default solver is an efficient implementation of the Next Subvolume Method (NSM).
+PyURDME was originally based on the URDME software package, it has been completely rewritten in python and updated.  It depends on the FEniCS libraries for mesh generation and assemply, see http://fenicsproject.org/.  The core simulation routines are implemetned in C, and requires GCC for compliation.  The default solver is an efficient implementation of the Next Subvolume Method (NSM).
 
 Contents:
 
 .. toctree::
    :maxdepth: 4
 
+   install
    pyurdme
    examples
 

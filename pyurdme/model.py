@@ -330,7 +330,7 @@ class Reaction():
             if rate == None:
                 raise ReactionError("Reaction "+self.name +": A mass-action propensity has to have a rate.")
             self.marate = rate
-            self.createMassAction()
+            self.create_mass_action()
         else:
             self.type = "customized"
 

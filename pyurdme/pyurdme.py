@@ -1761,7 +1761,7 @@ class URDMESolver:
         model_file = tmproot+'/'+self.model_name + '_pyurdme_generated_model'+ '.c'
         ret['model_file'] = os.path.basename(model_file)
         if self.model_file == None:
-            self.createPropensityFile(file_name=model_file)
+            self.create_propensity_file(file_name=model_file)
         else:
             subprocess.call('cp '+self.model_file+' '+model_file, shell=True)
         # Get the solver source files
@@ -1876,7 +1876,7 @@ class URDMESolver:
             prop_file_name=self.solver_dir + self.propfilename + '.c'
             if self.report_level > 1:
                 print "Creating propensity file {0}".format(prop_file_name)
-            self.createPropensityFile(file_name=prop_file_name)
+            self.create_propensity_file(file_name=prop_file_name)
         else:
             cmd = " ".join(['cp', self.model_file, self.solver_dir + self.propfilename + '.c'])
             if self.report_level > 1:
@@ -2032,7 +2032,7 @@ class URDMESolver:
         propfilestr = propfilestr.replace("__DEFINE_DATA_FUNCTIONS__", str(data_fn_str))
 
         # Make sure all paramters are evaluated to scalars before we write them to the file.
-        self.model.resolveParameters()
+        self.model.resolve_parameters()
         parameters = ""
         for p in self.model.listOfParameters:
             parameters += "const double " + p + " = " + str(self.model.listOfParameters[p].value) + ";\n"
@@ -2135,7 +2135,7 @@ class URDMEDataFunction():
         Args:
             x: a list of 3 ints.
         Returns:
-            a doubles.
+            a list of floats.
         """
         raise Exception("URDMEDataFunction.map() not implemented.")
 
@@ -2155,6 +2155,7 @@ class InvalidSystemMatrixException(Exception):
 
 
 class IntervalMeshPeriodicBoundary(dolfin.SubDomain):
+    """ Subdomain for Periodic boundary conditions on a interval domain. """
     def __init__(self, a=0.0, b=1.0):
         """ 1D domain from a to b. """
         dolfin.SubDomain.__init__(self)
@@ -2169,7 +2170,7 @@ class IntervalMeshPeriodicBoundary(dolfin.SubDomain):
             y[0] = self.a + (x[0] - self.b)
 
 class SquareMeshPeriodicBoundary(dolfin.SubDomain):
-    """ Sub domain for Periodic boundary condition """
+    """ Subdomain for Periodic boundary conditions on a square domain. """
     def __init__(self, Lx=1.0, Ly=1.0):
         dolfin.SubDomain.__init__(self)
         self.Lx = Lx
@@ -2195,7 +2196,7 @@ class SquareMeshPeriodicBoundary(dolfin.SubDomain):
             y[1] = x[1] - self.Ly
 
 class CubeMeshPeriodicBoundary(dolfin.SubDomain):
-    """ Sub domain for Periodic boundary condition """
+    """ Subdomain for Periodic boundary conditions on a cube domain. """
     def __init__(self, Lx=1.0, Ly=1.0, Lz=1.0):
         dolfin.SubDomain.__init__(self)
         self.Lx = Lx

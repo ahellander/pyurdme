@@ -185,11 +185,7 @@
 116
 117
 118
-119
-120
-121
-122</pre></div></td><td class="code"><div class="highlight"><pre><span class="c">#!/usr/bin/env python</span>
-<span class="sd">&quot;&quot;&quot; pyURDME model file for the MinCDE example. &quot;&quot;&quot;</span>
+119</pre></div></td><td class="code"><div class="highlight"><pre><span class="c">#!/usr/bin/env python</span>
 
 <span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">as</span> <span class="nn">plt</span>
 <span class="kn">import</span> <span class="nn">numpy</span>
@@ -219,6 +215,7 @@
         <span class="k">return</span> <span class="n">ret</span>
 
 <span class="k">class</span> <span class="nc">mincde</span><span class="p">(</span><span class="n">pyurdme</span><span class="o">.</span><span class="n">URDMEModel</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Model of MinD oscillations in E. Coli, based on the model by Huang. et. al. in &quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">model_name</span><span class="o">=</span><span class="s">&quot;mincde&quot;</span><span class="p">):</span>
         <span class="n">pyurdme</span><span class="o">.</span><span class="n">URDMEModel</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">model_name</span><span class="p">)</span>
@@ -255,8 +252,6 @@
         <span class="c"># Parameters</span>
         <span class="n">NA</span> <span class="o">=</span> <span class="n">pyurdme</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s">&quot;NA&quot;</span><span class="p">,</span><span class="n">expression</span><span class="o">=</span><span class="mf">6.022e23</span><span class="p">)</span>
         <span class="n">sigma_d</span>  <span class="o">=</span> <span class="n">pyurdme</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s">&quot;sigma_d&quot;</span><span class="p">,</span><span class="n">expression</span><span class="o">=</span><span class="mf">2.5e-8</span><span class="p">)</span>
-        <span class="c">#sigma_dD = pyurdme.Parameter(name=&quot;sigma_dD&quot;,expression=&quot;9.64e5/(1000.0*NA)&quot;)</span>
-        <span class="c">#sigma_e  = pyurdme.Parameter(name=&quot;sigma_e&quot;,expression=&quot;5.56e7/(1000.0*NA)&quot;)</span>
         <span class="n">sigma_dD</span> <span class="o">=</span> <span class="n">pyurdme</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s">&quot;sigma_dD&quot;</span><span class="p">,</span><span class="n">expression</span><span class="o">=</span><span class="mf">0.0016e-18</span><span class="p">)</span>
         <span class="n">sigma_e</span>  <span class="o">=</span> <span class="n">pyurdme</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s">&quot;sigma_e&quot;</span><span class="p">,</span><span class="n">expression</span><span class="o">=</span><span class="mf">0.093e-18</span><span class="p">)</span>
         <span class="n">sigma_de</span> <span class="o">=</span> <span class="n">pyurdme</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s">&quot;sigma_de&quot;</span><span class="p">,</span><span class="n">expression</span><span class="o">=</span><span class="mf">0.7</span><span class="p">)</span>
@@ -269,7 +264,6 @@
         <span class="n">boundary</span> <span class="o">=</span> <span class="p">[</span><span class="mi">2</span><span class="p">]</span>
         
         <span class="c"># Reactions</span>
-        <span class="c">#R1 = pyurdme.Reaction(name=&quot;R1&quot;,reactants={MinD_c_atp:1},products={MinD_m:1},massaction=True,rate=sigma_d, restrict_to=boundary)</span>
         <span class="n">R1</span> <span class="o">=</span> <span class="n">pyurdme</span><span class="o">.</span><span class="n">Reaction</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s">&quot;R1&quot;</span><span class="p">,</span><span class="n">reactants</span><span class="o">=</span><span class="p">{</span><span class="n">MinD_c_atp</span><span class="p">:</span><span class="mi">1</span><span class="p">},</span><span class="n">products</span><span class="o">=</span><span class="p">{</span><span class="n">MinD_m</span><span class="p">:</span><span class="mi">1</span><span class="p">},</span><span class="n">propensity_function</span><span class="o">=</span><span class="s">&quot;MinD_c_atp*sigma_d/MeshSize&quot;</span><span class="p">,</span> <span class="n">restrict_to</span><span class="o">=</span><span class="n">boundary</span><span class="p">)</span>
         <span class="n">R2</span> <span class="o">=</span> <span class="n">pyurdme</span><span class="o">.</span><span class="n">Reaction</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s">&quot;R2&quot;</span><span class="p">,</span><span class="n">reactants</span><span class="o">=</span><span class="p">{</span><span class="n">MinD_c_atp</span><span class="p">:</span><span class="mi">1</span><span class="p">,</span><span class="n">MinD_m</span><span class="p">:</span><span class="mi">1</span><span class="p">},</span><span class="n">products</span><span class="o">=</span><span class="p">{</span><span class="n">MinD_m</span><span class="p">:</span><span class="mi">2</span><span class="p">},</span><span class="n">massaction</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span><span class="n">rate</span><span class="o">=</span><span class="n">sigma_dD</span><span class="p">)</span>
         <span class="n">R3</span> <span class="o">=</span> <span class="n">pyurdme</span><span class="o">.</span><span class="n">Reaction</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s">&quot;R3&quot;</span><span class="p">,</span><span class="n">reactants</span><span class="o">=</span><span class="p">{</span><span class="n">MinD_m</span><span class="p">:</span><span class="mi">1</span><span class="p">,</span><span class="n">MinD_e</span><span class="p">:</span><span class="mi">1</span><span class="p">},</span><span class="n">products</span><span class="o">=</span><span class="p">{</span><span class="n">MinDE</span><span class="p">:</span><span class="mi">1</span><span class="p">},</span><span class="n">massaction</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span><span class="n">rate</span><span class="o">=</span><span class="n">sigma_e</span><span class="p">)</span>

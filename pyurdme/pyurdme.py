@@ -870,23 +870,6 @@ class URDMEModel(Model):
         return sol.run(number_of_trajectories=number_of_trajectories, seed=seed)
 
 
-    # Old function names for backwards compatablity
-    addDataFunction = add_data_function
-    speciesMap = get_species_map
-    __initializeSpeciesMap = __initialize_species_map
-    addSubDomain = add_subdomain
-    createStoichiometricMatrix = create_stoichiometric_matrix
-    createDependencyGraph = create_dependency_graph
-    subdomainVector = get_subdomain_vector
-    initializeInitialValue = initialize_initial_condition
-    meshextend = create_extended_mesh
-    scatter = set_initial_condition_scatter
-    distributeUniformly = set_initial_condition_distribute_uniformly
-    placeNear = set_initial_condition_place_near
-    createSystemMatrix = create_system_matrix
-    connectivityMatrix = create_connectivity_matrix
-    solverData = get_solver_datastructure
-
 
 class URDMEMesh(dolfin.Mesh):
     """ A URDME mesh extends the Dolfin mesh class. 
@@ -1159,27 +1142,6 @@ class URDMEMesh(dolfin.Mesh):
 
 
 
-    # Old function names for backwards compatability
-    toTHREEJs = export_to_three_js
-    unitIntervalMesh = generate_unit_interval_mesh
-    unitSquareMesh = generate_unit_square_mesh
-    unitCubeMesh = generate_unit_cube_mesh
-    IntervalMesh = generate_interval_mesh
-    SquareMesh = generate_square_mesh
-    CubeMesh = generate_cube_mesh
-    normalizedCoordinates = get_normalized_coordinates
-    scaledNormalizedCoordinates = get_scaled_normalized_coordinates
-    scaledCoordinates = get_scaled_coordinates
-    addPeriodicBoundaryCondition = add_periodic_boundary_condition
-    FunctionSpace = get_function_space
-    getNumVoxels = get_num_voxels
-    setNumDofVoxels = set_num_dof_voxels
-    getNumDofVoxels = get_num_dof_voxels
-    getVoxels = get_voxels
-    meshSize = get_mesh_size
-
-
-
 class URDMEXmesh():
     """ Extended mesh object.
 
@@ -1295,15 +1257,6 @@ class URDMEResult(dict):
         num_dofs = num_vox*num_species
         C = numpy.zeros((num_timepoints, num_dofs), dtype=numpy.float64)
 
-#        reorder_map = numpy.zeros((num_vox*num_species), dtype=numpy.int)
-#        for vox_ndx in range(num_vox):
-#            for cndx in range(num_species):
-#                reorder_map[vox_ndx*num_species+cndx] = v2d[vox_ndx]*num_species+cndx
-#        if len(M.shape) == 1:
-#            C[:,:] = M[reorder_map]
-#        else:
-#            C[:,:] = M[:, reorder_map]
-        #for t in range(num_timepoints):
         for vox_ndx in range(num_vox):
             for cndx in range(num_species):
                 try:
@@ -1694,16 +1647,6 @@ class URDMEResult(dict):
         IPython.display.display(IPython.display.HTML(html+hstr))
 
 
-    # Old function names for backwards compatablility
-    # TODO: remove
-    getSpecies = get_species
-    reorderDofToVoxel = _reorder_dof_to_voxel
-    toVTK = export_to_vtk
-    toXYZ = export_to_xyx
-    printParticlejs = export_to_particle_js
-    toTHREEJs = export_to_three_js
-
-
 
 class URDMESolver:
     """ Abstract class for URDME solvers. """
@@ -2077,13 +2020,9 @@ class URDMESolver:
 
         propfilestr = propfilestr.replace("__DEFINE_REACTIONS__", funcs)
         propfilestr = propfilestr.replace("__DEFINE_PROPFUNS__", funcinits)
-
         propfile.write(propfilestr)
         propfile.close()
 
-    # Old function name for backwards compatablility.
-    run_ensemble = run
-    createPropensityFile = create_propensity_file
 
 
 def urdme(model=None, solver='nsm', solver_path="", model_file=None, input_file=None, seed=None, report_level=0):

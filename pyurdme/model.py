@@ -156,28 +156,6 @@ class Model():
             self.listOfReactions == other.listOfReactions and \
             self.name == other.name)
 
-    # Old function names for backwards compatablity
-    updateNamespace = update_namespace
-    getSpecies = get_species
-    getNumSpecies = get_num_species
-    getAllSpecies = get_all_species
-    addSpecies = add_species
-    deleteSpecies = delete_species
-    deleteAllSpecies = delete_all_species
-    getParameter = get_parameter
-    getAllParameters = get_all_parameters
-    addParameter = add_parameter
-    deleteParameter = delete_parameter
-    setParameter = set_parameter
-    resolveParameters = resolve_parameters
-    deleteAllParameters = delete_all_parameters
-    addReaction = add_reaction
-    getReaction = get_reaction
-    getNumReactions = get_num_reactions
-    getAllReactions = get_all_reactions
-    deleteReaction = delete_reaction
-    deleteAllReactions = delete_all_reactions
-
 
 class Species():
     """ Model of a biochemical species. """
@@ -247,8 +225,6 @@ class Parameter():
     def __str__(self):
         return str(self.value)
         
-    # Old function names for backwards compatablity
-    setExpression = set_expression
 
 class Reaction():
     """ 
@@ -386,13 +362,6 @@ class Reaction():
 
     def annotate(self,annotation):
         self.annotation = annotation
-
-    # Old function names for backwards compatablity
-    createMassAction = create_mass_action
-    setType = set_type
-    addReactant = add_reactant
-    addProduct = add_product
-    Annotate = annotate
 
 
 # Module exceptions

@@ -10,13 +10,13 @@ setup(name="pyurdme",
       install_requires = ["numpy",
                           "matplotlib",
                           "scipy",
-                          "h5py"]
+                          "h5py"],
       
       author="Andreas Hellander, Brian Drawert",
-      author_email="andreas.hellander@gmail.com, briandrawert@gmail.com",
+      author_email=["andreas.hellander@gmail.com", "briandrawert@gmail.com"],
       license = "GPL",
       keywords = "pyurdme, urdme, spatial stochastic simulation, rdme",
-      url = "http://pyurdme.org"
+      url = "http://pyurdme.org",
       download_url = "https://github.com/ahellander/tarball/installer"
       
       )

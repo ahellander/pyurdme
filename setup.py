@@ -17,7 +17,7 @@ setup(name="pyurdme",
       license = "GPL",
       keywords = "pyurdme, urdme, spatial stochastic simulation, rdme",
       url = "http://pyurdme.org",
-      download_url = "https://github.com/ahellander/tarball/installer"
+      download_url = "https://github.com/pyurdme/pyurdme/tarball/master/1.0.0"
       
       )
       

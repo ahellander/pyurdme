@@ -34,7 +34,7 @@ To install and use pyurdme, you need to satisfy the following dependencies. Belo
       * ``sudo brew install h5py``
 
 
-Note: We strongly recommend using the appropriate package manager or binary installer for your platform to satisfy the above dependencies. However, we understand that some users prefer a non-system-wide installation of python packages, such as if using virtualenv. If one of the above listed dependencies is not satiesfied, setuptools will try to install it from the PyPI index. For numpy, scipy, matplotlib, h5py this involves building from source. Due to the many non-python dependencies, you will likely need to install development versions of certain libraries (such as freetype and libpng). An easy way to satisfy the dependencies for Ubuntu is
+Note: We strongly recommend using the appropriate package manager or binary installer for your platform to satisfy the above dependencies. However, we understand that some users prefer a non-system-wide installation of python packages, such as if using virtualenv. If one of the above listed dependencies is not satisfied, setuptools will try to install it from the PyPI index. For numpy, scipy, matplotlib, h5py this involves building from source. Due to the many non-python dependencies, you will likely need to install development versions of certain libraries (such as freetype and libpng). An easy way to satisfy the dependencies for Ubuntu is
 
 .. code-block:: bash
 

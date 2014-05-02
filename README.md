@@ -31,7 +31,7 @@ To install and use pyurdme, you need to satisfy the following dependencies. Belo
    * OSX:
       + brew install h5py
 
-Note: We strongly recommend using the appropriate package manager or binary installer for your platform to satisfy the above dependencies. However, we understand that some users prefer a non-system-wide installation of python packages, such as if using virtualenv. If one of the above listed dependencies is not satiesfied, setuptools will try to install it from the PyPI index. For numpy, scipy, matplotlib, h5py this involves building from source. Due to the many non-python dependencies, you will likely need to install development versions of certain libraries (such as freetype and libpng). An easy way to satisfy the dependencies for Ubuntu is
+Note: We strongly recommend using the appropriate package manager or binary installer for your platform to satisfy the above dependencies. However, we understand that some users prefer a non-system-wide installation of python packages, such as if using virtualenv. If one of the above listed dependencies is not satisfied, setuptools will try to install it from the PyPI index. For numpy, scipy, matplotlib, h5py this involves building from source. Due to the many non-python dependencies, you will likely need to install development versions of certain libraries (such as freetype and libpng). An easy way to satisfy the dependencies for Ubuntu is
 
 ```bash
 sudo apt-get build-dep python-numpy python-scipy python-matplotlib
@@ -44,7 +44,7 @@ If you do not mind system-wide installations, we provide a script to install all
 ### Ubuntu
 For Ubuntu, we provide a script that will install pyurdme and all dependecies. The install script must be run as root
 ```bash
-git clone https://github.com/ahellander/pyurdme
+git clone https://github.com/pyurdme/pyurdme
 cd pyurdme
 sudo ./install_ubuntu.sh
 ```
@@ -52,7 +52,7 @@ sudo ./install_ubuntu.sh
 If you want to manage the dependencies yourself, after installing them do:
 
 ```bash
-git clone https://github.com/ahellander/pyurdme.git
+git clone https://github.com/pyurdme/pyurdme.git
 cd pyurdme
 sudo python setup.py install 
 
@@ -60,19 +60,19 @@ sudo python setup.py install
 or simply 
 
 ```bash
-sudo pip install https://github.com/ahellander/pyurdme/tarball/master
+sudo pip install https://github.com/pyurdme/pyurdme/tarball/master
 ```
 
 ### OSX
 
 ```bash 
-git clone https://github.com/ahellander/pyurdme.git
+git clone https://github.com/pyurdme/pyurdme.git
 cd pyurdme
 sudo python setup.py install 
 ```
 
 or simply 
 ```bash
-sudo pip install https://github.com/ahellander/pyurdme/tarball/master
+sudo pip install https://github.com/pyurdme/pyurdme/tarball/master
 ```
 

@@ -13,7 +13,7 @@ setup(name="pyurdme",
                           "h5py"]
       
       author="Andreas Hellander, Brian Drawert",
-      author_email=["andreas.hellander@gmail.com","brian."],
+      author_email="andreas.hellander@gmail.com, briandrawert@gmail.com",
       license = "GPL",
       keywords = "pyurdme, urdme, spatial stochastic simulation, rdme",
       url = "http://pyurdme.org"

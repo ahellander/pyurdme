@@ -1206,7 +1206,7 @@ class URDMEResult(dict):
 
     def __getstate__(self):
         """ Used by pickle to get state when pickling. We need to read the contents of the
-        output file since we can't pickel file objects. """
+        output file since we can't pickle file objects. """
 
         try:
             with open(self.filename,mode='rb') as fh:
@@ -1216,12 +1216,7 @@ class URDMEResult(dict):
         
         state = self.__dict__
         state["filecontents"] = filecontents
-        for key, item in state.items():
-            try:
-                pickle.dumps(item)
-            except Exception as e:
-                raise Exception(("Failed to pickle URDMEResult:", str(e)))
-
+        
         return state
 
 

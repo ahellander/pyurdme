@@ -1,7 +1,5 @@
 #!/usr/bin/env python
 import pyurdme
-from examples.cylinder_demo.cylinder_demo3D import cylinderDemo3D
-from examples.simple_diffusion import simple_diffusion
 import pyurdme.nsmsolver
 import scipy.fftpack
 

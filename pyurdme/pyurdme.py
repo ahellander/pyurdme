@@ -628,7 +628,10 @@ class URDMEModel(Model):
 
             D.setdiag(-sumcol.flatten())        
 
-        return {'vol':vol, 'D':D, 'relative_positive_mass':positive_mass/total_mass}
+        if total_mass == 0.0:
+            return {'vol':vol, 'D':D, 'relative_positive_mass':None}
+        else:
+            return {'vol':vol, 'D':D, 'relative_positive_mass':positive_mass/total_mass}
 
 
     def validate(self, urdme_solver_data):
@@ -840,7 +843,7 @@ class URDMEModel(Model):
 
         return {'K':stiffness_matrices, 'M':mass_matrices}
 
-    def run(self, solver='nsm', number_of_trajectories=1, seed=None, report_level=0):
+    def run(self, number_of_trajectories=1, solver='nsm', seed=None, report_level=0):
         """ Simulate the model.
         
         Args:
@@ -866,23 +869,6 @@ class URDMEModel(Model):
 
         return sol.run(number_of_trajectories=number_of_trajectories, seed=seed)
 
-
-    # Old function names for backwards compatablity
-    addDataFunction = add_data_function
-    speciesMap = get_species_map
-    __initializeSpeciesMap = __initialize_species_map
-    addSubDomain = add_subdomain
-    createStoichiometricMatrix = create_stoichiometric_matrix
-    createDependencyGraph = create_dependency_graph
-    subdomainVector = get_subdomain_vector
-    initializeInitialValue = initialize_initial_condition
-    meshextend = create_extended_mesh
-    scatter = set_initial_condition_scatter
-    distributeUniformly = set_initial_condition_distribute_uniformly
-    placeNear = set_initial_condition_place_near
-    createSystemMatrix = create_system_matrix
-    connectivityMatrix = create_connectivity_matrix
-    solverData = get_solver_datastructure
 
 
 class URDMEMesh(dolfin.Mesh):
@@ -929,8 +915,18 @@ class URDMEMesh(dolfin.Mesh):
         return self.num_dof_voxels
 
     def get_voxels(self):
-        """ return the (x,y,z) coordinate of each voxel. """
+        """ Return the (x,y,z) coordinate of each voxel. """
         return self.coordinates()
+
+
+    def closest_vertex(self,x):
+        """ Get index of the vertex in the coordinate list closest to the point x. """
+        coords = self.get_voxels()
+        shape = coords.shape
+        reppoint = numpy.tile(x, (shape[0], 1))
+        dist = numpy.sqrt(numpy.sum((coords-reppoint)**2, axis=1))
+        ix = numpy.argmin(dist)
+        return ix
 
     def get_mesh_size(self):
         """ Estimate of mesh size at each vertex. """
@@ -1146,27 +1142,6 @@ class URDMEMesh(dolfin.Mesh):
 
 
 
-    # Old function names for backwards compatability
-    toTHREEJs = export_to_three_js
-    unitIntervalMesh = generate_unit_interval_mesh
-    unitSquareMesh = generate_unit_square_mesh
-    unitCubeMesh = generate_unit_cube_mesh
-    IntervalMesh = generate_interval_mesh
-    SquareMesh = generate_square_mesh
-    CubeMesh = generate_cube_mesh
-    normalizedCoordinates = get_normalized_coordinates
-    scaledNormalizedCoordinates = get_scaled_normalized_coordinates
-    scaledCoordinates = get_scaled_coordinates
-    addPeriodicBoundaryCondition = add_periodic_boundary_condition
-    FunctionSpace = get_function_space
-    getNumVoxels = get_num_voxels
-    setNumDofVoxels = set_num_dof_voxels
-    getNumDofVoxels = get_num_dof_voxels
-    getVoxels = get_voxels
-    meshSize = get_mesh_size
-
-
-
 class URDMEXmesh():
     """ Extended mesh object.
 
@@ -1282,15 +1257,6 @@ class URDMEResult(dict):
         num_dofs = num_vox*num_species
         C = numpy.zeros((num_timepoints, num_dofs), dtype=numpy.float64)
 
-#        reorder_map = numpy.zeros((num_vox*num_species), dtype=numpy.int)
-#        for vox_ndx in range(num_vox):
-#            for cndx in range(num_species):
-#                reorder_map[vox_ndx*num_species+cndx] = v2d[vox_ndx]*num_species+cndx
-#        if len(M.shape) == 1:
-#            C[:,:] = M[reorder_map]
-#        else:
-#            C[:,:] = M[:, reorder_map]
-        #for t in range(num_timepoints):
         for vox_ndx in range(num_vox):
             for cndx in range(num_species):
                 try:
@@ -1681,16 +1647,6 @@ class URDMEResult(dict):
         IPython.display.display(IPython.display.HTML(html+hstr))
 
 
-    # Old function names for backwards compatablility
-    # TODO: remove
-    getSpecies = get_species
-    reorderDofToVoxel = _reorder_dof_to_voxel
-    toVTK = export_to_vtk
-    toXYZ = export_to_xyx
-    printParticlejs = export_to_particle_js
-    toTHREEJs = export_to_three_js
-
-
 
 class URDMESolver:
     """ Abstract class for URDME solvers. """
@@ -1748,7 +1704,7 @@ class URDMESolver:
         model_file = tmproot+'/'+self.model_name + '_pyurdme_generated_model'+ '.c'
         ret['model_file'] = os.path.basename(model_file)
         if self.model_file == None:
-            self.createPropensityFile(file_name=model_file)
+            self.create_propensity_file(file_name=model_file)
         else:
             subprocess.call('cp '+self.model_file+' '+model_file, shell=True)
         # Get the solver source files
@@ -1863,13 +1819,13 @@ class URDMESolver:
             prop_file_name=self.solver_dir + self.propfilename + '.c'
             if self.report_level > 1:
                 print "Creating propensity file {0}".format(prop_file_name)
-            self.createPropensityFile(file_name=prop_file_name)
+            self.create_propensity_file(file_name=prop_file_name)
         else:
             cmd = " ".join(['cp', self.model_file, self.solver_dir + self.propfilename + '.c'])
             if self.report_level > 1:
                 print cmd
-            subprocess.call(cmd)
-
+            subprocess.call(cmd,shell=True)
+            
         # Build the solver
         makefile = 'Makefile.' + self.NAME
         cmd = " ".join([ 'cd', self.solver_base_dir , ';', 'make', '-f', self.URDME_BUILD + makefile, 'URDME_ROOT=' + self.URDME_ROOT, 'URDME_MODEL=' + self.propfilename])
@@ -2019,7 +1975,7 @@ class URDMESolver:
         propfilestr = propfilestr.replace("__DEFINE_DATA_FUNCTIONS__", str(data_fn_str))
 
         # Make sure all paramters are evaluated to scalars before we write them to the file.
-        self.model.resolveParameters()
+        self.model.resolve_parameters()
         parameters = ""
         for p in self.model.listOfParameters:
             parameters += "const double " + p + " = " + str(self.model.listOfParameters[p].value) + ";\n"
@@ -2064,13 +2020,9 @@ class URDMESolver:
 
         propfilestr = propfilestr.replace("__DEFINE_REACTIONS__", funcs)
         propfilestr = propfilestr.replace("__DEFINE_PROPFUNS__", funcinits)
-
         propfile.write(propfilestr)
         propfile.close()
 
-    # Old function name for backwards compatablility.
-    run_ensemble = run
-    createPropensityFile = create_propensity_file
 
 
 def urdme(model=None, solver='nsm', solver_path="", model_file=None, input_file=None, seed=None, report_level=0):
@@ -2122,7 +2074,7 @@ class URDMEDataFunction():
         Args:
             x: a list of 3 ints.
         Returns:
-            a doubles.
+            a list of floats.
         """
         raise Exception("URDMEDataFunction.map() not implemented.")
 
@@ -2142,6 +2094,7 @@ class InvalidSystemMatrixException(Exception):
 
 
 class IntervalMeshPeriodicBoundary(dolfin.SubDomain):
+    """ Subdomain for Periodic boundary conditions on a interval domain. """
     def __init__(self, a=0.0, b=1.0):
         """ 1D domain from a to b. """
         dolfin.SubDomain.__init__(self)
@@ -2156,7 +2109,7 @@ class IntervalMeshPeriodicBoundary(dolfin.SubDomain):
             y[0] = self.a + (x[0] - self.b)
 
 class SquareMeshPeriodicBoundary(dolfin.SubDomain):
-    """ Sub domain for Periodic boundary condition """
+    """ Subdomain for Periodic boundary conditions on a square domain. """
     def __init__(self, Lx=1.0, Ly=1.0):
         dolfin.SubDomain.__init__(self)
         self.Lx = Lx
@@ -2182,7 +2135,7 @@ class SquareMeshPeriodicBoundary(dolfin.SubDomain):
             y[1] = x[1] - self.Ly
 
 class CubeMeshPeriodicBoundary(dolfin.SubDomain):
-    """ Sub domain for Periodic boundary condition """
+    """ Subdomain for Periodic boundary conditions on a cube domain. """
     def __init__(self, Lx=1.0, Ly=1.0, Lz=1.0):
         dolfin.SubDomain.__init__(self)
         self.Lx = Lx

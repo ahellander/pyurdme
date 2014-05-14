@@ -56,12 +56,12 @@ class G_protein_cycle_1D(pyurdme.URDMEModel):
         Gbg = pyurdme.Species(name="Gbg",diffusion_constant=0.01)
         Gd  = pyurdme.Species(name="Gd", diffusion_constant=0.01)
         
-        self.addSpecies([R,RL,G,Ga,Gbg,Gd])
+        self.add_species([R,RL,G,Ga,Gbg,Gd])
     
         L = 4*3.14159
         NUM_VOXEL = 200
         MOLAR=6.02e-01*((L/NUM_VOXEL)**3)
-        self.mesh = pyurdme.URDMEMesh.IntervalMesh(nx=NUM_VOXEL, a=-2*3.14159, b=2*3.14159, periodic=True)
+        self.mesh = pyurdme.URDMEMesh.generate_interval_mesh(nx=NUM_VOXEL, a=-2*3.14159, b=2*3.14159, periodic=True)
         
         SA    = pyurdme.Parameter(name="SA" ,expression=201.056)
         V     = pyurdme.Parameter(name="V" ,expression=33.5)
@@ -73,10 +73,10 @@ class G_protein_cycle_1D(pyurdme.URDMEModel):
         k_G1  = pyurdme.Parameter(name="k_G1" ,expression="1.0*SA")
         k_Ga  = pyurdme.Parameter(name="k_Ga" ,expression="1e-06*SA")
         k_Gd  = pyurdme.Parameter(name="k_Gd" ,expression=0.1)
-        self.addParameter([SA,V,k_RL,k_RLm,k_Rs,k_Rd0,k_Rd1,k_G1,k_Ga,k_Gd]) 
+        self.add_parameter([SA,V,k_RL,k_RLm,k_Rs,k_Rd0,k_Rd1,k_G1,k_Ga,k_Gd]) 
 
         # Add Data Function to model the mating pheromone gradient.
-        self.addDataFunction(PheromoneGradient(a=-2*3.14159, b=2*3.14159, MOLAR=MOLAR))
+        self.add_data_function(PheromoneGradient(a=-2*3.14159, b=2*3.14159, MOLAR=MOLAR))
 
         # Reactions
         R0 = pyurdme.Reaction(name="R0", reactants={}, products={R:1}, massaction=True, rate=k_Rs)
@@ -87,11 +87,11 @@ class G_protein_cycle_1D(pyurdme.URDMEModel):
         R5 = pyurdme.Reaction(name="R5", reactants={G:1}, products={Ga:1, Gbg:1}, propensity_function="k_Ga*RL*G/vol")
         R6 = pyurdme.Reaction(name="R6", reactants={Ga:1}, products={Gd:1}, massaction=True, rate=k_Ga)
         R7 = pyurdme.Reaction(name="R7", reactants={Gd:1, Gbg:1}, products={G:1}, massaction=True, rate=k_G1)
-        self.addReaction([R0,R1,R2,R3,R4,R5,R6,R7])
+        self.add_reaction([R0,R1,R2,R3,R4,R5,R6,R7])
         
         # Distribute molecules randomly over the mesh according to their initial values
-        self.scatter({R:10000})
-        self.scatter({G:10000})
+        self.set_initial_condition_scatter({R:10000})
+        self.set_initial_condition_scatter({G:10000})
 
         self.timespan(range(201))
 
@@ -100,12 +100,11 @@ if __name__=="__main__":
     """ Dump model to a file. """
                      
     model = G_protein_cycle_1D()
-    result = pyurdme.urdme(model)
-    print result
+    result = model.run()
 
     x_vals = model.mesh.coordinates()[:, 0]
-    G = result.getSpecies("G", timepoints=49)
-    Gbg = result.getSpecies("Gbg", timepoints=49)
+    G = result.get_species("G", timepoints=49)
+    Gbg = result.get_species("Gbg", timepoints=49)
     plt.plot(x_vals, Gbg)
     plt.title('Gbg at t=49')
     plt.xlabel('Space')

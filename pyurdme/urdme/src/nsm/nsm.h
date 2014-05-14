@@ -9,7 +9,8 @@
 
 #include "hdf5.h"
 #include "hdf5_hl.h"
-#include "matmodel.h"
+#include "urdmemodel.h"
+#include "outputwriter.h"
 
 void nsm(void *data, urdme_output_writer *writer);
 void nsm_core(const size_t *irD,const size_t *jcD,const double *prD,

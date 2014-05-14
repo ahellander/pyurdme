@@ -36,7 +36,7 @@ class simple_diffusion2(URDMEModel):
         A = Species(name="A",diffusion_constant=1.0,dimension=2)
         B = Species(name="B",diffusion_constant=0.1,dimension=1)
 
-        self.addSpecies([A,B])
+        self.add_species([A,B])
 
         # A circle
         #c1 = dolfin.Circle(0,0,1)
@@ -58,20 +58,20 @@ class simple_diffusion2(URDMEModel):
         membrane_patch = MembranePatch()
         membrane_patch.mark(facet_function,3)
         
-        self.addSubDomain(cell_function)
-        self.addSubDomain(facet_function)
+        self.add_subdomain(cell_function)
+        self.add_subdomain(facet_function)
         
         k1 = Parameter(name="k1",expression=1000.0)
-        self.addParameter([k1])
+        self.add_parameter([k1])
         R1 = Reaction(name="R1",reactants={A:1},products={B:1},massaction=True,rate=k1,restrict_to=3)
-        self.addReaction([R1])
+        self.add_reaction([R1])
         
         # Restrict species B to the membrane subdomain
         self.restrict(species=B,subdomains=[2,3])
         self.timespan(numpy.linspace(0,1,10))
         
         # Place the A molecules in the voxel nearest to the center of the square
-        self.placeNear({A:1000},point=[0,0])
+        self.set_initial_condition_place_near({A:1000},point=[0,0])
 
 if __name__ == '__main__':
     import time
@@ -87,14 +87,14 @@ if __name__ == '__main__':
     result = urdme(model,report_level=0)
     print "\t pyurdme took "+str(time.time()-tic)+" s."
     tic = time.time()
-    A = result.getSpecies("A")
+    A = result.get_species("A")
 
     #U = result["U"]
     Asum=numpy.sum(A,axis=1)
     print "\t and accessing the data and aggregating one species took "+str(time.time()-tic)+" s."
     # Get A at a selceted time point
     tic  = time.time()
-    A = result.getSpecies("A",[300])
+    A = result.get_species("A",[300])
     #print numpy.sum(A,axis=1)
     print "\t Selecting a single timepoint took "+str(time.time()-tic)+" s."
 
@@ -106,14 +106,14 @@ if __name__ == '__main__':
     print "\t pyurdme took "+str(time.time()-tic)+" s."
     tic = time.time()
     # U = result["U"]
-    A = result.getSpecies("A")
+    A = result.get_species("A")
 
     Asum=numpy.sum(A,axis=1)
 
     print "\t and accessing all timepoints for one species took "+str(time.time()-tic)+" s."
     # Get A at a selceted time point
     tic  = time.time()
-    A = result.getSpecies("A",[4000])
+    A = result.get_species("A",[4000])
     #print numpy.sum(A,axis=1)
     print "\t Selecting a single timepoint took "+str(time.time()-tic)+" s."
 
@@ -125,13 +125,13 @@ if __name__ == '__main__':
     result = urdme(model,report_level=0)
     print "\t pyurdme took "+str(time.time()-tic)+" s."
     tic = time.time()
-    A = result.getSpecies("A")
+    A = result.get_species("A")
     
     Asum=numpy.sum(A,axis=1)
     print "\t and accessing all timepoints for one species took "+str(time.time()-tic)+" s."
     # Get A at a seleceted time point
     tic  = time.time()
-    A = result.getSpecies("A",[25000])
+    A = result.get_species("A",[25000])
     #print numpy.sum(A,axis=1)
     print "\t Selecting a single timepoint took "+str(time.time()-tic)+" s."
 
@@ -143,13 +143,13 @@ if __name__ == '__main__':
     print "\t pyurdme took "+str(time.time()-tic)+" s."
     tic = time.time()
     #U = result["U"]
-    A = result.getSpecies("A")
+    A = result.get_species("A")
     Asum=numpy.sum(A,axis=1)
     print "\t and accessing all timepoints for one species took "+str(time.time()-tic)+" s."
 
     # Get A at a selceted time point
     tic  = time.time()
-    A = result.getSpecies("A",[100000])
+    A = result.get_species("A",[100000])
     #print numpy.sum(A,axis=1)
     print "\t Selecting a single timepoint took "+str(time.time()-tic)+" s."
 

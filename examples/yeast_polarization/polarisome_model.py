@@ -43,10 +43,10 @@ class polarisome_1D(pyurdme.URDMEModel):
         Spa2m = pyurdme.Species(name="Spa2m",  diffusion_constant=default_D)
         Actinc = pyurdme.Species(name="Actinc",  diffusion_constant=fast_D)
         Actinm = pyurdme.Species(name="Actinm",  diffusion_constant=default_D)
-        self.addSpecies([Bni1c, Bni1m, Spa2c, Spa2m, Actinc, Actinm])
+        self.add_species([Bni1c, Bni1m, Spa2c, Spa2m, Actinc, Actinm])
     
         NUM_VOXEL = 160
-        self.mesh = pyurdme.URDMEMesh.IntervalMesh(nx=NUM_VOXEL, a=-4*numpy.pi, b=4*numpy.pi, periodic=True)
+        self.mesh = pyurdme.URDMEMesh.generate_interval_mesh(nx=NUM_VOXEL, a=-4*numpy.pi, b=4*numpy.pi, periodic=True)
 
         Bon = pyurdme.Parameter(name="Bon", expression=1.6e-6)
         Boff = pyurdme.Parameter(name="Boff", expression=0.25)
@@ -56,10 +56,10 @@ class polarisome_1D(pyurdme.URDMEModel):
         Km = pyurdme.Parameter(name="Km", expression=3500)
         Son = pyurdme.Parameter(name="Son", expression=0.16)
         Soff = pyurdme.Parameter(name="Soff", expression=0.35)
-        self.addParameter([Bon, Boff, Bfb, Aon, Aoff, Km, Son, Soff]) 
+        self.add_parameter([Bon, Boff, Bfb, Aon, Aoff, Km, Son, Soff]) 
 
         # Add Data Function to model the mating pheromone gradient.
-        self.addDataFunction(Cdc42())
+        self.add_data_function(Cdc42())
 
         # Reactions
         R0 = pyurdme.Reaction(name="R0", reactants={Bni1c:1}, products={Bni1m:1}, propensity_function="Bon*Bni1c*NUM_VOXELS*Cdc42")
@@ -69,12 +69,12 @@ class polarisome_1D(pyurdme.URDMEModel):
         R4 = pyurdme.Reaction(name="R4", reactants={Spa2c:1}, products={Spa2m:1}, propensity_function="Son*Spa2c*NUM_VOXELS*Actinm")
         R5 = pyurdme.Reaction(name="R5", reactants={Spa2m:1}, products={Spa2c:1}, massaction=True, rate=Soff)
         R6 = pyurdme.Reaction(name="R6", reactants={Bni1c:1}, products={Bni1m:1}, propensity_function="Bfb*Bni1c*NUM_VOXELS*Spa2m")
-        self.addReaction([R0,R1,R2,R3,R4,R5,R6])
+        self.add_reaction([R0,R1,R2,R3,R4,R5,R6])
         
         # Distribute molecules randomly over the mesh according to their initial values
-        self.scatter({Bni1c:1000})
-        self.scatter({Spa2c:5000})
-        self.scatter({Actinc:40})
+        self.set_initial_condition_scatter({Bni1c:1000})
+        self.set_initial_condition_scatter({Spa2c:5000})
+        self.set_initial_condition_scatter({Actinc:40})
 
         #self.timespan(range(0,3601,30))
         self.timespan(range(0,201,10))
@@ -84,12 +84,11 @@ if __name__=="__main__":
     """ Dump model to a file. """
                      
     model = polarisome_1D()
-    result = pyurdme.urdme(model)
-    print result
+    result = model.run()
 
     x_vals = model.mesh.coordinates()[:, 0]
-    Bni1 = result.getSpecies("Bni1m", timepoints=20)
-    Spa2 = result.getSpecies("Spa2m", timepoints=20)
+    Bni1 = result.get_species("Bni1m", timepoints=20)
+    Spa2 = result.get_species("Spa2m", timepoints=20)
     plt.plot(x_vals, Spa2)
     plt.title('Spa2_m at t={0}'.format(model.tspan[20]))
     plt.show()

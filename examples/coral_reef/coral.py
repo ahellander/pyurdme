@@ -19,7 +19,7 @@ class CoralReef(pyurdme.URDMEModel):
         MA = pyurdme.Species(name="MA", diffusion_constant=0.0)
         MA_m = pyurdme.Species(name="MA_m", diffusion_constant=D_m)
         Turf = pyurdme.Species(name="Turf", diffusion_constant=0.0)
-        self.addSpecies([Coral, MA, Coral_m, MA_m, Turf])
+        self.add_species([Coral, MA, Coral_m, MA_m, Turf])
 
         # Parameters
         phi_c = pyurdme.Parameter(name="phi_c", expression=0.0011) #1/year
@@ -41,62 +41,59 @@ class CoralReef(pyurdme.URDMEModel):
         R_c = pyurdme.Parameter(name="R_c", expression=1.0) #1/year
         R_m = pyurdme.Parameter(name="R_m", expression=1.0) #1/year
 
-        self.addParameter([phi_c, phi_m, g_tc, g_tm, Gamma, dc, dm, phi_g, mu_c, mu_m, alpha_c, alpha_m, R_c, R_m])
+        self.add_parameter([phi_c, phi_m, g_tc, g_tm, Gamma, dc, dm, phi_g, mu_c, mu_m, alpha_c, alpha_m, R_c, R_m])
                 
 
         # Reactions:
         # C -> T : dc
-        self.addReaction(pyurdme.Reaction(name="R3", reactants={Coral:1}, products={Turf:1}, rate=dc))
+        self.add_reaction(pyurdme.Reaction(name="R3", reactants={Coral:1}, products={Turf:1}, rate=dc))
         # MA -> T : dm
-        self.addReaction(pyurdme.Reaction(name="R4", reactants={MA:1}, products={Turf:1}, rate=dm))
+        self.add_reaction(pyurdme.Reaction(name="R4", reactants={MA:1}, products={Turf:1}, rate=dm))
         # T + C_m -> C : phi_c
-        self.addReaction(pyurdme.Reaction(name="R5", reactants={Turf:1, Coral_m:1}, products={Coral:1}, rate=phi_c))
+        self.add_reaction(pyurdme.Reaction(name="R5", reactants={Turf:1, Coral_m:1}, products={Coral:1}, rate=phi_c))
         # T + MA_m -> MA : phi_m
-        self.addReaction(pyurdme.Reaction(name="R6", reactants={Turf:1, MA_m:1}, products={MA:1}, rate=phi_m))
+        self.add_reaction(pyurdme.Reaction(name="R6", reactants={Turf:1, MA_m:1}, products={MA:1}, rate=phi_m))
         # C + T -> 2C : g_tc * exp(-1.0 * psi_g * MA / 100)
-        self.addReaction(pyurdme.Reaction(name="R7", reactants={Turf:1, Coral:1}, products={Coral:2}, propensity_function="g_tc*Turf*Coral*exp(-1.0 * psi_g * MA / Space_per_voxel)/vol"))
+        self.add_reaction(pyurdme.Reaction(name="R7", reactants={Turf:1, Coral:1}, products={Coral:2}, propensity_function="g_tc*Turf*Coral*exp(-1.0 * psi_g * MA / Space_per_voxel)/vol"))
         # MA + T -> 2MA : g_tm
-        self.addReaction(pyurdme.Reaction(name="R8", reactants={Turf:1, MA:1}, products={MA:2}, rate=g_tm))
+        self.add_reaction(pyurdme.Reaction(name="R8", reactants={Turf:1, MA:1}, products={MA:2}, rate=g_tm))
         # C + MA -> 2MA : Gamma * g_tm
-        self.addReaction(pyurdme.Reaction(name="R9", reactants={Coral:1, MA:1}, products={MA:2}, propensity_function="g_tm*Gamma*Coral*MA/vol"))
+        self.add_reaction(pyurdme.Reaction(name="R9", reactants={Coral:1, MA:1}, products={MA:2}, propensity_function="g_tm*Gamma*Coral*MA/vol"))
         # C -> C + C_m : R_c
-        self.addReaction(pyurdme.Reaction(name="R10", reactants={Coral:1}, products={Coral:1, Coral_m:1}, rate=R_c))
+        self.add_reaction(pyurdme.Reaction(name="R10", reactants={Coral:1}, products={Coral:1, Coral_m:1}, rate=R_c))
         # MA -> MA + MA_m : R_m
-        self.addReaction(pyurdme.Reaction(name="R11", reactants={MA:1}, products={MA:1, MA_m:1}, rate=R_m))
+        self.add_reaction(pyurdme.Reaction(name="R11", reactants={MA:1}, products={MA:1, MA_m:1}, rate=R_m))
         # C_m -> 0 : mu_c
-        self.addReaction(pyurdme.Reaction(name="R12", reactants={Coral_m:1}, products={}, rate=mu_c))
+        self.add_reaction(pyurdme.Reaction(name="R12", reactants={Coral_m:1}, products={}, rate=mu_c))
         # MA_m -> 0 : mu_m
-        self.addReaction(pyurdme.Reaction(name="R13", reactants={MA_m:1},  products={}, rate=mu_m))
+        self.add_reaction(pyurdme.Reaction(name="R13", reactants={MA_m:1},  products={}, rate=mu_m))
         # MA + C_m -> MA : alpha_c
-        self.addReaction(pyurdme.Reaction(name="R14", reactants={MA:1, Coral_m:1},  products={MA:1}, rate=alpha_c))
+        self.add_reaction(pyurdme.Reaction(name="R14", reactants={MA:1, Coral_m:1},  products={MA:1}, rate=alpha_c))
         # C + MA_m -> C : alpha_m
-        self.addReaction(pyurdme.Reaction(name="R15", reactants={Coral:1, MA_m:1},  products={Coral:1}, rate=alpha_m))
+        self.add_reaction(pyurdme.Reaction(name="R15", reactants={Coral:1, MA_m:1},  products={Coral:1}, rate=alpha_m))
  
         
 
         # A unit square
         # each grid point is 10cm x 10cm, domain is 5m x 5m
-        self.mesh = pyurdme.URDMEMesh.SquareMesh(L=5, nx=50, ny=50, periodic=True)
+        self.mesh = pyurdme.URDMEMesh.generate_square_mesh(L=5, nx=50, ny=50, periodic=True)
 
-        # Place the A molecules in the voxel nearest the center of the square
-        #self.placeNear({Coral:100}, point=[10,10])
-        
         Space_per_voxel = 10
-        self.addParameter(pyurdme.Parameter(name="Space_per_voxel", expression=Space_per_voxel)) #1/year
+        self.add_parameter(pyurdme.Parameter(name="Space_per_voxel", expression=Space_per_voxel)) #1/year
         
                           
         if True:
             # Start with two colonys
-            self.distributeUniformly({Turf:Space_per_voxel})
-            self.placeNear({Coral:Space_per_voxel}, point=[1,1])
-            self.placeNear({Turf:0}, point=[1,1])
-            self.placeNear({MA:Space_per_voxel}, point=[4,4])
-            self.placeNear({Turf:0}, point=[4,4])
+            self.set_initial_condition_distribute_uniformly({Turf:Space_per_voxel})
+            self.set_initial_condition_place_near({Coral:Space_per_voxel}, point=[1,1])
+            self.set_initial_condition_place_near({Turf:0}, point=[1,1])
+            self.set_initial_condition_place_near({MA:Space_per_voxel}, point=[4,4])
+            self.set_initial_condition_place_near({Turf:0}, point=[4,4])
         else:
             # Every voxel is the same
-            self.distributeUniformly({Turf:0})
-            self.distributeUniformly({Coral:Space_per_voxel-1})
-            self.distributeUniformly({MA:1})
+            self.set_initial_condition_distribute_uniformly({Turf:0})
+            self.set_initial_condition_distribute_uniformly({Coral:Space_per_voxel-1})
+            self.set_initial_condition_distribute_uniformly({MA:1})
 
 
         for vndx in range(self.u0.shape[1]):
@@ -116,13 +113,13 @@ if __name__ == "__main__":
     model = CoralReef()
     result = model.run(report_level=1)
     print "Writing PavaView compatable output to 'output_coral' directory"
-    result.toVTK(species='Coral',folder_name="output_coral")
+    result.export_to_vtk(species='Coral',folder_name="output_coral")
 
     x_vals = model.mesh.coordinates()[:, 0]
     y_vals = model.mesh.coordinates()[:, 1]
-    C_vals = result.getSpecies("Coral")
-    MA_vals = result.getSpecies("MA")
-    Turf_vals = result.getSpecies("Turf")
+    C_vals = result.get_species("Coral")
+    MA_vals = result.get_species("MA")
+    Turf_vals = result.get_species("Turf")
     num_vox = len(x_vals)    
 
     plt.figure(figsize=(12,6), dpi=100)

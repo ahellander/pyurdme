@@ -11,7 +11,8 @@
 #include <stdio.h>
 #include "propensities.h"
 #include "nsm.h"
-#include "matmodel.h"
+#include "urdmemodel.h"
+#include "outputwriter.h"
 #include "time.h"
 
 #include "hdf5.h"

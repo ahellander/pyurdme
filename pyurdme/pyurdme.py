@@ -1159,7 +1159,7 @@ class URDMEResult(dict):
     """ Result object for a URDME simulation, extends the dict object. """
 
     def __init__(self, model=None, filename=None, loaddata=False):
-        self.model = model
+        #self.model = model
         self.sol = None
         self.U = None
         self.tspan = None

@@ -80,45 +80,45 @@ class URDMEModel(Model):
         #  Filter out any instance variable that is not picklable...
         state = {}
         for key, item in self.__dict__.items():
-            try:
-                pickle.dumps(item)
-                state[key] = item
-            except Exception as e:
-                if key == "mesh":
+            
+            if key == "mesh":
+                tmpfile = tempfile.NamedTemporaryFile(suffix=".xml")
+                dolfin.File(tmpfile.name) << item
+                tmpfile.seek(0)
+                state['mesh'] = {}
+                state['mesh']['data'] = tmpfile.read()
+                tmpfile.close()
+                if item.constrained_domain is not None:
+                    # Warning: This is black magic.
+                    try:
+                        cdd = {}
+                        cdd['source'] = inspect.getsource(item.constrained_domain.__class__)
+                        cdd['name'] = item.constrained_domain.__class__.__name__
+                        cdd['dict'] = {}
+                        for k,v in item.constrained_domain.__dict__.iteritems():
+                            if type(v).__name__ != 'SwigPyObject':
+                                cdd['dict'][k] = v
+                        state['mesh']['constrained_domain'] = cdd
+                    except Exception as e:
+                        sys.stderr.write("error pickling mesh.constrained_domain: {0}\n".format(e))
+                        raise e
+                if item.num_dof_voxels is not None:
+                    state['mesh']['num_dof_voxels'] = item.num_dof_voxels
+            elif key == "subdomains":
+                sddict = OrderedDict()
+                for sdkey, sd_func in item.items():
                     tmpfile = tempfile.NamedTemporaryFile(suffix=".xml")
-                    dolfin.File(tmpfile.name) << item
+                    dolfin.File(tmpfile.name) << sd_func
                     tmpfile.seek(0)
-                    state['mesh'] = {}
-                    state['mesh']['data'] = tmpfile.read()
+                    sddict[sdkey] = tmpfile.read()
                     tmpfile.close()
-                    if item.constrained_domain is not None:
-                        # Warning: This is black magic.
-                        try:
-                            cdd = {}
-                            cdd['source'] = inspect.getsource(item.constrained_domain.__class__)
-                            cdd['name'] = item.constrained_domain.__class__.__name__
-                            cdd['dict'] = {}
-                            for k,v in item.constrained_domain.__dict__.iteritems():
-                                if type(v).__name__ != 'SwigPyObject':
-                                    cdd['dict'][k] = v
-                            state['mesh']['constrained_domain'] = cdd
-                        except Exception as e:
-                            sys.stderr.write("error pickling mesh.constrained_domain: {0}\n".format(e))
-                            raise e
-                    if item.num_dof_voxels is not None:
-                        state['mesh']['num_dof_voxels'] = item.num_dof_voxels
-                elif key == "subdomains":
-                    sddict = OrderedDict()
-                    for sdkey, sd_func in item.items():
-                        tmpfile = tempfile.NamedTemporaryFile(suffix=".xml")
-                        dolfin.File(tmpfile.name) << sd_func
-                        tmpfile.seek(0)
-                        sddict[sdkey] = tmpfile.read()
-                        tmpfile.close()
-                    state[key] = sddict
-                else:
-                    state[key] = None
-
+                    
+                state[key] = sddict
+            elif key in ["stiffness_matrices","mass_matrices","xmesh"]:
+                state[key] = None
+            else:
+                state[key] = item
+    
 
         return state
 

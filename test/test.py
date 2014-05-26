@@ -83,6 +83,11 @@ class TestSolverFunctionality(unittest.TestCase):
         result2 = solver.run()
         self.assertNotEqual(result1,result2)
 
+    def test_mesh_pickle(self):
+        meshstr = pickle.dumps(self.model.mesh)
+        mesh = pickle.loads(meshstr)
+
+
     def test_model_pickle(self):
         """ Test that the model is picklable. We do not compare models directly, but rather the results after simulation. """
         model = self.model

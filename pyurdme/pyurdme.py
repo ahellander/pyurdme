@@ -1058,6 +1058,14 @@ class URDMEMesh(dolfin.Mesh):
         mesh = cls.read_dolfin_mesh(filename[:-4]+".xml",colors)
         return mesh
 
+    @classmethod
+    def read_geometry(cls, filename=None, dimension=2, clscale=1, colors=[]):
+        """Import a mesh from a geometry"""
+        mesh_filename = (filename[:-4] if filename[-4:]==".geo" else filename)+".msh"
+        subprocess.call(["gmsh","-"+str(dimension),"-clscale",str(clscale),filename,"-o",mesh_filename])
+        mesh = cls.read_mesh(mesh_filename,colors)
+        return mesh
+
     def export_to_three_js(self, colors = None):
         """ return a Json string of the mesh in THREE Js format. 
             

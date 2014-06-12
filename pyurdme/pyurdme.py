@@ -1049,6 +1049,15 @@ class URDMEMesh(dolfin.Mesh):
         except Exception as e:
             raise MeshImportError("Failed to import mesh: " + filename+"\n" + str(e))
 
+    @classmethod
+    def read_mesh(cls, filename=None, colors = []):
+        """Import a mesh in gmsh .msh or Dolfins .xml format"""
+        if filename[-4:]==".msh":
+            #if the input file is a .msh, we convert it into a Dolfin .xml
+            subprocess.call(["dolfin-convert",filename,filename[:-4]+".xml"])
+        mesh = cls.read_dolfin_mesh(filename[:-4]+".xml",colors)
+        return mesh
+
     def export_to_three_js(self, colors = None):
         """ return a Json string of the mesh in THREE Js format. 
             

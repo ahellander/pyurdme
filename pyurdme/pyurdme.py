@@ -939,7 +939,7 @@ class URDMEMesh(dolfin.Mesh):
             cr.append(cell.diameter()/2.0)
 
         # Compute the mean for each vertex based on all incident cells
-        vtx2cell = self.topology()(0,self.topology().dim())
+        vtx2cell = self.topology()(self.topology().dim(),0)
         vtxh = []
         for i in range(self.num_vertices()):
             v2c = vtx2cell(i)

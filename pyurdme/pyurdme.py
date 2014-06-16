@@ -939,7 +939,7 @@ class URDMEMesh(dolfin.Mesh):
             cr.append(cell.diameter()/2.0)
 
         # Compute the mean for each vertex based on all incident cells
-        vtx2cell = self.topology()(0,self.topology().dim())
+        vtx2cell = self.topology()(self.topology().dim(),0)
         vtxh = []
         for i in range(self.num_vertices()):
             v2c = vtx2cell(i)
@@ -1048,6 +1048,23 @@ class URDMEMesh(dolfin.Mesh):
             return mesh
         except Exception as e:
             raise MeshImportError("Failed to import mesh: " + filename+"\n" + str(e))
+
+    @classmethod
+    def read_mesh(cls, filename=None, colors = []):
+        """Import a mesh in gmsh .msh or Dolfins .xml format"""
+        if filename[-4:]==".msh":
+            #if the input file is a .msh, we convert it into a Dolfin .xml
+            subprocess.call(["dolfin-convert",filename,filename[:-4]+".xml"])
+        mesh = cls.read_dolfin_mesh(filename[:-4]+".xml",colors)
+        return mesh
+
+    @classmethod
+    def read_geometry(cls, filename=None, dimension=2, clscale=1, colors=[]):
+        """Import a mesh from a geometry"""
+        mesh_filename = (filename[:-4] if filename[-4:]==".geo" else filename)+".msh"
+        subprocess.call(["gmsh","-"+str(dimension),"-clscale",str(clscale),filename,"-o",mesh_filename])
+        mesh = cls.read_mesh(mesh_filename,colors)
+        return mesh
 
     def export_to_three_js(self, colors = None):
         """ return a Json string of the mesh in THREE Js format. 

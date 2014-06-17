@@ -1,8 +1,9 @@
+
 // Gmsh project created on Wed Jun 11 15:38:08 2014
 
-lc = 2; //characteristic length
+lc = 0.9; //characteristic length
 cr = 7.5; //cell radius
-nr = 0.3; //nucleus size ratio
+nr = 0.4; //nucleus size ratio
 
 Point(1) = {0, 0, 0, lc};
 
@@ -36,7 +37,8 @@ Delete { Volume{18};}
 
 Surface Loop(36) = {25, 30, 35, 20};
 Volume(37) = {17, 36};
-Physical Surface(38) = {20, 35, 30, 25};
-Physical Surface(39) = {10, 12, 14, 16};
-Physical Volume(40) = {19};
-Physical Volume(41) = {37};
+//Physical Point(0) = {1};
+Physical Surface(0) = {20, 35, 30, 25};
+Physical Surface(1) = {10, 12, 14, 16};
+Physical Volume(0) = {19};
+Physical Volume(1) = {37};

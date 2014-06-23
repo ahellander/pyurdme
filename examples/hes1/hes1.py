@@ -35,10 +35,10 @@ class hes1(pyurdme.URDMEModel):
         self.mesh = pyurdme.URDMEMesh.read_mesh(basedir+"/mesh/cell.msh")
         
         volumes = dolfin.MeshFunction("size_t",self.mesh,0)
-        volumes.set_all(1)
+        volumes.set_all(2)
         nucleus = Nucleus()
-        nucleus.mark(volumes,0)
-        #volumes[self.mesh.closest_vertex([0,0,0])] = 2
+        nucleus.mark(volumes,1)
+        volumes[self.mesh.closest_vertex([0,0,0])] = 3
 
         self.add_subdomain(volumes)
 
@@ -57,16 +57,16 @@ class hes1(pyurdme.URDMEModel):
         self.add_parameter([k1,k2,alpha_m,alpha_m_gamma,alpha_p,mu_m,mu_p])
 
         #Domains markers
-        nucleus = [0]
-        cytoplasm = [1]
+        nucleus = [1]
+        cytoplasm = [2]
         #promoter_site = [2]
-        promoter_site = [1]
+        promoter_site = [3]
 
         #Reactions
-        R1 = pyurdme.Reaction(name="R1",reactants={Pf:1,protein:1},products={Po:1},massaction=True,rate=k1,restrict_to=promoter_site)
-        R2 = pyurdme.Reaction(name="R2",reactants={Po:1},products={Pf:1,protein:1},massaction=True,rate=k2,restrict_to=promoter_site)
-        R3 = pyurdme.Reaction(name="R3",reactants={Pf:1},products={Pf:1,mRNA:1},massaction=True,rate=alpha_m,restrict_to=promoter_site)
-        R4 = pyurdme.Reaction(name="R4",reactants={Po:1},products={Po:1,mRNA:1},massaction=True,rate=alpha_m_gamma,restrict_to=promoter_site)
+        R1 = pyurdme.Reaction(name="R1",reactants={Pf:1,protein:1},products={Po:1},massaction=True,rate=k1, restrict_to=promoter_site)
+        R2 = pyurdme.Reaction(name="R2",reactants={Po:1},products={Pf:1,protein:1},massaction=True,rate=k2, restrict_to=promoter_site)
+        R3 = pyurdme.Reaction(name="R3",reactants={Pf:1},products={Pf:1,mRNA:1},massaction=True,rate=alpha_m, restrict_to=promoter_site)
+        R4 = pyurdme.Reaction(name="R4",reactants={Po:1},products={Po:1,mRNA:1},massaction=True,rate=alpha_m_gamma, restrict_to=promoter_site)
         R5 = pyurdme.Reaction(name="R5",reactants={mRNA:1},products={mRNA:1,protein:1},massaction=True,rate=alpha_p,restrict_to=cytoplasm)
         R6 = pyurdme.Reaction(name="R6",reactants={mRNA:1},products={},massaction=True,rate=mu_m)
         R7 = pyurdme.Reaction(name="R7",reactants={protein:1},products={},massaction=True,rate=mu_p)
@@ -78,6 +78,7 @@ class hes1(pyurdme.URDMEModel):
         self.restrict(Pf,promoter_site)
 
         #Distribute molecules over the mesh
+        #self.set_initial_condition_place_near({Pf:1},[0,0,0])
         self.set_initial_condition_scatter({Pf:1},promoter_site)
         self.set_initial_condition_scatter({protein:60},cytoplasm)
         self.set_initial_condition_scatter({mRNA:10},nucleus)
@@ -88,7 +89,7 @@ if __name__=="__main__":
     model = hes1(model_name="hes1")
     result = model.run(report_level=1)
     print 'Writing species "protein" to folder "proteinOut"'
-    result.export_to_vtk(species='protein',folder_name='proteinOut')
+    #result.export_to_vtk(species='protein',folder_name='proteinOut')
 
     protein = result.get_species("protein")
     proteinsum = numpy.sum(protein,axis=1)

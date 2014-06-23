@@ -40,5 +40,5 @@ Volume(37) = {17, 36};
 //Physical Point(0) = {1};
 Physical Surface(0) = {20, 35, 30, 25};
 Physical Surface(1) = {10, 12, 14, 16};
-Physical Volume(0) = {19};
-Physical Volume(1) = {37};
+Physical Volume(1) = {19};
+Physical Volume(2) = {37};

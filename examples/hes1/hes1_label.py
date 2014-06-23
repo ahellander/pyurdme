@@ -48,8 +48,8 @@ class hes1(pyurdme.URDMEModel):
         self.add_parameter([k1,k2,alpha_m,alpha_m_gamma,alpha_p,mu_m,mu_p])
 
         #Domains markers
-        nucleus = [0]
-        cytoplasm = [1]
+        nucleus = [1]
+        cytoplasm = [2]
         #promoter_site = [2]
         promoter_site = [1]
 
@@ -69,7 +69,7 @@ class hes1(pyurdme.URDMEModel):
         self.restrict(Pf,promoter_site)
 
         #Distribute molecules over the mesh
-        self.set_initial_condition_scatter({Pf:1},promoter_site)
+        self.set_initial_condition_place_near({Pf:1},[0,0,0])
         self.set_initial_condition_scatter({protein:60},cytoplasm)
         self.set_initial_condition_scatter({mRNA:10},nucleus)
 

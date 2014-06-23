@@ -59,9 +59,9 @@ if __name__ == '__main__':
     handle = subprocess.Popen("sleep 5", shell=True)
     return_code = handle.wait()
     print "main thread assembling pyurdme model"
-    model = cylinderDemo3D()
+    #model = cylinderDemo3D()
     print "main thread run pyurdme model"
     #result = model.run(5)
-    result = run_ensemble(model, 5, 43242)
-    print result
+    #result = run_ensemble(model, 5, 43242)
+    #print result
     print "main thread exiting"

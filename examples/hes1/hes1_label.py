@@ -4,14 +4,6 @@ import pyurdme
 import dolfin
 import numpy
 
-class Nucleus(dolfin.SubDomain):
-    def inside(self,x,on_boundary):
-        return dolfin.between(x[0]**2+x[1]**2+x[2]**2,(0,3.**2))
-
-class Cytoplasm(dolfin.SubDomain):
-    def inside(self,x,on_boundary):
-        return dolfin.between(x[0]**2+x[1]**2+x[2]**2,(3.**2,7.5**2))
-
 class MeshSize(pyurdme.URDMEDataFunction):
     def __init__(self,mesh):
         pyurdme.URDMEDataFunction.__init__(self,name="MeshSize")

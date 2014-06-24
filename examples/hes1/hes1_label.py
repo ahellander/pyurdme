@@ -50,7 +50,6 @@ class hes1(pyurdme.URDMEModel):
         #Domains markers
         nucleus = [1]
         cytoplasm = [2]
-        #promoter_site = [2]
         promoter_site = [1]
 
         #Reactions

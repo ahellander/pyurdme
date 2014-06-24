@@ -3,6 +3,7 @@ import os.path
 import pyurdme
 import dolfin
 import numpy
+import scipy
 
 class Nucleus(dolfin.SubDomain):
     def inside(self,x,on_boundary):
@@ -59,7 +60,6 @@ class hes1(pyurdme.URDMEModel):
         #Domains markers
         nucleus = [1]
         cytoplasm = [2]
-        #promoter_site = [2]
         promoter_site = [3]
 
         #Reactions
@@ -88,8 +88,6 @@ class hes1(pyurdme.URDMEModel):
 if __name__=="__main__":
     model = hes1(model_name="hes1")
     result = model.run(report_level=1)
-    print 'Writing species "protein" to folder "proteinOut"'
-    #result.export_to_vtk(species='protein',folder_name='proteinOut')
 
     protein = result.get_species("protein")
     proteinsum = numpy.sum(protein,axis=1)
@@ -98,3 +96,6 @@ if __name__=="__main__":
     mRNAsum=numpy.sum(mRNA[:],axis=1)
     plt.plot(model.tspan,mRNAsum,'b')
     plt.show()
+
+    #print 'Writing species "protein" to folder "proteinOut"'
+    #result.export_to_vtk(species='protein',folder_name='proteinOut')

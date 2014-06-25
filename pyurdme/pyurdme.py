@@ -1538,7 +1538,7 @@ class URDMEResult(dict):
         
         for j,spec in enumerate(species):
             
-            timeslice = self.get_species(spec, 0)
+            timeslice = self.get_species(spec, time_index)
             #timeslice = US[time_index,:]
             ns = numpy.sum(timeslice)
             total_num_particles += ns

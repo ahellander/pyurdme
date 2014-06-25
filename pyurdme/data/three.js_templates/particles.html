@@ -1,0 +1,61 @@
+<html>
+    <head>
+        <title>My first Three.js app</title> <style>canvas { width: 100%; height: 100% }</style> </head>
+    
+        <body>
+            <script src="https://rawgithub.com/mrdoob/three.js/master/build/three.js"></script>
+            <script src="https://rawgithub.com/mrdoob/three.js/master/examples/js/controls/OrbitControls.js"></script>
+            <script>
+                
+        
+                    var scene = new THREE.Scene();
+                    var camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
+                    var renderer = new THREE.WebGLRenderer(); renderer.setSize( window.innerWidth, window.innerHeight );
+                    document.body.appendChild( renderer.domElement );
+                    
+                    
+                    var x = __X__;
+                    var y = __Y__;
+                    var z = __Z__;
+                    var c = __COLOR__;
+                    var radius = __RADIUS__;
+                    
+                    for (var i=0; i< __NUM__MOLECULES__;i++)
+                    {
+                        
+                        var moleculegeom   = new THREE.SphereGeometry(radius[i],6,6);
+                        var material    = new THREE.MeshLambertMaterial( { color: c[i] } );
+                        var molecule  = new THREE.Mesh( moleculegeom, material );
+                        molecule.position = new THREE.Vector3(x[i],y[i],z[i]);
+                        scene.add( molecule );
+                    }
+            
+                    
+                    camera.position.z = 1;
+                    // camera.position.x = 0.5;
+                    
+                    
+                    //controls = new THREE.OrbitControls( camera );
+                    //controls.addEventListener( 'change', render )
+                    
+                    // add subtle blue ambient lighting
+                    var ambientLight = new THREE.AmbientLight(0x000044);
+                    scene.add(ambientLight);
+                    hemiLight = new THREE.HemisphereLight( 0x0000ff, 0x00ff00, 1.0 );
+                    scene.add(hemiLight);
+                    
+                    // directional lighting
+                    var directionalLight = new THREE.DirectionalLight(0xffffff);
+                    directionalLight.position.set(1, 1, 1).normalize();
+                    scene.add(directionalLight);
+                    
+                    function render() {
+                        requestAnimationFrame(render);
+                        renderer.render(scene, camera);
+                    }
+                    render();
+            
+            </script>
+        </body>
+
+</html>

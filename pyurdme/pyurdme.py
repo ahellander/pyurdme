@@ -80,45 +80,21 @@ class URDMEModel(Model):
         #  Filter out any instance variable that is not picklable...
         state = {}
         for key, item in self.__dict__.items():
-            try:
-                pickle.dumps(item)
-                state[key] = item
-            except Exception as e:
-                if key == "mesh":
+            if key == "subdomains":
+                sddict = OrderedDict()
+                for sdkey, sd_func in item.items():
                     tmpfile = tempfile.NamedTemporaryFile(suffix=".xml")
-                    dolfin.File(tmpfile.name) << item
+                    dolfin.File(tmpfile.name) << sd_func
                     tmpfile.seek(0)
-                    state['mesh'] = {}
-                    state['mesh']['data'] = tmpfile.read()
+                    sddict[sdkey] = tmpfile.read()
                     tmpfile.close()
-                    if item.constrained_domain is not None:
-                        # Warning: This is black magic.
-                        try:
-                            cdd = {}
-                            cdd['source'] = inspect.getsource(item.constrained_domain.__class__)
-                            cdd['name'] = item.constrained_domain.__class__.__name__
-                            cdd['dict'] = {}
-                            for k,v in item.constrained_domain.__dict__.iteritems():
-                                if type(v).__name__ != 'SwigPyObject':
-                                    cdd['dict'][k] = v
-                            state['mesh']['constrained_domain'] = cdd
-                        except Exception as e:
-                            sys.stderr.write("error pickling mesh.constrained_domain: {0}\n".format(e))
-                            raise e
-                    if item.num_dof_voxels is not None:
-                        state['mesh']['num_dof_voxels'] = item.num_dof_voxels
-                elif key == "subdomains":
-                    sddict = OrderedDict()
-                    for sdkey, sd_func in item.items():
-                        tmpfile = tempfile.NamedTemporaryFile(suffix=".xml")
-                        dolfin.File(tmpfile.name) << sd_func
-                        tmpfile.seek(0)
-                        sddict[sdkey] = tmpfile.read()
-                        tmpfile.close()
-                    state[key] = sddict
-                else:
-                    state[key] = None
-
+                    
+                state[key] = sddict
+            elif key in ["stiffness_matrices","mass_matrices","xmesh"]:
+                state[key] = None
+            else:
+                state[key] = item
+    
 
         return state
 
@@ -126,31 +102,7 @@ class URDMEModel(Model):
         """ Used by pickle to set state when unpickling. """
 
         self.__dict__ = state
-
-        if 'mesh' in state:
-            # Recreate the mesh
-            try:
-                fd = tempfile.NamedTemporaryFile(suffix=".xml")
-                fdname = fd.name
-                fd.write(state['mesh']['data'])
-                fd.seek(0)
-                mesh = URDMEMesh.read_dolfin_mesh(fdname)
-                fd.close()
-                if 'constrained_domain' in state['mesh']:
-                    # Black magic to match that in __getstate__
-                    cdd = state['mesh']['constrained_domain']
-                    compiled_class = compile(cdd['source'], 'pyurdme.mesh.constrained_domain', 'exec')
-                    eval(compiled_class)
-                    compiled_object = eval("{0}()".format(cdd['name']))
-                    for k,v in cdd['dict'].iteritems():
-                        compiled_object.__dict__[k] = v
-                    mesh.constrained_domain = compiled_object
-                if 'num_dof_voxels' in state['mesh']:
-                    mesh.num_dof_voxels = state['mesh']['num_dof_voxels']
-                self.__dict__['mesh'] = mesh
-            except Exception as e:
-                print "Error unpickling model, could not recreate the mesh."
-                raise e
+        #self.__dict__["mesh"] = pickle.loads(self.__dict__["mesh"])
 
         if 'subdomains' in state:
             # Recreate the subdomain functions
@@ -883,6 +835,66 @@ class URDMEMesh(dolfin.Mesh):
         dolfin.Mesh.__init__(self, mesh)
         self.function_space = None
         self.num_dof_voxels = None
+    
+    
+    def __getstate__(self):
+        
+      
+      #state = self.__dict__
+        state = {}
+        state['function_space'] = None
+      
+        tmpfile = tempfile.NamedTemporaryFile(suffix=".xml")
+        dolfin.File(tmpfile.name) << self
+        tmpfile.seek(0)
+
+        state['meshdata'] = tmpfile.read()
+        tmpfile.close()
+        
+        if self.constrained_domain is not None:
+            # Warning: This is black magic.
+            try:
+                cdd = {}
+                cdd['source'] = inspect.getsource(self.constrained_domain.__class__)
+                cdd['name'] = self.constrained_domain.__class__.__name__
+                cdd['dict'] = {}
+                for k,v in self.constrained_domain.__dict__.iteritems():
+                    if type(v).__name__ != 'SwigPyObject':
+                        cdd['dict'][k] = v
+                state['constrained_domain'] = cdd
+            except Exception as e:
+                sys.stderr.write("error pickling mesh.constrained_domain: {0}\n".format(e))
+                raise e
+        if self.num_dof_voxels is not None:
+            state['num_dof_voxels'] = self.num_dof_voxels
+
+        return state
+
+    def __setstate__(self,state):
+        """ Used by pickle to set state when unpickling. """
+            
+        try:
+            fd = tempfile.NamedTemporaryFile(suffix=".xml")
+            fdname = fd.name
+            fd.write(state['meshdata'])
+            fd.seek(0)
+            self.__init__(fd.name)
+            
+            if 'constrained_domain' in state and state['constrained_domain'] is not None:
+                # Black magic to match that in __getstate__
+                cdd = state['constrained_domain']
+                compiled_class = compile(cdd['source'], 'pyurdme.mesh.constrained_domain', 'exec')
+                eval(compiled_class)
+                compiled_object = eval("{0}()".format(cdd['name']))
+                for k,v in cdd['dict'].iteritems():
+                    compiled_object.__dict__[k] = v
+                self.constrained_domain = compiled_object
+            if 'num_dof_voxels' in state and state['num_dof_voxels'] is not None:
+                self.num_dof_voxels = state['num_dof_voxels']
+        except Exception as e:
+            print "Error unpickling model, could not recreate the mesh."
+            raise e
+
 
     def add_periodic_boundary_condition(self, domain):
         """ Add a periodic boundary mapping object (a subclass of dolfin.SubDomain). """
@@ -1206,7 +1218,7 @@ class URDMEResult(dict):
 
     def __getstate__(self):
         """ Used by pickle to get state when pickling. We need to read the contents of the
-        output file since we can't pickel file objects. """
+        output file since we can't pickle file objects. """
 
         try:
             with open(self.filename,mode='rb') as fh:
@@ -1216,12 +1228,7 @@ class URDMEResult(dict):
         
         state = self.__dict__
         state["filecontents"] = filecontents
-        for key, item in state.items():
-            try:
-                pickle.dumps(item)
-            except Exception as e:
-                raise Exception(("Failed to pickle URDMEResult:", str(e)))
-
+        
         return state
 
 
@@ -1325,6 +1332,7 @@ class URDMEResult(dict):
         
         species_map = self.model.get_species_map()
         num_species = self.model.get_num_species()
+        
         spec_indx = species_map[spec_name]
         
         resultfile = h5py.File(self.filename, 'r')

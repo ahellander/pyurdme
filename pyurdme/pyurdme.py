@@ -883,6 +883,7 @@ class URDMEMesh(dolfin.Mesh):
         dolfin.Mesh.__init__(self, mesh)
         self.function_space = None
         self.num_dof_voxels = None
+        self.init()
 
     def add_periodic_boundary_condition(self, domain):
         """ Add a periodic boundary mapping object (a subclass of dolfin.SubDomain). """
@@ -939,7 +940,7 @@ class URDMEMesh(dolfin.Mesh):
             cr.append(cell.diameter()/2.0)
 
         # Compute the mean for each vertex based on all incident cells
-        vtx2cell = self.topology()(self.topology().dim(),0)
+        vtx2cell = self.topology()(0,self.topology().dim())
         vtxh = []
         for i in range(self.num_vertices()):
             v2c = vtx2cell(i)

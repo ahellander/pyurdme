@@ -373,10 +373,10 @@ class URDMEModel(Model):
         self.mesh.init()
 
         # TODO: Support arbitrary sd-numbers and more than one subdomain
-        sd = numpy.zeros((1, self.mesh.get_num_voxels()))
+        sd = numpy.zeros(self.mesh.get_num_voxels())
         
         if subdomains == {}:
-            self.sd = sd.flatten()
+            self.sd = sd
             print subdomains
         else:
             for dim, subdomain in subdomains.items():
@@ -392,10 +392,9 @@ class URDMEModel(Model):
                     for i in range(subdomain.size()):
                         for vtx in tovertex(i):
                             if subdomain[i] != 0: # TODO: Temporary hack to fix issue with Gmesh facet_region files.
-                                sd[0, vtx] = subdomain[i]
+                                sd[vtx] = subdomain[i]
 
-        self.sd = sd.flatten()
-        
+        self.sd = sd        
         self.sd_initialied = True
         return self.sd
 

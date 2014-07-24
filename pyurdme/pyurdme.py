@@ -440,8 +440,7 @@ class URDMEModel(Model):
 
         self._initialize_species_to_subdomains()
 
-        if not hasattr(self, 'sd'):
-            self.get_subdomain_vector(self.subdomains)
+        self.get_subdomain_vector(self.subdomains)
 
         for species in spec_init:
 

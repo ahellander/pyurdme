@@ -53,6 +53,9 @@ class URDMEModel(Model):
 
         # Currently not used
         self.geometry = None
+        #
+        self.sd = []
+        self.sd_initialied=False
 
         self.mesh = None
         self.xmesh = None
@@ -347,10 +350,19 @@ class URDMEModel(Model):
 
 
 
+    def set_subdomain_vector(self, sd):
+        """ Explicitly set the subdomain vector from an array. """
+        self.sd = sd
+        self.sd_initialied = True
+    
     def get_subdomain_vector(self, subdomains={}):
         """ Create the 'sd' vector. 'subdomains' is a dolfin FacetFunction,
             and if no subdomain input is specified, they voxels default to
             subdomain 1. """
+        if self.sd_initialied:
+            return self.sd
+        
+        
         # We need to make sure that the highest dimension is applied
         # first, otherwise the cell level will overwrite all markings
         # applied on boundaries.
@@ -362,19 +374,29 @@ class URDMEModel(Model):
 
         # TODO: Support arbitrary sd-numbers and more than one subdomain
         sd = numpy.zeros((1, self.mesh.get_num_voxels()))
+        
         if subdomains == {}:
             self.sd = sd.flatten()
             print subdomains
         else:
             for dim, subdomain in subdomains.items():
-                # Map all facet labels to vertex labels
-                tovertex = self.mesh.topology()(dim, 0)
-                for i in range(subdomain.size()):
-                    for vtx in tovertex(i):
-                        if subdomain[i] != 0: # TODO: Temporary hack to fix issue with Gmesh facet_region files.
-                            sd[0, vtx] = subdomain[i]
+                if dim == 0:
+                    # If we define subdomains on vertex, ONLY use those.
+                    # Then it is a direct copy to the sd
+                    for ndx,val in enumerate(subdomain):
+                        sd[ndx] = val
+                    break
+                else:
+                    # Map all facet labels to vertex labels
+                    tovertex = self.mesh.topology()(dim, 0)
+                    for i in range(subdomain.size()):
+                        for vtx in tovertex(i):
+                            if subdomain[i] != 0: # TODO: Temporary hack to fix issue with Gmesh facet_region files.
+                                sd[0, vtx] = subdomain[i]
 
         self.sd = sd.flatten()
+        
+        self.sd_initialied = True
         return self.sd
 
     def initialize_initial_condition(self):
@@ -824,7 +846,6 @@ class URDMEModel(Model):
         for spec_name, species in self.listOfSpecies.items():
 
             # Find out what subdomains this species is active on
-            #subdomain_list = self.species_to_subdomains[species]
             weak_form_K[spec_name] = dolfin.inner(dolfin.nabla_grad(trial_functions[spec_name]), dolfin.nabla_grad(test_functions[spec_name]))*dolfin.dx
             weak_form_M[spec_name] = trial_functions[spec_name]*test_functions[spec_name]*dolfin.dx
 

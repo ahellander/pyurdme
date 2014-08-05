@@ -427,7 +427,7 @@ class URDMEModel(Model):
 
         coords = self.mesh.get_voxels()
         shape = coords.shape
-
+        print "Coord shapes", shape
 
         for spec in spec_init:
             spec_name = spec.name

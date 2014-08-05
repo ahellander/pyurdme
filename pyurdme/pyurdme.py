@@ -928,7 +928,10 @@ class URDMEMesh(dolfin.Mesh):
 
     def get_voxels(self):
         """ Return the (x,y,z) coordinate of each voxel. """
-        return self.coordinates()
+        coords = self.coordinates()
+        if coords.shape[1] == 2:
+            coords = numpy.append(coords, numpy.tile([0],(coords.shape[0],1)), 1)
+        return coords
 
 
     def closest_vertex(self,x):

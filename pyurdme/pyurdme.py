@@ -394,7 +394,7 @@ class URDMEModel(Model):
                             if subdomain[i] != 0: # TODO: Temporary hack to fix issue with Gmesh facet_region files.
                                 sd[vtx] = subdomain[i]
 
-        self.sd = sd        
+        self.sd = sd
         self.sd_initialied = True
         return self.sd
 
@@ -466,7 +466,7 @@ class URDMEModel(Model):
                 ind = table[vtx]
                 self.u0[specindx, ind] += 1
 
-    def set_initial_condition_distribute_uniformly(self, spec_init):
+    def set_initial_condition_distribute_uniformly(self, spec_init, subdomains=None):
         """ Place the same number of molecules of the species in each voxel. """
         if not hasattr(self, "u0"):
             self.initialize_initial_condition()
@@ -474,14 +474,19 @@ class URDMEModel(Model):
         if not hasattr(self, 'xmesh'):
             self.create_extended_mesh()
 
+        self._initialize_species_to_subdomains()
+
         species_map = self.get_species_map()
         num_voxels = self.mesh.get_num_voxels()
         for spec in spec_init:
+            if subdomains is None:
+                subdomains = self.species_to_subdomains[spec]
             spec_name = spec.name
             num_spec = spec_init[spec]
             specindx = species_map[spec_name]
             for ndx in range(num_voxels):
-                self.u0[specindx, ndx] = num_spec
+                if self.sd[ndx] in subdomains:
+                    self.u0[specindx, ndx] = num_spec
     
     
     def set_initial_condition_place_near(self, spec_init, point=None):
@@ -1073,6 +1078,7 @@ class URDMEMesh(dolfin.Mesh):
             
             If a colors list is specified, it should have the num_voxels entries
         """
+        self.init(2,0)
         document = {}
         document["metadata"] = {"formatVersion":3}
         gfdg,vtx = self.get_scaled_normalized_coordinates()
@@ -1107,7 +1113,6 @@ class URDMEMesh(dolfin.Mesh):
         
         document["colors"] = colors
         
-        self.init(2,0)
         connectivity = self.topology()(2,0)
         faces = []
         
@@ -1120,7 +1125,7 @@ class URDMEMesh(dolfin.Mesh):
 
                 f.append(int(ind))
             faces += ([128]+f+f)
-            document["faces"] = list(faces)
+        document["faces"] = list(faces)
         
         #Test that we can index into vertices
         vertices = document["vertices"]
@@ -2027,6 +2032,7 @@ class URDMESolver:
                     raise URDMEError("When restricting reaction to subdomains, you must specify either a list or an int")
                 func += "){\n"
                 func += self.model.listOfReactions[R].propensity_function
+                func += ';'
 
                 func += "\n}else{"
                 func += "\n\treturn 0.0;}"

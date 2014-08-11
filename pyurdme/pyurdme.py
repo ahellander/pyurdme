@@ -2017,12 +2017,12 @@ class URDMESolver:
             func = ""
             rname = self.model.listOfReactions[R].name
             func += funheader.replace("__NAME__", rname) + "\n{\n"
-            if self.model.listOfReactions[R].restrict_to == None:
+            if self.model.listOfReactions[R].restrict_to == None or (isinstance(self.model.listOfReactions[R].restrict_to, list) and len(self.model.listOfReactions[R].restrict_to) == 0):
                 func += self.model.listOfReactions[R].propensity_function
-
+                func += ';'
             else:
                 func += "if("
-                if isinstance(self.model.listOfReactions[R].restrict_to, list):
+                if isinstance(self.model.listOfReactions[R].restrict_to, list) and len(self.model.listOfReactions[R].restrict_to) > 0:
                     for sd in self.model.listOfReactions[R].restrict_to:
                         func += "sd == " + str(sd) + "||"
                     func = func[:-2]

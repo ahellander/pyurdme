@@ -76,30 +76,12 @@ class simple_diffusion2(pyurdme.URDMEModel):
 if __name__ == '__main__':
     
     model = simple_diffusion2()
+    #model._subdomains_to_threejs(sd=2)
     result = model.run()
-    A = result.get_species("A")
-    #print numpy.sum(A,axis=1)
-    data = model.get_solver_datastructure()
-    u0 = model.u0
-    print numpy.sum(u0,axis=1)
-    ix = numpy.argmax(u0[0,:])
     
-    c = model.mesh.coordinates()
-    x = c[:,0]
-    print c[ix,:]
-    dof2vtx = dolfin.dof_to_vertex_map(model.mesh.get_function_space())
-    u0 = data["u0"]
-    ixdof = numpy.argmax(u0[0,:])
-    print ix, dof2vtx[ixdof]
-    print u0[0,ixdof]
-    print A[0,ix]
-    print A[1,ix]
-#print A0[ixdof]
-
-    #print numpy.max(x)
-    #print numpy.min(x)
+#model._subdomains_to_html("testsd.html")
     # Dump timeseries in Paraview format
-    result.export_to_vtk(species="B",folder_name="Bout")
-    result.export_to_vtk(species="A",folder_name="Aout")
+    #result.export_to_vtk(species="B",folder_name="Bout")
+    #result.export_to_vtk(species="A",folder_name="Aout")
 
 

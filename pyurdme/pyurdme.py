@@ -55,7 +55,7 @@ class URDMEModel(Model):
         self.geometry = None
         #
         self.sd = []
-        self.sd_initialied=False
+        self.sd_initialized=False
 
         self.mesh = None
         self.xmesh = None
@@ -154,6 +154,20 @@ class URDMEModel(Model):
         else:
             raise ModelException("Failed to add subdomain function of dim "+str(subdomain.dim())+". Only one subdomain function of a given dimension is allowed.")
 
+    def _subdomains_to_threejs(sd=1):
+        """ Export threejs code to plot the mesh with edges colored for the listed subdomains. """
+        sd = self.get_subdomain_vector()
+        c = _compute_colors(sd)
+        jsondoc = self.mesh.export_to_three_js(colors = c)
+        return jsondoc
+    
+    def _subdomains_to_html(filename, sd=1):
+        sd = self.get_subdomain_vector()
+        c = _compute_colors(sd)
+        self.mesh._ipython_display(filename, colors=c)
+
+
+    
     def create_stoichiometric_matrix(self):
         """ Generate a stoichiometric matrix in sparse CSC format. """
 
@@ -305,13 +319,13 @@ class URDMEModel(Model):
     def set_subdomain_vector(self, sd):
         """ Explicitly set the subdomain vector from an array. """
         self.sd = sd
-        self.sd_initialied = True
+        self.sd_initialized = True
     
     def get_subdomain_vector(self, subdomains={}):
         """ Create the 'sd' vector. 'subdomains' is a dolfin FacetFunction,
             and if no subdomain input is specified, they voxels default to
             subdomain 1. """
-        if self.sd_initialied:
+        if self.sd_initialized:
             return self.sd
         
         
@@ -347,7 +361,7 @@ class URDMEModel(Model):
                                 sd[vtx] = subdomain[i]
 
         self.sd = sd
-        self.sd_initialied = True
+        self.sd_initialized = True
         return self.sd
 
     def initialize_initial_condition(self):
@@ -1164,8 +1178,8 @@ class URDMEMesh(dolfin.Mesh):
         
         return json.dumps(document)
 
-    def _ipython_display_(self, filename=None):
-        jstr = self.export_to_three_js()
+    def _ipython_display_(self, filename=None,colors=None):
+        jstr = self.export_to_three_js(colors=colors)
         hstr = None
         with open(os.path.dirname(os.path.abspath(__file__))+"/data/three.js_templates/mesh.html",'r') as fd:
             hstr = fd.read()
@@ -1658,22 +1672,28 @@ class URDMEResult(dict):
         """ Create a color list for species at time. """
         
         timeslice = self.get_species(species,time_index, concentration = True)
+        colors = compute_colors(timeslice)
+        return colors
+    
+    
+    def _compute_colors(x):
         import matplotlib.cm
         
         # Get RGB color map proportinal to the concentration.
         cm = matplotlib.cm.ScalarMappable()
-        crgba= cm.to_rgba(timeslice, bytes = True)
-                                     
+        crgba= cm.to_rgba(x, bytes = True)
+        
         # Convert RGB to HEX
         colors= []
         for row in crgba:
             colors.append(self._rgb_to_hex(tuple(list(row[1:]))))
-
+        
         # Convert Hex to Decimal
         for i,c in enumerate(colors):
             colors[i] = int(c,0)
 
         return colors
+
 
     def _rgb_to_hex(self, rgb):
         return '0x%02x%02x%02x' % rgb

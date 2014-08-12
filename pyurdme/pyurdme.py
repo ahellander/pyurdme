@@ -154,17 +154,27 @@ class URDMEModel(Model):
         else:
             raise ModelException("Failed to add subdomain function of dim "+str(subdomain.dim())+". Only one subdomain function of a given dimension is allowed.")
 
-    def _subdomains_to_threejs(sd=1):
-        """ Export threejs code to plot the mesh with edges colored for the listed subdomains. """
+    def _subdomains_to_threejs(self, subdomains={1:'blue'}):
+        """ Export threejs code to plot the mesh with edges colored for the listed subdomains.
+            Input is a dictionary with subdomain index:color pairs, output is a single json three.js mesh
+            with the subdomains colored according to the input colors. """
         sd = self.get_subdomain_vector()
-        c = _compute_colors(sd)
+        print sd
+        c = ['black']*len(sd)
+        
+        for i,s in enumerate(sd):
+            try:
+                c[i] = subdomains[int(s)]
+            except KeyError:
+                pass
+
         jsondoc = self.mesh.export_to_three_js(colors = c)
         return jsondoc
     
-    def _subdomains_to_html(filename, sd=1):
+    def _subdomains_to_html(self, filename, sd=1):
         sd = self.get_subdomain_vector()
         c = _compute_colors(sd)
-        self.mesh._ipython_display(filename, colors=c)
+        self.mesh._ipython_display_(filename, colors=c)
 
 
     
@@ -464,19 +474,19 @@ class URDMEModel(Model):
         if not hasattr(self, 'xmesh'):
             self.create_extended_mesh()
 
-        coords = self.mesh.get_voxels()
-        shape = coords.shape
-        print "Coord shapes", shape
+#coords = self.mesh.get_voxels()
+#        shape = coords.shape
+#        print "Coord shapes", shape
 
         for spec in spec_init:
             spec_name = spec.name
             num_spec = spec_init[spec]
 
             # Find the voxel with center (vertex) nearest to the point
-            reppoint = numpy.tile(point, (shape[0], 1))
-            dist = numpy.sqrt(numpy.sum((coords-reppoint)**2, axis=1))
-            ix = numpy.argmin(dist)
-
+            #reppoint = numpy.tile(point, (shape[0], 1))
+            #dist = numpy.sqrt(numpy.sum((coords-reppoint)**2, axis=1))
+            #ix = numpy.argmin(dist)
+            ix = self.mesh.closest_vertex(point)
             species_map = self.get_species_map()
             specindx = species_map[spec_name]
             #dofind = self.xmesh.vertex_to_dof_map[spec_name][ix]
@@ -976,7 +986,11 @@ class URDMEMesh(dolfin.Mesh):
         """ Get index of the vertex in the coordinate list closest to the point x. """
         coords = self.get_voxels()
         shape = coords.shape
-        reppoint = numpy.tile(x, (shape[0], 1))
+        if len(x) == 2:
+            point = numpy.append(x,0.0)
+        else:
+            point = x
+        reppoint = numpy.tile(point, (shape[0], 1))
         dist = numpy.sqrt(numpy.sum((coords-reppoint)**2, axis=1))
         ix = numpy.argmin(dist)
         return ix
@@ -1672,32 +1686,10 @@ class URDMEResult(dict):
         """ Create a color list for species at time. """
         
         timeslice = self.get_species(species,time_index, concentration = True)
-        colors = compute_colors(timeslice)
+        colors = _compute_colors(timeslice)
         return colors
     
     
-    def _compute_colors(x):
-        import matplotlib.cm
-        
-        # Get RGB color map proportinal to the concentration.
-        cm = matplotlib.cm.ScalarMappable()
-        crgba= cm.to_rgba(x, bytes = True)
-        
-        # Convert RGB to HEX
-        colors= []
-        for row in crgba:
-            colors.append(self._rgb_to_hex(tuple(list(row[1:]))))
-        
-        # Convert Hex to Decimal
-        for i,c in enumerate(colors):
-            colors[i] = int(c,0)
-
-        return colors
-
-
-    def _rgb_to_hex(self, rgb):
-        return '0x%02x%02x%02x' % rgb
-
 
     def display(self,species,time_index):
 
@@ -1717,6 +1709,28 @@ class URDMEResult(dict):
         
         html = '<div id="'+displayareaid+'" class="cell"></div>'
         IPython.display.display(IPython.display.HTML(html+hstr))
+
+def _compute_colors(x):
+    import matplotlib.cm
+    
+    # Get RGB color map proportinal to the concentration.
+    cm = matplotlib.cm.ScalarMappable()
+    crgba= cm.to_rgba(x, bytes = True)
+    
+    # Convert RGB to HEX
+    colors= []
+    for row in crgba:
+        colors.append(_rgb_to_hex(tuple(list(row[1:]))))
+    
+    # Convert Hex to Decimal
+    for i,c in enumerate(colors):
+        colors[i] = int(c,0)
+    
+    return colors
+
+
+def _rgb_to_hex(rgb):
+    return '0x%02x%02x%02x' % rgb
 
 
 

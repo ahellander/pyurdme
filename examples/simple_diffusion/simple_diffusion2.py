@@ -76,10 +76,13 @@ class simple_diffusion2(pyurdme.URDMEModel):
 if __name__ == '__main__':
     
     model = simple_diffusion2()
-    #model._subdomains_to_threejs(sd=2)
-    result = model.run()
+    # This is necessary to intiialize all subdomain data structures, etc.
+    model.get_solver_datastructure()
     
-#model._subdomains_to_html("testsd.html")
+    json_sd1 = model._subdomains_to_threejs(subdomains={1:'red', 2:'green'})
+    with open("testsdmesh.json","w") as fh:
+        fh.write(json_sd1)
+
     # Dump timeseries in Paraview format
     #result.export_to_vtk(species="B",folder_name="Bout")
     #result.export_to_vtk(species="A",folder_name="Aout")

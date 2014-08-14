@@ -1633,9 +1633,9 @@ class URDMEResult(dict):
                     x.append((coordinates[i,0]+random.uniform(-1,1)*hix))
                     y.append((coordinates[i,1]+random.uniform(-1,1)*hiy))
                     z.append((coordinates[i,2]+random.uniform(-1,1)*hiz))
-                    try:
+                    if self.model.listOfSpecies[spec].reaction_radius:
                         radius.append(self.model.listOfSpecies[spec].reaction_radius)
-                    except:
+                    else:
                         radius.append(0.01)
                     
                     c.append(colors[j])

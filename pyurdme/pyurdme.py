@@ -1912,15 +1912,14 @@ class URDMESolver:
             self.infile_name = input_file
             self.delete_infile = False
 
-        outfile = tempfile.NamedTemporaryFile(delete=False)
-        outfile.close()
-
         if not os.path.exists(self.infile_name):
             raise URDMEError("input file not found.")
 
         # Execute the solver
-        urdme_solver_cmd = [self.solver_dir + self.propfilename + '.' + self.NAME, self.infile_name, outfile.name]
         for run_ndx in range(number_of_trajectories):
+            outfile = tempfile.NamedTemporaryFile(delete=False)
+            outfile.close()
+            urdme_solver_cmd = [self.solver_dir + self.propfilename + '.' + self.NAME, self.infile_name, outfile.name]
             
             if seed is not None:
                 urdme_solver_cmd.append(str(seed+run_ndx))

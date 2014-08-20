@@ -2081,7 +2081,6 @@ class URDMESolver:
             func += funheader.replace("__NAME__", rname) + "\n{\n"
             if self.model.listOfReactions[R].restrict_to == None or (isinstance(self.model.listOfReactions[R].restrict_to, list) and len(self.model.listOfReactions[R].restrict_to) == 0):
                 func += self.model.listOfReactions[R].propensity_function
-                func += ';'
             else:
                 func += "if("
                 if isinstance(self.model.listOfReactions[R].restrict_to, list) and len(self.model.listOfReactions[R].restrict_to) > 0:
@@ -2094,7 +2093,6 @@ class URDMESolver:
                     raise URDMEError("When restricting reaction to subdomains, you must specify either a list or an int")
                 func += "){\n"
                 func += self.model.listOfReactions[R].propensity_function
-                func += ';'
 
                 func += "\n}else{"
                 func += "\n\treturn 0.0;}"

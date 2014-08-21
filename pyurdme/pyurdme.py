@@ -377,7 +377,6 @@ class URDMEModel(Model):
         
         if subdomains == {}:
             self.sd = sd
-            print subdomains
         else:
             for dim, subdomain in subdomains.items():
                 if dim == 0:

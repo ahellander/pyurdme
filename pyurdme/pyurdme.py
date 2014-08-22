@@ -1638,7 +1638,8 @@ class URDMEResult(dict):
         # Convert RGB to HEX
         colors= []
         for row in crgba:
-            colors.append(self._rgb_to_hex(tuple(list(row[1:]))))
+            # get R,G,B of RGBA
+            colors.append(self._rgb_to_hex(tuple(list(row[0:3]))))
 
         # Convert Hex to Decimal
         for i,c in enumerate(colors):

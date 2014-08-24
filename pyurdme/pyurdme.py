@@ -998,12 +998,14 @@ class URDMEMesh(dolfin.Mesh):
             coords = numpy.append(coords, numpy.tile([0],(coords.shape[0],1)), 1)
         return coords
 
-
+    def closest_vertex(self,x):
         """ Get index of the vertex in the coordinate list closest to the point x. """
         coords = self.get_voxels()
         shape = coords.shape
         
-    
+        if isinstance(x,(int,float)):
+            x = [x]
+        
         if len(x) == 2:
             point = numpy.append(x,0.0)
         else:

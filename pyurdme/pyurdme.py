@@ -531,7 +531,6 @@ class URDMEModel(Model):
         # Use dolfin 'dof' number of voxels, not the number of verticies
         Nvoxels = self.mesh.get_num_dof_voxels()
         Ndofs = Nvoxels*Mspecies
-        S = scipy.sparse.dok_matrix((Ndofs, Ndofs))
 
         # Create the volume vector by lumping the mass matrices
         vol = numpy.zeros((Ndofs, 1))
@@ -571,55 +570,76 @@ class URDMEModel(Model):
         sd = sd_vec_dof
         
         tic  = time.time()
+        # If a volume is zero, we need to set it to 1.
+        vi = vol+(vol<=0.0)
+
+        S = scipy.sparse.dok_matrix((Ndofs, Ndofs))
+
+
+        keys = []
+        values = []
 
         for species, K in stiffness_matrices.iteritems():
 
             rows, cols, vals = K.data()
+            
+            # Filter the matrix: get rid of all elements < 0 (inlcuding the diagonal)
+            vals *= vals<0
             Kcrs = scipy.sparse.csr_matrix((vals, cols, rows))
-            Kdok = Kcrs.todok()
+            #Kdok = Kcrs.todok()
             
             sdmap  = self.species_to_subdomains[self.listOfSpecies[species]]
             
             # Filter the matrix: get rid of all elements < 0 (inlcuding the diagonal)
-            #Kcrs.data *= Kcrs.data>0
+            #Kcrs.data *= Kcrs.data<0
             #Kcrs[Kcrs<0] = 0.0
-            
-            for entries in Kdok.items():
+            Kdok = Kcrs.todok()
+            #print Kdok.viewkeys()
+            # print sdmap
 
-                ind = entries[0]
+# print sd
+
+            for ind, val in Kdok.iteritems():
+
+#  ind = entries[0]
                 ir = ind[0]
                 ij = ind[1]
 
-                val = entries[1]
+#               val = entries[1]
                 
-                if ir == ij: # Diagonal entry, we reassemble that below
-                    val = 0.0
-                else:
+                #if ir == ij: # Diagonal entry, we reassemble that below
+                #    val = 0.0
+                #else:
 
                     # Check if this is an edge that the species should diffuse along,
                     # if not, set the diffusion coefficient along this edge to zero. This is
                     # equivalent to how boundary species are handled in the current Matlab interface.
-                    if sd[ir] not in sdmap:
-                        val = 0.0
+                if sd[ir] not in sdmap:
+                    val = 0.0
 
-                    if val > 0.0:
-                        positive_mass += val
-                        val = 0.0
-                    else:
-                        total_mass += val
+#if val > 0.0:
+#                        positive_mass += val
+#                       val = 0.0
+#                   else:
+#                       total_mass += val
 
                 # The volume can be zero, if the species is not active at the vertex (such as a 2D species at a 3D node)
-                if vol[Mspecies*ij+spec] == 0:
-                    vi = 1
-                else:
-                    vi = vol[Mspecies*ij+spec]
-                
-                S[Mspecies*ir+spec, Mspecies*ij+spec] = -val/vi
+                #if vol[Mspecies*ij+spec] == 0:
+                #    vi = 1
+                #else:
+                #   vi = vol[Mspecies*ij+spec]
+                #vi = vol+vol<=0.0
+                #keys.append((Mspecies*ir+spec, Mspecies*ij+spec))
+                #values.append(-val/vi[Mspecies*ind[1]])
+
+                S[Mspecies*ir+spec, Mspecies*ij+spec] = -val/vi[Mspecies*ij+spec]
 
             spec = spec + 1
 
         print "Zeroing out etc:", time.time()-tic
-        
+        #print keys
+        #print values
+        #S = scipy.sparse.dok_matrix.fromkeys(keys, values)
         # Renormalize the columns (may not sum to zero since elements may have been filtered out
         sumcol = S.tocsr().sum(axis=0)
         S.setdiag(-numpy.array(sumcol).flatten())
@@ -979,10 +999,11 @@ class URDMEMesh(dolfin.Mesh):
         return coords
 
 
-    def closest_vertex(self,x):
         """ Get index of the vertex in the coordinate list closest to the point x. """
         coords = self.get_voxels()
         shape = coords.shape
+        
+    
         if len(x) == 2:
             point = numpy.append(x,0.0)
         else:

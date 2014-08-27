@@ -21,7 +21,15 @@ DMAT = -DURDME_LIBMAT
 CC	   = mpicc
 LINKER = mpicc 
 
-CFLAGS = -gdwarf-2 -m64 -c  -O3 -std=gnu99 $(MEMOPTS) -Wall -Wlong-long -Wformat -Wpointer-arith  $(INCLUDE) $(DMAT)
+LBITS := $(shell getconf LONG_BIT)
+ifeq ($(LBITS),64)
+    # 64 bit stuff
+    CFLAGS = -gdwarf-2 -m64 -c  -O3 -std=gnu99 $(MEMOPTS) -Wall -Wlong-long -Wformat -Wpointer-arith  $(INCLUDE) $(DMAT)
+else
+    # 32 bit stuff
+    CFLAGS = -gdwarf-2 -m32 -c  -O3 -std=gnu99 $(MEMOPTS) -Wall -Wlong-long -Wformat -Wpointer-arith  $(INCLUDE) $(DMAT)
+endif
+
 
 LFLAGS_BASE= -l hdf5 -l hdf5_hl 
 LFLAGS = $(LFLAGS_BASE) -lm

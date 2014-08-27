@@ -53,6 +53,9 @@ class URDMEModel(Model):
 
         # Currently not used
         self.geometry = None
+        #
+        self.sd = []
+        self.sd_initialied=False
 
         self.mesh = None
         self.xmesh = None
@@ -347,10 +350,19 @@ class URDMEModel(Model):
 
 
 
+    def set_subdomain_vector(self, sd):
+        """ Explicitly set the subdomain vector from an array. """
+        self.sd = sd
+        self.sd_initialied = True
+    
     def get_subdomain_vector(self, subdomains={}):
         """ Create the 'sd' vector. 'subdomains' is a dolfin FacetFunction,
             and if no subdomain input is specified, they voxels default to
             subdomain 1. """
+        if self.sd_initialied:
+            return self.sd
+        
+        
         # We need to make sure that the highest dimension is applied
         # first, otherwise the cell level will overwrite all markings
         # applied on boundaries.
@@ -361,20 +373,28 @@ class URDMEModel(Model):
         self.mesh.init()
 
         # TODO: Support arbitrary sd-numbers and more than one subdomain
-        sd = numpy.zeros((1, self.mesh.get_num_voxels()))
+        sd = numpy.zeros(self.mesh.get_num_voxels())
+        
         if subdomains == {}:
-            self.sd = sd.flatten()
-            print subdomains
+            self.sd = sd
         else:
             for dim, subdomain in subdomains.items():
-                # Map all facet labels to vertex labels
-                tovertex = self.mesh.topology()(dim, 0)
-                for i in range(subdomain.size()):
-                    for vtx in tovertex(i):
-                        if subdomain[i] != 0: # TODO: Temporary hack to fix issue with Gmesh facet_region files.
-                            sd[0, vtx] = subdomain[i]
+                if dim == 0:
+                    # If we define subdomains on vertex, ONLY use those.
+                    # Then it is a direct copy to the sd
+                    for ndx,val in enumerate(subdomain):
+                        sd[ndx] = val
+                    break
+                else:
+                    # Map all facet labels to vertex labels
+                    tovertex = self.mesh.topology()(dim, 0)
+                    for i in range(subdomain.size()):
+                        for vtx in tovertex(i):
+                            if subdomain[i] != 0: # TODO: Temporary hack to fix issue with Gmesh facet_region files.
+                                sd[vtx] = subdomain[i]
 
-        self.sd = sd.flatten()
+        self.sd = sd
+        self.sd_initialied = True
         return self.sd
 
     def initialize_initial_condition(self):
@@ -418,8 +438,7 @@ class URDMEModel(Model):
 
         self._initialize_species_to_subdomains()
 
-        if not hasattr(self, 'sd'):
-            self.get_subdomain_vector(self.subdomains)
+        self.get_subdomain_vector(self.subdomains)
 
         for species in spec_init:
 
@@ -446,7 +465,7 @@ class URDMEModel(Model):
                 ind = table[vtx]
                 self.u0[specindx, ind] += 1
 
-    def set_initial_condition_distribute_uniformly(self, spec_init):
+    def set_initial_condition_distribute_uniformly(self, spec_init, subdomains=None):
         """ Place the same number of molecules of the species in each voxel. """
         if not hasattr(self, "u0"):
             self.initialize_initial_condition()
@@ -454,14 +473,19 @@ class URDMEModel(Model):
         if not hasattr(self, 'xmesh'):
             self.create_extended_mesh()
 
+        self._initialize_species_to_subdomains()
+
         species_map = self.get_species_map()
         num_voxels = self.mesh.get_num_voxels()
         for spec in spec_init:
+            if subdomains is None:
+                subdomains = self.species_to_subdomains[spec]
             spec_name = spec.name
             num_spec = spec_init[spec]
             specindx = species_map[spec_name]
             for ndx in range(num_voxels):
-                self.u0[specindx, ndx] = num_spec
+                if self.sd[ndx] in subdomains:
+                    self.u0[specindx, ndx] = num_spec
     
     
     def set_initial_condition_place_near(self, spec_init, point=None):
@@ -824,7 +848,6 @@ class URDMEModel(Model):
         for spec_name, species in self.listOfSpecies.items():
 
             # Find out what subdomains this species is active on
-            #subdomain_list = self.species_to_subdomains[species]
             weak_form_K[spec_name] = dolfin.inner(dolfin.nabla_grad(trial_functions[spec_name]), dolfin.nabla_grad(test_functions[spec_name]))*dolfin.dx
             weak_form_M[spec_name] = trial_functions[spec_name]*test_functions[spec_name]*dolfin.dx
 
@@ -1054,6 +1077,7 @@ class URDMEMesh(dolfin.Mesh):
             
             If a colors list is specified, it should have the num_voxels entries
         """
+        self.init(2,0)
         document = {}
         document["metadata"] = {"formatVersion":3}
         gfdg,vtx = self.get_scaled_normalized_coordinates()
@@ -1088,7 +1112,6 @@ class URDMEMesh(dolfin.Mesh):
         
         document["colors"] = colors
         
-        self.init(2,0)
         connectivity = self.topology()(2,0)
         faces = []
         
@@ -1101,7 +1124,7 @@ class URDMEMesh(dolfin.Mesh):
 
                 f.append(int(ind))
             faces += ([128]+f+f)
-            document["faces"] = list(faces)
+        document["faces"] = list(faces)
         
         #Test that we can index into vertices
         vertices = document["vertices"]
@@ -1615,7 +1638,8 @@ class URDMEResult(dict):
         # Convert RGB to HEX
         colors= []
         for row in crgba:
-            colors.append(self._rgb_to_hex(tuple(list(row[1:]))))
+            # get R,G,B of RGBA
+            colors.append(self._rgb_to_hex(tuple(list(row[0:3]))))
 
         # Convert Hex to Decimal
         for i,c in enumerate(colors):
@@ -1888,15 +1912,14 @@ class URDMESolver:
             self.infile_name = input_file
             self.delete_infile = False
 
-        outfile = tempfile.NamedTemporaryFile(delete=False)
-        outfile.close()
-
         if not os.path.exists(self.infile_name):
             raise URDMEError("input file not found.")
 
         # Execute the solver
-        urdme_solver_cmd = [self.solver_dir + self.propfilename + '.' + self.NAME, self.infile_name, outfile.name]
         for run_ndx in range(number_of_trajectories):
+            outfile = tempfile.NamedTemporaryFile(delete=False)
+            outfile.close()
+            urdme_solver_cmd = [self.solver_dir + self.propfilename + '.' + self.NAME, self.infile_name, outfile.name]
             
             if seed is not None:
                 urdme_solver_cmd.append(str(seed+run_ndx))
@@ -1993,12 +2016,11 @@ class URDMESolver:
             func = ""
             rname = self.model.listOfReactions[R].name
             func += funheader.replace("__NAME__", rname) + "\n{\n"
-            if self.model.listOfReactions[R].restrict_to == None:
+            if self.model.listOfReactions[R].restrict_to == None or (isinstance(self.model.listOfReactions[R].restrict_to, list) and len(self.model.listOfReactions[R].restrict_to) == 0):
                 func += self.model.listOfReactions[R].propensity_function
-
             else:
                 func += "if("
-                if isinstance(self.model.listOfReactions[R].restrict_to, list):
+                if isinstance(self.model.listOfReactions[R].restrict_to, list) and len(self.model.listOfReactions[R].restrict_to) > 0:
                     for sd in self.model.listOfReactions[R].restrict_to:
                         func += "sd == " + str(sd) + "||"
                     func = func[:-2]

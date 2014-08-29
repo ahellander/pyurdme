@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>pyurdme.model &mdash; PyURDME 1.0 documentation</title>
+    <title>pyurdme.model &mdash; PyURDME 1.0.1 documentation</title>
     
     <link rel="stylesheet" href="../../_static/default.css" type="text/css" />
     <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../../',
-        VERSION:     '1.0',
+        VERSION:     '1.0.1',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -23,7 +23,7 @@
     <script type="text/javascript" src="../../_static/jquery.js"></script>
     <script type="text/javascript" src="../../_static/underscore.js"></script>
     <script type="text/javascript" src="../../_static/doctools.js"></script>
-    <link rel="top" title="PyURDME 1.0 documentation" href="../../index.html" />
+    <link rel="top" title="PyURDME 1.0.1 documentation" href="../../index.html" />
     <link rel="up" title="Module code" href="../index.html" /> 
   </head>
   <body>
@@ -36,7 +36,7 @@
         <li class="right" >
           <a href="../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li><a href="../../index.html">PyURDME 1.0 documentation</a> &raquo;</li>
+        <li><a href="../../index.html">PyURDME 1.0.1 documentation</a> &raquo;</li>
           <li><a href="../index.html" accesskey="U">Module code</a> &raquo;</li> 
       </ul>
     </div>  
@@ -205,28 +205,6 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">listOfReactions</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">listOfReactions</span> <span class="ow">and</span> \
             <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
 
-    <span class="c"># Old function names for backwards compatablity</span>
-    <span class="n">updateNamespace</span> <span class="o">=</span> <span class="n">update_namespace</span>
-    <span class="n">getSpecies</span> <span class="o">=</span> <span class="n">get_species</span>
-    <span class="n">getNumSpecies</span> <span class="o">=</span> <span class="n">get_num_species</span>
-    <span class="n">getAllSpecies</span> <span class="o">=</span> <span class="n">get_all_species</span>
-    <span class="n">addSpecies</span> <span class="o">=</span> <span class="n">add_species</span>
-    <span class="n">deleteSpecies</span> <span class="o">=</span> <span class="n">delete_species</span>
-    <span class="n">deleteAllSpecies</span> <span class="o">=</span> <span class="n">delete_all_species</span>
-    <span class="n">getParameter</span> <span class="o">=</span> <span class="n">get_parameter</span>
-    <span class="n">getAllParameters</span> <span class="o">=</span> <span class="n">get_all_parameters</span>
-    <span class="n">addParameter</span> <span class="o">=</span> <span class="n">add_parameter</span>
-    <span class="n">deleteParameter</span> <span class="o">=</span> <span class="n">delete_parameter</span>
-    <span class="n">setParameter</span> <span class="o">=</span> <span class="n">set_parameter</span>
-    <span class="n">resolveParameters</span> <span class="o">=</span> <span class="n">resolve_parameters</span>
-    <span class="n">deleteAllParameters</span> <span class="o">=</span> <span class="n">delete_all_parameters</span>
-    <span class="n">addReaction</span> <span class="o">=</span> <span class="n">add_reaction</span>
-    <span class="n">getReaction</span> <span class="o">=</span> <span class="n">get_reaction</span>
-    <span class="n">getNumReactions</span> <span class="o">=</span> <span class="n">get_num_reactions</span>
-    <span class="n">getAllReactions</span> <span class="o">=</span> <span class="n">get_all_reactions</span>
-    <span class="n">deleteReaction</span> <span class="o">=</span> <span class="n">delete_reaction</span>
-    <span class="n">deleteAllReactions</span> <span class="o">=</span> <span class="n">delete_all_reactions</span>
-
 </div>
 <div class="viewcode-block" id="Species"><a class="viewcode-back" href="../../pyurdme.html#pyurdme.model.Species">[docs]</a><span class="k">class</span> <span class="nc">Species</span><span class="p">():</span>
     <span class="sd">&quot;&quot;&quot; Model of a biochemical species. &quot;&quot;&quot;</span>
@@ -296,8 +274,6 @@
     <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">value</span><span class="p">)</span>
         
-    <span class="c"># Old function names for backwards compatablity</span>
-    <span class="n">setExpression</span> <span class="o">=</span> <span class="n">set_expression</span>
 </div>
 <div class="viewcode-block" id="Reaction"><a class="viewcode-back" href="../../pyurdme.html#pyurdme.model.Reaction">[docs]</a><span class="k">class</span> <span class="nc">Reaction</span><span class="p">():</span>
     <span class="sd">&quot;&quot;&quot; </span>
@@ -379,7 +355,7 @@
             <span class="k">if</span> <span class="n">rate</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
                 <span class="k">raise</span> <span class="n">ReactionError</span><span class="p">(</span><span class="s">&quot;Reaction &quot;</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">+</span><span class="s">&quot;: A mass-action propensity has to have a rate.&quot;</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">marate</span> <span class="o">=</span> <span class="n">rate</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">createMassAction</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">create_mass_action</span><span class="p">()</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">type</span> <span class="o">=</span> <span class="s">&quot;customized&quot;</span>
 
@@ -436,15 +412,8 @@
 <div class="viewcode-block" id="Reaction.annotate"><a class="viewcode-back" href="../../pyurdme.html#pyurdme.model.Reaction.annotate">[docs]</a>    <span class="k">def</span> <span class="nf">annotate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">annotation</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">annotation</span> <span class="o">=</span> <span class="n">annotation</span>
 
-    <span class="c"># Old function names for backwards compatablity</span></div>
-    <span class="n">createMassAction</span> <span class="o">=</span> <span class="n">create_mass_action</span>
-    <span class="n">setType</span> <span class="o">=</span> <span class="n">set_type</span>
-    <span class="n">addReactant</span> <span class="o">=</span> <span class="n">add_reactant</span>
-    <span class="n">addProduct</span> <span class="o">=</span> <span class="n">add_product</span>
-    <span class="n">Annotate</span> <span class="o">=</span> <span class="n">annotate</span>
 
-
-<span class="c"># Module exceptions</span></div>
+<span class="c"># Module exceptions</span></div></div>
 <div class="viewcode-block" id="ModelError"><a class="viewcode-back" href="../../pyurdme.html#pyurdme.model.ModelError">[docs]</a><span class="k">class</span> <span class="nc">ModelError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
     <span class="k">pass</span>
 </div>
@@ -489,7 +458,7 @@
         <li class="right" >
           <a href="../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li><a href="../../index.html">PyURDME 1.0 documentation</a> &raquo;</li>
+        <li><a href="../../index.html">PyURDME 1.0.1 documentation</a> &raquo;</li>
           <li><a href="../index.html" >Module code</a> &raquo;</li> 
       </ul>
     </div>

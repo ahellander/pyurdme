@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>PyURDME API &mdash; PyURDME 1.0 documentation</title>
+    <title>PyURDME API &mdash; PyURDME 1.0.1 documentation</title>
     
     <link rel="stylesheet" href="_static/default.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    './',
-        VERSION:     '1.0',
+        VERSION:     '1.0.1',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -23,7 +23,7 @@
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
-    <link rel="top" title="PyURDME 1.0 documentation" href="index.html" />
+    <link rel="top" title="PyURDME 1.0.1 documentation" href="index.html" />
     <link rel="next" title="PyURDME Examples" href="examples.html" />
     <link rel="prev" title="Installing PyURDME" href="install.html" /> 
   </head>
@@ -43,7 +43,7 @@
         <li class="right" >
           <a href="install.html" title="Installing PyURDME"
              accesskey="P">previous</a> |</li>
-        <li><a href="index.html">PyURDME 1.0 documentation</a> &raquo;</li> 
+        <li><a href="index.html">PyURDME 1.0.1 documentation</a> &raquo;</li> 
       </ul>
     </div>  
 
@@ -408,7 +408,7 @@ report_level: An int, Level of output from the solver: 0, 1, or 2. Default: 0.</
 
 <dl class="method">
 <dt id="pyurdme.pyurdme.URDMEModel.set_initial_condition_distribute_uniformly">
-<tt class="descname">set_initial_condition_distribute_uniformly</tt><big>(</big><em>spec_init</em><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMEModel.set_initial_condition_distribute_uniformly"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMEModel.set_initial_condition_distribute_uniformly" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">set_initial_condition_distribute_uniformly</tt><big>(</big><em>spec_init</em>, <em>subdomains=None</em><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMEModel.set_initial_condition_distribute_uniformly"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMEModel.set_initial_condition_distribute_uniformly" title="Permalink to this definition">¶</a></dt>
 <dd><p>Place the same number of molecules of the species in each voxel.</p>
 </dd></dl>
 
@@ -422,6 +422,12 @@ report_level: An int, Level of output from the solver: 0, 1, or 2. Default: 0.</
 <dt id="pyurdme.pyurdme.URDMEModel.set_initial_condition_scatter">
 <tt class="descname">set_initial_condition_scatter</tt><big>(</big><em>spec_init</em>, <em>subdomains=None</em><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMEModel.set_initial_condition_scatter"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMEModel.set_initial_condition_scatter" title="Permalink to this definition">¶</a></dt>
 <dd><p>Scatter an initial number of molecules over the voxels in a subdomain.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyurdme.pyurdme.URDMEModel.set_subdomain_vector">
+<tt class="descname">set_subdomain_vector</tt><big>(</big><em>sd</em><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMEModel.set_subdomain_vector"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMEModel.set_subdomain_vector" title="Permalink to this definition">¶</a></dt>
+<dd><p>Explicitly set the subdomain vector from an array.</p>
 </dd></dl>
 
 <dl class="method">
@@ -476,6 +482,12 @@ read by e.g. VMD, Jmol and Paraview.</p>
 </dd></dl>
 
 <dl class="method">
+<dt id="pyurdme.pyurdme.URDMEResult.get_d2v">
+<tt class="descname">get_d2v</tt><big>(</big><big>)</big><a class="headerlink" href="#pyurdme.pyurdme.URDMEResult.get_d2v" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the dof-to-vertex mapping.</p>
+</dd></dl>
+
+<dl class="method">
 <dt id="pyurdme.pyurdme.URDMEResult.get_endtime_model">
 <tt class="descname">get_endtime_model</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMEResult.get_endtime_model"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMEResult.get_endtime_model" title="Permalink to this definition">¶</a></dt>
 <dd><p>Return a URDME model object with the initial conditions set to the final time point of the
@@ -498,6 +510,12 @@ if set to True, the concentration (=copy_number/volume) is returned.</p>
 <dt id="pyurdme.pyurdme.URDMEResult.get_timespan">
 <tt class="descname">get_timespan</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/pyurdme/pyurdme.html#URDMEResult.get_timespan"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyurdme.pyurdme.URDMEResult.get_timespan" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
+
+<dl class="method">
+<dt id="pyurdme.pyurdme.URDMEResult.get_v2d">
+<tt class="descname">get_v2d</tt><big>(</big><big>)</big><a class="headerlink" href="#pyurdme.pyurdme.URDMEResult.get_v2d" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the vertex-to-dof mapping.</p>
+</dd></dl>
 
 <dl class="method">
 <dt id="pyurdme.pyurdme.URDMEResult.read_solution">
@@ -860,7 +878,7 @@ in the namespace defined by the union of its Reactant, Product and Parameter dic
         <li class="right" >
           <a href="install.html" title="Installing PyURDME"
              >previous</a> |</li>
-        <li><a href="index.html">PyURDME 1.0 documentation</a> &raquo;</li> 
+        <li><a href="index.html">PyURDME 1.0.1 documentation</a> &raquo;</li> 
       </ul>
     </div>
     <div class="footer">

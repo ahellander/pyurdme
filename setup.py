@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(name="pyurdme",
-      version="1.0.0",
+      version="1.0.1",
       packages=['pyurdme'],
       
       #include_package_data = True,

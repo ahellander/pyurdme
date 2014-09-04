@@ -150,6 +150,7 @@ class URDMEModel(Model):
                     mesh.constrained_domain = compiled_object
                 if 'num_dof_voxels' in state['mesh']:
                     mesh.num_dof_voxels = state['mesh']['num_dof_voxels']
+                mesh.init(2, 0)
                 self.__dict__['mesh'] = mesh
             except Exception as e:
                 print "Error unpickling model, could not recreate the mesh."
@@ -377,7 +378,6 @@ class URDMEModel(Model):
         
         if subdomains == {}:
             self.sd = sd
-            print subdomains
         else:
             for dim, subdomain in subdomains.items():
                 if dim == 0:
@@ -1240,6 +1240,10 @@ class URDMEResult(dict):
         
         state = self.__dict__
         state["filecontents"] = filecontents
+        state["v2d"] = self.get_v2d()
+        state["d2v"] = self.get_d2v()
+
+
         for key, item in state.items():
             try:
                 pickle.dumps(item)
@@ -1266,11 +1270,26 @@ class URDMEResult(dict):
         for k,v in state.items():
             self.__dict__[k] = v
 
+    def get_v2d(self):
+        """ Return the vertex-to-dof mapping. """
+        if not hasattr(self, 'v2d'):
+            fs = self.model.mesh.get_function_space()
+            self.v2d = dolfin.vertex_to_dof_map(fs)
+
+        return self.v2d
+
+    def get_d2v(self):
+        """ Return the dof-to-vertex mapping. """
+        if not hasattr(self, 'd2v'):
+            fs = self.model.mesh.get_function_space()
+            self.d2v = dolfin.dof_to_vertex_map(fs)
+
+        return self.d2v
+
     def _reorder_dof_to_voxel(self, M, num_species=None):
         """ Reorder the colums of M from dof ordering to vertex ordering. """
         
-        fs = self.model.mesh.get_function_space()
-        v2d = dolfin.vertex_to_dof_map(fs)
+        v2d = self.get_v2d()
         if len(M.shape) == 1:
             num_timepoints = 1
         else:
@@ -1425,8 +1444,8 @@ class URDMEResult(dict):
             raise URDMEError("URDMEResult.model must be set before the sol attribute can be accessed.")
         numvox = self.model.mesh.num_vertices()
         fs = self.model.mesh.get_function_space()
-        vertex_to_dof_map = dolfin.vertex_to_dof_map(fs)
-        dof_to_vertex_map = dolfin.dof_to_vertex_map(fs)
+        vertex_to_dof_map = self.get_v2d()
+        dof_to_vertex_map = self.get_d2v()
 
         # The result is loaded in dolfin Functions, one for each species and time point
         for i, spec in enumerate(self.model.listOfSpecies):
@@ -1608,8 +1627,7 @@ class URDMEResult(dict):
             where the volume unit is defined by the user input.
         """
         
-        fs = self.model.mesh.get_function_space()
-        v2d = dolfin.vertex_to_dof_map(fs)
+        v2d = self.get_v2d()
         shape = numpy.shape(copy_number_data)
         if len(shape) == 1:
             shape = (1,shape[0])
@@ -1639,7 +1657,8 @@ class URDMEResult(dict):
         # Convert RGB to HEX
         colors= []
         for row in crgba:
-            colors.append(self._rgb_to_hex(tuple(list(row[1:]))))
+            # get R,G,B of RGBA
+            colors.append(self._rgb_to_hex(tuple(list(row[0:3]))))
 
         # Convert Hex to Decimal
         for i,c in enumerate(colors):
@@ -1912,15 +1931,14 @@ class URDMESolver:
             self.infile_name = input_file
             self.delete_infile = False
 
-        outfile = tempfile.NamedTemporaryFile(delete=False)
-        outfile.close()
-
         if not os.path.exists(self.infile_name):
             raise URDMEError("input file not found.")
 
         # Execute the solver
-        urdme_solver_cmd = [self.solver_dir + self.propfilename + '.' + self.NAME, self.infile_name, outfile.name]
         for run_ndx in range(number_of_trajectories):
+            outfile = tempfile.NamedTemporaryFile(delete=False)
+            outfile.close()
+            urdme_solver_cmd = [self.solver_dir + self.propfilename + '.' + self.NAME, self.infile_name, outfile.name]
             
             if seed is not None:
                 urdme_solver_cmd.append(str(seed+run_ndx))

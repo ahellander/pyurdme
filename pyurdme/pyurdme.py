@@ -586,61 +586,28 @@ class URDMEModel(Model):
             # Filter the matrix: get rid of all elements < 0 (inlcuding the diagonal)
             vals *= vals<0
             Kcrs = scipy.sparse.csr_matrix((vals, cols, rows))
-            #Kdok = Kcrs.todok()
             
             sdmap  = self.species_to_subdomains[self.listOfSpecies[species]]
             
             # Filter the matrix: get rid of all elements < 0 (inlcuding the diagonal)
-            #Kcrs.data *= Kcrs.data<0
-            #Kcrs[Kcrs<0] = 0.0
             Kdok = Kcrs.todok()
-            #print Kdok.viewkeys()
-            # print sdmap
 
-# print sd
 
             for ind, val in Kdok.iteritems():
 
-#  ind = entries[0]
                 ir = ind[0]
                 ij = ind[1]
 
-#               val = entries[1]
-                
-                #if ir == ij: # Diagonal entry, we reassemble that below
-                #    val = 0.0
-                #else:
-
-                    # Check if this is an edge that the species should diffuse along,
-                    # if not, set the diffusion coefficient along this edge to zero. This is
-                    # equivalent to how boundary species are handled in the current Matlab interface.
+                # Check if this is an edge that the species should diffuse along,
+                # if not, set the diffusion coefficient along this edge to zero. This is
+                # equivalent to how boundary species are handled in the current Matlab interface.
                 if sd[ir] not in sdmap:
                     val = 0.0
-
-#if val > 0.0:
-#                        positive_mass += val
-#                       val = 0.0
-#                   else:
-#                       total_mass += val
-
-                # The volume can be zero, if the species is not active at the vertex (such as a 2D species at a 3D node)
-                #if vol[Mspecies*ij+spec] == 0:
-                #    vi = 1
-                #else:
-                #   vi = vol[Mspecies*ij+spec]
-                #vi = vol+vol<=0.0
-                #keys.append((Mspecies*ir+spec, Mspecies*ij+spec))
-                #values.append(-val/vi[Mspecies*ind[1]])
 
                 S[Mspecies*ir+spec, Mspecies*ij+spec] = -val/vi[Mspecies*ij+spec]
 
             spec = spec + 1
 
-        print "Zeroing out etc:", time.time()-tic
-        #print keys
-        #print values
-        #S = scipy.sparse.dok_matrix.fromkeys(keys, values)
-        # Renormalize the columns (may not sum to zero since elements may have been filtered out
         sumcol = S.tocsr().sum(axis=0)
         S.setdiag(-numpy.array(sumcol).flatten())
         

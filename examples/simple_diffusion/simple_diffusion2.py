@@ -39,8 +39,7 @@ class simple_diffusion2(pyurdme.URDMEModel):
         self.add_species([A,B])
 
         # A circle
-        mesh = dolfin.UnitCircleMesh(20)
-        self.mesh = pyurdme.URDMEMesh(mesh)
+        self.mesh = pyurdme.URDMEMesh.read_dolfin_mesh("circle.xml")
         
         # A mesh function for the cells
         cell_function = dolfin.CellFunction("size_t",self.mesh)
@@ -77,7 +76,7 @@ if __name__ == '__main__':
     
     model = simple_diffusion2()
     result = model.run()
-    
+
     # Write output in Paraview compatible format.
     result.export_to_vtk(species="B",folder_name="Bout")
     result.export_to_vtk(species="A",folder_name="Aout")

@@ -54,7 +54,7 @@ class TestSolverFunctionality(unittest.TestCase):
         model.listOfSpecies["A"].diffusion_constant = 0.0
         result = model.run()
         A = result.get_species("A")
-        self.assertFalse((numpy.mean(A,axis=0)-model.u0).any())
+        self.assertFalse((A[:,0]-model.u0).any())
     
     def test_same_seed(self):
         """ Test that the output is the same if the same seed is used, edxplicit solver creation  """

@@ -477,14 +477,13 @@ class URDMEModel(Model):
         self._initialize_species_to_subdomains()
 
         species_map = self.get_species_map()
-        num_voxels = self.mesh.get_num_voxels()
         for spec in spec_init:
             if subdomains is None:
                 subdomains = self.species_to_subdomains[spec]
             spec_name = spec.name
             num_spec = spec_init[spec]
             specindx = species_map[spec_name]
-            for ndx in range(num_voxels):
+            for ndx in range(len(self.sd)):
                 if self.sd[ndx] in subdomains:
                     self.u0[specindx, ndx] = num_spec
     

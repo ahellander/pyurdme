@@ -1258,7 +1258,7 @@ class URDMEResult(dict):
         # If the object contains filecontents, write those to a new tmp file.
         try:
             filecontents = state.pop("filecontents",None)
-            fd = tempfile.NamedTemporaryFile(delete=False)
+            fd = tempfile.NamedTemporaryFile(delete=False, dir=os.environ.get('PYURDME_TMPDIR'))
             with open(fd.name, mode='wb') as fh:
                 fh.write(filecontents)
             state["filename"] = fd.name
@@ -1918,13 +1918,13 @@ class URDMESolver:
         if input_file is None:
             if self.infile_name is None or not os.path.exists(self.infile_name):
                 # Get temporary input and output files
-                infile = tempfile.NamedTemporaryFile(delete=False) #TODO: respect os.environ.get('PYURDME_TMPDIR')
+                infile = tempfile.NamedTemporaryFile(delete=False, dir=os.environ.get('PYURDME_TMPDIR'))
 
                 # Write the model to an input file in .mat format
                 self.serialize(filename=infile, report_level=self.report_level)
                 infile.close()
                 self.infile_name = infile.name
-                #self.delete_infile = True
+                self.delete_infile = True
         else:
             self.infile_name = input_file
             self.delete_infile = False

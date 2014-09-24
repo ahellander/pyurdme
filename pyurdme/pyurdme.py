@@ -451,14 +451,13 @@ class URDMEModel(Model):
         self._initialize_species_to_subdomains()
 
         species_map = self.get_species_map()
-        num_voxels = self.mesh.get_num_voxels()
         for spec in spec_init:
             if subdomains is None:
                 subdomains = self.species_to_subdomains[spec]
             spec_name = spec.name
             num_spec = spec_init[spec]
             specindx = species_map[spec_name]
-            for ndx in range(num_voxels):
+            for ndx in range(len(self.sd)):
                 if self.sd[ndx] in subdomains:
                     self.u0[specindx, ndx] = num_spec
     
@@ -1296,7 +1295,7 @@ class URDMEResult(dict):
         # If the object contains filecontents, write those to a new tmp file.
         try:
             filecontents = state.pop("filecontents",None)
-            fd = tempfile.NamedTemporaryFile(delete=False)
+            fd = tempfile.NamedTemporaryFile(delete=False, dir=os.environ.get('PYURDME_TMPDIR'))
             with open(fd.name, mode='wb') as fh:
                 fh.write(filecontents)
             state["filename"] = fd.name
@@ -1787,7 +1786,7 @@ class URDMESolver:
         #ret['vars']['model'] = None
         ret['vars']['is_compiled'] = False
         # Create temp root
-        tmproot = tempfile.mkdtemp()
+        tmproot = tempfile.mkdtemp(dir=os.environ.get('PYURDME_TMPDIR'))
         # Get the propensity file
         model_file = tmproot+'/'+self.model_name + '_pyurdme_generated_model'+ '.c'
         ret['model_file'] = os.path.basename(model_file)
@@ -1832,7 +1831,7 @@ class URDMESolver:
         for key, val in state['vars'].iteritems():
             self.__dict__[key] = val
         # 1. create temporary directory = URDME_ROOT
-        self.temp_urdme_root = tempfile.mkdtemp()
+        self.temp_urdme_root = tempfile.mkdtemp(dir=os.environ.get('PYURDME_TMPDIR'))
         self.URDME_ROOT = self.temp_urdme_root
         self.URDME_BUILD = self.temp_urdme_root+'/build/'
         origwd = os.getcwd()
@@ -1884,7 +1883,7 @@ class URDMESolver:
         """ Compile the model."""
 
         # Create a unique directory each time call to compile.
-        self.solver_base_dir = tempfile.mkdtemp()
+        self.solver_base_dir = tempfile.mkdtemp(dir=os.environ.get('PYURDME_TMPDIR'))
         self.solver_dir = self.solver_base_dir + '/.urdme/'
         #print "URDMESolver.compile()  self.solver_dir={0}".format(self.solver_dir)
 
@@ -1939,7 +1938,6 @@ class URDMESolver:
             print handle.stdout.read()
             print handle.stderr.read()
 
-
         self.is_compiled = True
 
 
@@ -1965,13 +1963,13 @@ class URDMESolver:
         if input_file is None:
             if self.infile_name is None or not os.path.exists(self.infile_name):
                 # Get temporary input and output files
-                infile = tempfile.NamedTemporaryFile(delete=False)
+                infile = tempfile.NamedTemporaryFile(delete=False, dir=os.environ.get('PYURDME_TMPDIR'))
 
                 # Write the model to an input file in .mat format
                 self.serialize(filename=infile, report_level=self.report_level)
                 infile.close()
                 self.infile_name = infile.name
-                #self.delete_infile = True
+                self.delete_infile = True
         else:
             self.infile_name = input_file
             self.delete_infile = False
@@ -1981,7 +1979,7 @@ class URDMESolver:
 
         # Execute the solver
         for run_ndx in range(number_of_trajectories):
-            outfile = tempfile.NamedTemporaryFile(delete=False)
+            outfile = tempfile.NamedTemporaryFile(delete=False, dir=os.environ.get('PYURDME_TMPDIR'))
             outfile.close()
             urdme_solver_cmd = [self.solver_dir + self.propfilename + '.' + self.NAME, self.infile_name, outfile.name]
             

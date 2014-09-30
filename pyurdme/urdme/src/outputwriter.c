@@ -49,7 +49,8 @@ urdme_output_writer *get_urdme_output_writer(urdme_model *model, char *filename)
     H5Pset_chunk(writer->plist,2,writer->chunk_dims);
     
     /* Uncommenting this line would enable zlib compression of the file. */
-    //status = H5Pset_deflate (plist, 4);
+    herr_t status = H5Pset_deflate (writer->plist, 3);
+    //herr_t status = H5Pset_szip(writer->plist,  H5_SZIP_EC_OPTION_MASK, 128);
     
     writer->trajectory_dataset = H5Dcreate2(writer->output_file, "/U", writer->datatype, writer->trajectory_dataspace, H5P_DEFAULT,writer->plist,H5P_DEFAULT);
     

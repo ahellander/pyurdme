@@ -41,6 +41,9 @@ import json
 
 # Set log level to report only errors or worse
 dolfin.set_log_level(dolfin.ERROR)
+import logging
+logging.getLogger('FFC').setLevel(logging.ERROR)
+logging.getLogger('UFL').setLevel(logging.ERROR)
 
 class URDMEModel(Model):
     """

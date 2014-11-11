@@ -854,7 +854,6 @@ class URDMEModel(Model):
         return sol.run(number_of_trajectories=number_of_trajectories, seed=seed)
 
 
-
 class URDMEMesh(dolfin.Mesh):
     """ A URDME mesh extends the Dolfin mesh class. 
 
@@ -1702,9 +1701,34 @@ class URDMEResult(dict):
         IPython.display.display(IPython.display.HTML(html+hstr))
 
 
-    def display(self,species,time_index):
+    def display(self,species,time_index,opacity=1.0,wireframe=True):
+        """ Plot the trajectory as a PDE style plot. """
+        data = self.get_species(species,time_index,concentration=True)
+        fun = DolfinFunctionWrapper(self.model.mesh.get_function_space())
+        vec = fun.vector()
+        for i,d in enumerate(data):
+            vec[i] = d
+        fun.display(opacity=opacity, wireframe=wireframe)
 
-        jstr = self.export_to_three_js(species,time_index)
+
+class DolfinFunctionWrapper(dolfin.Function):
+    """ A dolfin.Function extended with methods to visualize it in
+        an IPyhthon notebook using three.js.
+        """
+    
+    def __init__(self, function_space):
+        dolfin.Function.__init__(self, function_space)
+    
+    def display(self, opacity=1.0,wireframe=True):
+        """ Plot the solution in an IPython notebook.
+            
+            opacity:    controls the degree of transparency
+            wireframe:  toggle display of the wireframe mesh on and off.
+            
+            """
+        u_vec = self.vector()
+        c = _compute_colors(u_vec)
+        jstr = URDMEMesh(self.function_space().mesh()).export_to_three_js(colors=c)
         hstr = None
         with open(os.path.dirname(os.path.abspath(__file__))+"/data/three.js_templates/solution.html",'r') as fd:
             hstr = fd.read()
@@ -1717,9 +1741,17 @@ class URDMEResult(dict):
         import uuid
         displayareaid=str(uuid.uuid4())
         hstr = hstr.replace('###DISPLAYAREAID###',displayareaid)
+        hstr = hstr.replace('###ALPHA###',str(opacity))
+        if wireframe:
+            hstr = hstr.replace('###WIREFRAME###',"true")
+        else:
+            hstr = hstr.replace('###WIREFRAME###',"false")
+        
         
         html = '<div id="'+displayareaid+'" class="cell"></div>'
         IPython.display.display(IPython.display.HTML(html+hstr))
+
+
 
 
 def get_N_HexCol(N=None):
@@ -1755,48 +1787,6 @@ def _compute_colors(x):
 
 def _rgb_to_hex(rgb):
     return '0x%02x%02x%02x' % rgb
-
-
-class DolfinFunctionWrapper(dolfin.Function):
-    """ A dolfin.Function extended with methods to visualize it in 
-        an IPyhthon notebook using three.js.
-    """
-    
-    def __init__(self, function_space):
-        dolfin.Function.__init__(self, function_space)
-
-    def display(self, opacity=1.0,wireframe=True):
-        """ Plot the solution in an IPython notebook. 
-                
-            opacity:    controls the degree of transparency
-            wireframe:  toggle display of the wireframe mesh on and off.
-        
-        """
-        u_vec = self.vector()
-        c = _compute_colors(u_vec)
-        jstr = URDMEMesh(self.function_space().mesh()).export_to_three_js(colors=c)
-        hstr = None
-        with open(os.path.dirname(os.path.abspath(__file__))+"/data/three.js_templates/solution.html",'r') as fd:
-            hstr = fd.read()
-        if hstr is None:
-            raise Exception("could note open template mesh.html")
-        hstr = hstr.replace('###PYURDME_MESH_JSON###',jstr)
-        
-        # Create a random id for the display div. This is to avioid multiple plots ending up in the same
-        # div in Ipython notebook
-        import uuid
-        displayareaid=str(uuid.uuid4())
-        hstr = hstr.replace('###DISPLAYAREAID###',displayareaid)
-        hstr = hstr.replace('###ALPHA###',str(opacity))
-        if wireframe:
-            hstr = hstr.replace('###WIREFRAME###',"true")
-        else:
-            hstr = hstr.replace('###WIREFRAME###',"false")
-
-
-        html = '<div id="'+displayareaid+'" class="cell"></div>'
-        IPython.display.display(IPython.display.HTML(html+hstr))
-
 
 
 class URDMESolver:

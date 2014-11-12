@@ -854,7 +854,6 @@ class URDMEModel(Model):
         return sol.run(number_of_trajectories=number_of_trajectories, seed=seed)
 
 
-
 class URDMEMesh(dolfin.Mesh):
     """ A URDME mesh extends the Dolfin mesh class. 
 
@@ -1592,7 +1591,9 @@ class URDMEResult(dict):
                 outfile.close()
 
 
-    def export_to_particle_js(self,species,time_index):
+
+    def _export_to_particle_js(self,species,time_index, colors=None):
+        """ Create a html string for displaying the particles as small spheres. """
         import random
         with open(os.path.dirname(os.path.abspath(__file__))+"/data/three.js_templates/particles.html",'r') as fd:
             template = fd.read()
@@ -1617,12 +1618,13 @@ class URDMEResult(dict):
         radius = []
 
         total_num_particles = 0
-        colors = ["blue","red","yellow", "green"]
+        #colors = ["blue","red","yellow", "green"]
+        if colors == None:
+            colors =  get_N_HexCol(len(species))
         
         for j,spec in enumerate(species):
             
             timeslice = self.get_species(spec, time_index)
-            #timeslice = US[time_index,:]
             ns = numpy.sum(timeslice)
             total_num_particles += ns
 
@@ -1643,15 +1645,13 @@ class URDMEResult(dict):
                     
                     c.append(colors[j])
     
-        docstr = template.replace("__NUM__MOLECULES__", str(total_num_particles))
-        docstr = docstr.replace("__X__",str(x))
-        docstr = docstr.replace("__Y__",str(y))
-        docstr = docstr.replace("__Z__",str(z))
-        docstr = docstr.replace("__COLOR__",str(c))
-        docstr = docstr.replace("__RADIUS__",str(radius))
-
-
-        return docstr
+        template = template.replace("__X__",str(x))
+        template = template.replace("__Y__",str(y))
+        template = template.replace("__Z__",str(z))
+        template = template.replace("__COLOR__",str(c))
+        template = template.replace("__RADIUS__",str(radius))
+        
+        return template
 
 
     def export_to_three_js(self, species, time_index):
@@ -1691,11 +1691,44 @@ class URDMEResult(dict):
         colors = _compute_colors(timeslice)
         return colors
     
+    def display_particles(self,species, time_index):
+        hstr = self._export_to_particle_js(species, time_index)
+        import uuid
+        displayareaid=str(uuid.uuid4())
+        hstr = hstr.replace('###DISPLAYAREAID###',displayareaid)
+        
+        html = '<div id="'+displayareaid+'" class="cell"></div>'
+        IPython.display.display(IPython.display.HTML(html+hstr))
+
+
+    def display(self,species,time_index,opacity=1.0,wireframe=True):
+        """ Plot the trajectory as a PDE style plot. """
+        data = self.get_species(species,time_index,concentration=True)
+        fun = DolfinFunctionWrapper(self.model.mesh.get_function_space())
+        vec = fun.vector()
+        for i,d in enumerate(data):
+            vec[i] = d
+        fun.display(opacity=opacity, wireframe=wireframe)
+
+
+class DolfinFunctionWrapper(dolfin.Function):
+    """ A dolfin.Function extended with methods to visualize it in
+        an IPyhthon notebook using three.js.
+        """
     
-
-    def display(self,species,time_index):
-
-        jstr = self.export_to_three_js(species,time_index)
+    def __init__(self, function_space):
+        dolfin.Function.__init__(self, function_space)
+    
+    def display(self, opacity=1.0,wireframe=True):
+        """ Plot the solution in an IPython notebook.
+            
+            opacity:    controls the degree of transparency
+            wireframe:  toggle display of the wireframe mesh on and off.
+            
+            """
+        u_vec = self.vector()
+        c = _compute_colors(u_vec)
+        jstr = URDMEMesh(self.function_space().mesh()).export_to_three_js(colors=c)
         hstr = None
         with open(os.path.dirname(os.path.abspath(__file__))+"/data/three.js_templates/solution.html",'r') as fd:
             hstr = fd.read()
@@ -1708,9 +1741,28 @@ class URDMEResult(dict):
         import uuid
         displayareaid=str(uuid.uuid4())
         hstr = hstr.replace('###DISPLAYAREAID###',displayareaid)
+        hstr = hstr.replace('###ALPHA###',str(opacity))
+        if wireframe:
+            hstr = hstr.replace('###WIREFRAME###',"true")
+        else:
+            hstr = hstr.replace('###WIREFRAME###',"false")
+        
         
         html = '<div id="'+displayareaid+'" class="cell"></div>'
         IPython.display.display(IPython.display.HTML(html+hstr))
+
+
+
+
+def get_N_HexCol(N=None):
+    import colorsys
+    HSV_tuples = [(x*1.0/N, 0.5, 0.5) for x in xrange(N)]
+    hex_out = []
+    for rgb in HSV_tuples:
+        rgb = map(lambda x: int(x*255),colorsys.hsv_to_rgb(*rgb))
+        hex_out.append("".join(map(lambda x: chr(x).encode('hex'),rgb)))
+    return ["red","green","blue", "yellow"]
+
 
 def _compute_colors(x):
     import matplotlib.cm
@@ -1735,7 +1787,6 @@ def _compute_colors(x):
 
 def _rgb_to_hex(rgb):
     return '0x%02x%02x%02x' % rgb
-
 
 
 class URDMESolver:

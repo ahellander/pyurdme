@@ -21,6 +21,7 @@ urdme_output_writer *get_urdme_output_writer(urdme_model *model, char *filename)
     
     writer->datatype = H5Tcopy(H5T_NATIVE_INT);
     
+    printf("Ncells:%i Mspecies: %i",model->Ncells, model->Mspecies);
     int Ndofs = model->Ncells*model->Mspecies;
     
     /* How many timepoints do we log before the buffer is full? */

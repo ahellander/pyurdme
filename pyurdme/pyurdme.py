@@ -1054,7 +1054,7 @@ class URDMEMesh(dolfin.Mesh):
     @classmethod
     def generate_unit_cube_mesh(cls, nx, ny, nz, periodic=False):
         """ Unit Cube (3D) of with nx, ny, nz points in the respective axes. """
-        return cls.generate_cube_mesh(nx=nx, ny=ny, nz=nz, periodic=periodic)
+        return cls.generate_cube_mesh(L=1,nx=nx, ny=ny, nz=nz, periodic=periodic)
 
     @classmethod
     def generate_interval_mesh(cls, nx, a, b, periodic=False):
@@ -1639,7 +1639,7 @@ class URDMEResult(dict):
                     y.append((coordinates[i,1]+random.uniform(-1,1)*hiy))
                     z.append((coordinates[i,2]+random.uniform(-1,1)*hiz))
                     if self.model.listOfSpecies[spec].reaction_radius:
-                        radius.append(self.model.listOfSpecies[spec].reaction_radius)
+                        radius.append(factor*self.model.listOfSpecies[spec].reaction_radius)
                     else:
                         radius.append(0.01)
                     

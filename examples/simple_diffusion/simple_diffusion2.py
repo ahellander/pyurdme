@@ -25,7 +25,6 @@ class Cytosol(dolfin.SubDomain):
     def inside(self,x,on_boundary):
         return not on_boundary
 
-
 class simple_diffusion2(pyurdme.URDMEModel):
     """ One species diffusing on the boundary of a sphere and one species
         diffusing inside the sphere. """
@@ -38,7 +37,7 @@ class simple_diffusion2(pyurdme.URDMEModel):
 
         self.add_species([A,B])
 
-        # A circle
+        # Import a circle mesh
         self.mesh = pyurdme.URDMEMesh.read_dolfin_mesh("circle.xml")
         
         # A mesh function for the cells

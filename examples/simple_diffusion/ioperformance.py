@@ -40,8 +40,8 @@ class simple_diffusion2(URDMEModel):
 
         # A circle
         #c1 = dolfin.Circle(0,0,1)
-        mesh = dolfin.UnitCircle(20)
-        self.mesh = URDMEMesh(mesh=mesh)
+        c1 = dolfin.Circle(0,0,1)
+        self.mesh = URDMEMesh(mesh=dolfin.Mesh(c1,20))
         
         # A mesh function for the cells
         cell_function = dolfin.CellFunction("size_t",self.mesh)
@@ -75,6 +75,7 @@ class simple_diffusion2(URDMEModel):
 
 if __name__ == '__main__':
     import time
+    import dill
     """ This model is constructed to be non-stiff but with denser and denser output so that 
         we can measure the peroformace as we become IO/Memory bound. """
     
@@ -134,7 +135,8 @@ if __name__ == '__main__':
     A = result.get_species("A",[25000])
     #print numpy.sum(A,axis=1)
     print "\t Selecting a single timepoint took "+str(time.time()-tic)+" s."
-
+    with open('testdump.pyb','w') as fh:
+        fh.write(dill.dumps(result))
 
     print "Output data set size:", str(4*num_dofs*500000/2/1.024e6) + " MB"
     model.timespan(numpy.linspace(0,1,500000/2))
@@ -152,6 +154,8 @@ if __name__ == '__main__':
     A = result.get_species("A",[100000])
     #print numpy.sum(A,axis=1)
     print "\t Selecting a single timepoint took "+str(time.time()-tic)+" s."
+    with open('testdump.pyb','w') as fh:
+        fh.write(dill.dumps(result))
 
 
 

@@ -15,7 +15,7 @@ else
   MY_PATH=$(cd $(dirname $EXE_FILE); pwd)
 fi
 export PYURDMEHOME=$MY_PATH
-export PYTHONPATH="$PYTHONPATH:$PYURDMEHOME"
+export PYTHONPATH="$PYURDMEHOME:$PYTHONPATH"
 export C_INCLUDE_PATH=/usr/lib/openmpi/include
 export C_INCLUDE_PATH=/usr/lib/openmpi/include
 export INSTANT_SYSTEM_CALL_METHOD=SUBPROCESS

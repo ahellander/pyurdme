@@ -10,5 +10,4 @@ add-apt-repository ppa:fenics-packages/fenics
 apt-get update
 apt-get -y install fenics
 apt-get -y install cython python-h5py
-apt-get -y install python-pip
-pip install https://www.github.com/ahellander/pyurdme/tarball/installer
+python setup.py install

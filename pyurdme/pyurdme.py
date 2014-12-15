@@ -9,7 +9,6 @@ import sys
 import tempfile
 import types
 import warnings
-import copy
 
 import numpy
 import scipy.io
@@ -41,6 +40,9 @@ import json
 
 # Set log level to report only errors or worse
 dolfin.set_log_level(dolfin.ERROR)
+import logging
+logging.getLogger('FFC').setLevel(logging.ERROR)
+logging.getLogger('UFL').setLevel(logging.ERROR)
 
 class URDMEModel(Model):
     """
@@ -53,6 +55,9 @@ class URDMEModel(Model):
 
         # Currently not used
         self.geometry = None
+        #
+        self.sd = []
+        self.sd_initialized=False
 
         self.mesh = None
         self.xmesh = None
@@ -61,6 +66,7 @@ class URDMEModel(Model):
         
         # subdomins is a list of MeshFunctions with subdomain marker information
         self.subdomains = OrderedDict()
+        self.old_style_subdomain = False
 
         # This dictionary hold information about the subdomains each species is active on
         self.species_to_subdomains = {}
@@ -102,7 +108,6 @@ class URDMEModel(Model):
         """ Used by pickle to set state when unpickling. """
 
         self.__dict__ = state
-        #self.__dict__["mesh"] = pickle.loads(self.__dict__["mesh"])
 
         if 'subdomains' in state:
             # Recreate the subdomain functions
@@ -145,12 +150,58 @@ class URDMEModel(Model):
 
         return self.species_map
 
-    def add_subdomain(self, subdomain):
-        if not subdomain.dim() in self.subdomains.keys():
-            self.subdomains[subdomain.dim()] = subdomain
+    def add_subdomain(self, subdomain, subdomain_id=None):
+        """ Add a subdomain definition to the model.  By default, all regions are set to 
+        subdomain 1.
+        
+        Args:
+            subdomain: an instance of a 'dolfin.SubDomain' subclass.
+            id: an int, the identifier for this subdomain.
+        """
+        if subdomain_id is None and isinstance(subdomain, dolfin.cpp.mesh.MeshFunctionSizet):
+            # Old style, for backwards compatability
+            if not subdomain.dim() in self.subdomains.keys():
+                self.subdomains[subdomain.dim()] = subdomain
+                self.old_style_subdomain = True
+            else:
+                raise ModelException("Failed to add subdomain function of dim "+str(subdomain.dim())+". Only one subdomain function of a given dimension is allowed.")
         else:
-            raise ModelException("Failed to add subdomain function of dim "+str(subdomain.dim())+". Only one subdomain function of a given dimension is allowed.")
+            # New style
+            if self.old_style_subdomain:
+                raise ModelException("Can't mix old and new style subdomains")
+            if not issubclass(subdomain.__class__, dolfin.SubDomain):
+                raise ModelException("'subdomain' argument to add_subdomain() must be a subclass of dolfin.SubDomain")
+            if subdomain_id is None or not isinstance(subdomain_id, int):
+                raise ModelException("'id' argument to add_subdomain() must be an int")
+            self.subdomains[subdomain_id] = subdomain
 
+
+
+
+    def _subdomains_to_threejs(self, subdomains={1:'blue'}):
+        """ Export threejs code to plot the mesh with edges colored for the listed subdomains.
+            Input is a dictionary with subdomain index:color pairs, output is a single json three.js mesh
+            with the subdomains colored according to the input colors. """
+        sd = self.get_subdomain_vector()
+        print sd
+        c = ['black']*len(sd)
+        
+        for i,s in enumerate(sd):
+            try:
+                c[i] = subdomains[int(s)]
+            except KeyError:
+                pass
+
+        jsondoc = self.mesh.export_to_three_js(colors = c)
+        return jsondoc
+    
+    def _subdomains_to_html(self, filename, sd=1):
+        sd = self.get_subdomain_vector()
+        c = _compute_colors(sd)
+        self.mesh._ipython_display_(filename, colors=c)
+
+
+    
     def create_stoichiometric_matrix(self):
         """ Generate a stoichiometric matrix in sparse CSC format. """
 
@@ -261,28 +312,26 @@ class URDMEModel(Model):
             is that a species is active in all the defined subdomains.
         """
 
-        # If no subdomain function has been set by the user,
-        # we need to create a default subdomain here.
-        if not self.subdomains:
-            self._initialize_default_subdomain()
+#        # If no subdomain function has been set by the user,
+#        # we need to create a default subdomain here.
+#        if len(self.subdomains) == 0:
+#            self._initialize_default_subdomain()
+#
+#        # The unique elements of the subdomain MeshFunctions
+#        sds = []
+#        for dim, subdomain in self.subdomains.items():
+#            sds = sds + list(numpy.unique(subdomain.array()).flatten())
+#        sds = numpy.unique(sds)
+#        sds = list(sds)
+#
 
-        # The unique elements of the subdomain MeshFunctions
-        sds = []
-        for dim, subdomain in self.subdomains.items():
-            sds = sds + list(numpy.unique(subdomain.array()).flatten())
-        sds = numpy.unique(sds)
-        sds = list(sds)
-
-        # This explicit typecast is necessary for UFL not to choke on the subdomain ids.
-        for i, sd in enumerate(sds):
-            sds[i] = int(sd)
-
+        sds = list(numpy.unique(self.get_subdomain_vector()))
         # This conversion is necessary for UFL not to choke on the subdomain ids.
         for i, sd in enumerate(sds):
             sds[i] = int(sd)
         try:
             sds.remove(0)
-        except Exception:
+        except ValueError:
             pass
 
         # If a species is not present as key in the species_to_subdomain mapping,
@@ -299,10 +348,18 @@ class URDMEModel(Model):
 
 
 
-    def get_subdomain_vector(self, subdomains={}):
+    def set_subdomain_vector(self, sd):
+        """ Explicitly set the subdomain vector from an array. """
+        self.sd = sd
+        self.sd_initialized = True
+    
+    def get_subdomain_vector(self, subdomains=None):
         """ Create the 'sd' vector. 'subdomains' is a dolfin FacetFunction,
             and if no subdomain input is specified, they voxels default to
             subdomain 1. """
+        if self.sd_initialized:
+            return self.sd
+        
         # We need to make sure that the highest dimension is applied
         # first, otherwise the cell level will overwrite all markings
         # applied on boundaries.
@@ -313,20 +370,38 @@ class URDMEModel(Model):
         self.mesh.init()
 
         # TODO: Support arbitrary sd-numbers and more than one subdomain
-        sd = numpy.zeros((1, self.mesh.get_num_voxels()))
-        if subdomains == {}:
-            self.sd = sd.flatten()
-            print subdomains
+        sd = numpy.ones(self.mesh.get_num_voxels())
+        
+        if len(self.subdomains) == 0:
+            self.sd = sd
         else:
-            for dim, subdomain in subdomains.items():
-                # Map all facet labels to vertex labels
-                tovertex = self.mesh.topology()(dim, 0)
-                for i in range(subdomain.size()):
-                    for vtx in tovertex(i):
-                        if subdomain[i] != 0: # TODO: Temporary hack to fix issue with Gmesh facet_region files.
-                            sd[0, vtx] = subdomain[i]
+            if self.old_style_subdomain:
+                subdomains = self.subdomains
+            else:
+                subdomains = OrderedDict()
+                sdvec = dolfin.MeshFunction("size_t", self.mesh, self.mesh.topology().dim()-1)
+                sdvec.set_all(1)
+                for id, inst in self.subdomains.iteritems():
+                    inst.mark(sdvec, id)
+                subdomains[sdvec.dim()] = sdvec
 
-        self.sd = sd.flatten()
+            for dim, subdomain in subdomains.items():
+                if dim == 0:
+                    # If we define subdomains on vertex, ONLY use those.
+                    # Then it is a direct copy to the sd
+                    for ndx,val in enumerate(subdomain):
+                        sd[ndx] = val
+                    break
+                else:
+                    # Map all facet labels to vertex labels
+                    tovertex = self.mesh.topology()(dim, 0)
+                    for i in range(subdomain.size()):
+                        for vtx in tovertex(i):
+                            if subdomain[i] != 0: # TODO: Temporary hack to fix issue with Gmesh facet_region files.
+                                sd[vtx] = subdomain[i]
+
+        self.sd = sd
+        self.sd_initialized = True
         return self.sd
 
     def initialize_initial_condition(self):
@@ -370,8 +445,7 @@ class URDMEModel(Model):
 
         self._initialize_species_to_subdomains()
 
-        if not hasattr(self, 'sd'):
-            self.get_subdomain_vector(self.subdomains)
+        self.get_subdomain_vector()
 
         for species in spec_init:
 
@@ -398,7 +472,7 @@ class URDMEModel(Model):
                 ind = table[vtx]
                 self.u0[specindx, ind] += 1
 
-    def set_initial_condition_distribute_uniformly(self, spec_init):
+    def set_initial_condition_distribute_uniformly(self, spec_init, subdomains=None):
         """ Place the same number of molecules of the species in each voxel. """
         if not hasattr(self, "u0"):
             self.initialize_initial_condition()
@@ -406,14 +480,18 @@ class URDMEModel(Model):
         if not hasattr(self, 'xmesh'):
             self.create_extended_mesh()
 
+        self._initialize_species_to_subdomains()
+
         species_map = self.get_species_map()
-        num_voxels = self.mesh.get_num_voxels()
         for spec in spec_init:
+            if subdomains is None:
+                subdomains = self.species_to_subdomains[spec]
             spec_name = spec.name
             num_spec = spec_init[spec]
             specindx = species_map[spec_name]
-            for ndx in range(num_voxels):
-                self.u0[specindx, ndx] = num_spec
+            for ndx in range(len(self.sd)):
+                if self.sd[ndx] in subdomains:
+                    self.u0[specindx, ndx] = num_spec
     
     
     def set_initial_condition_place_near(self, spec_init, point=None):
@@ -425,19 +503,19 @@ class URDMEModel(Model):
         if not hasattr(self, 'xmesh'):
             self.create_extended_mesh()
 
-        coords = self.mesh.get_voxels()
-        shape = coords.shape
-
+#coords = self.mesh.get_voxels()
+#        shape = coords.shape
+#        print "Coord shapes", shape
 
         for spec in spec_init:
             spec_name = spec.name
             num_spec = spec_init[spec]
 
             # Find the voxel with center (vertex) nearest to the point
-            reppoint = numpy.tile(point, (shape[0], 1))
-            dist = numpy.sqrt(numpy.sum((coords-reppoint)**2, axis=1))
-            ix = numpy.argmin(dist)
-
+            #reppoint = numpy.tile(point, (shape[0], 1))
+            #dist = numpy.sqrt(numpy.sum((coords-reppoint)**2, axis=1))
+            #ix = numpy.argmin(dist)
+            ix = self.mesh.closest_vertex(point)
             species_map = self.get_species_map()
             specindx = species_map[spec_name]
             #dofind = self.xmesh.vertex_to_dof_map[spec_name][ix]
@@ -458,6 +536,8 @@ class URDMEModel(Model):
             and the fraction of the mass of the negative off-diagonal elements that has been filtered out.
 
             """
+        
+        import time
 
         # Check if the individual stiffness and mass matrices (per species) have been assembled, otherwise assemble them.
         if self.stiffness_matrices is not None and self.mass_matrices is not None:
@@ -473,7 +553,6 @@ class URDMEModel(Model):
             mass_matrices = self.mass_matrices
 
         # Make a dok matrix of dimension (Ndofs,Ndofs) for easier manipulatio
-
         i = 1
         Mspecies = len(self.listOfSpecies)
         if Mspecies == 0:
@@ -481,14 +560,13 @@ class URDMEModel(Model):
         # Use dolfin 'dof' number of voxels, not the number of verticies
         Nvoxels = self.mesh.get_num_dof_voxels()
         Ndofs = Nvoxels*Mspecies
-        S = scipy.sparse.dok_matrix((Ndofs, Ndofs))
 
         # Create the volume vector by lumping the mass matrices
         vol = numpy.zeros((Ndofs, 1))
         spec = 0
 
         xmesh = self.xmesh
-
+        
         for species, M in mass_matrices.iteritems():
 
             #dof2vtx = xmesh.dof_to_vertex_map[species]
@@ -502,7 +580,7 @@ class URDMEModel(Model):
                 vx = j
                 dof = Mspecies*vx+spec
                 vol[dof, 0] = vols[j]
-            
+
         # This is necessary in order for the array to have the right dimension (Ndofs,1)
         vol = vol.flatten()
 
@@ -513,78 +591,62 @@ class URDMEModel(Model):
         total_mass = 0.0
 
 
-        sd = self.get_subdomain_vector(self.subdomains)
+        sd = self.get_subdomain_vector()
         sd_vec_dof = numpy.zeros(self.mesh.get_num_dof_voxels())
         vertex_to_dof = dolfin.vertex_to_dof_map(self.mesh.get_function_space())
         for ndx, sd_val in enumerate(sd):
             sd_vec_dof[vertex_to_dof[ndx]] = sd_val
         sd = sd_vec_dof
+        
+        tic  = time.time()
+        # If a volume is zero, we need to set it to 1.
+        vi = vol+(vol<=0.0)
+
+        S = scipy.sparse.dok_matrix((Ndofs, Ndofs))
+
+
+        keys = []
+        values = []
 
         for species, K in stiffness_matrices.iteritems():
 
             rows, cols, vals = K.data()
+            
+            # Filter the matrix: get rid of all elements < 0 (inlcuding the diagonal)
+            vals *= vals<0
             Kcrs = scipy.sparse.csr_matrix((vals, cols, rows))
+            
+            sdmap  = self.species_to_subdomains[self.listOfSpecies[species]]
+            
+            # Filter the matrix: get rid of all elements < 0 (inlcuding the diagonal)
             Kdok = Kcrs.todok()
 
-            #dof2vtx = xmesh.dof_to_vertex_map[species]
 
-            for entries in Kdok.items():
+            for ind, val in Kdok.iteritems():
 
-                ind = entries[0]
                 ir = ind[0]
                 ij = ind[1]
 
-                # Use Dolfin dof ordering
-                # Depricated: Permutation to make the matrix ordering match that of sd, u0. (Dolfin dof -> URDME dof)
-                #ir = dof2vtx[ind[0]]
-                #ij = dof2vtx[ind[1]]
+                # Check if this is an edge that the species should diffuse along,
+                # if not, set the diffusion coefficient along this edge to zero. This is
+                # equivalent to how boundary species are handled in the current Matlab interface.
+                if sd[ir] not in sdmap:
+                    val = 0.0
 
-                val = entries[1]
-
-                if ir != ij:
-
-                    # Check if this is an edge that the species should diffuse along,
-                    # if not, set the diffusion coefficient along this edge to zero. This is
-                    # equivalent to how boundary species are handled in the current Matlab interface.
-                    if sd[ir] not in self.species_to_subdomains[self.listOfSpecies[species]]:
-                        val = 0.0
-
-                    if val > 0.0:
-                        positive_mass += val
-                        val = 0.0
-                    else:
-                        total_mass += val
-
-                # The volume can be zero, if the species is not active at the vertex (such as a 2D species at a 3D node)
-                if vol[Mspecies*ij+spec] == 0:
-                    vi = 1
-                else:
-                    vi = vol[Mspecies*ij+spec]
-                
-                S[Mspecies*ir+spec, Mspecies*ij+spec] = -val/vi
+                S[Mspecies*ir+spec, Mspecies*ij+spec] = -val/vi[Mspecies*ij+spec]
 
             spec = spec + 1
 
-        # Convert to compressed column for compatibility with the URDME solvers.
+        sumcol = S.tocsr().sum(axis=0)
+        S.setdiag(-numpy.array(sumcol).flatten())
+        
         D = S.tocsc()
-
-        # Renormalize the columns (may not sum to zero since elements may have been filtered out
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            sumcol = numpy.zeros((Ndofs, 1))
-            for i in range(Ndofs):
-                col = D.getcol(i)
-                for val in col.data:
-                    if val > 0.0:
-                        sumcol[i] += val
-
-            D.setdiag(-sumcol.flatten())        
-
+        
         if total_mass == 0.0:
             return {'vol':vol, 'D':D, 'relative_positive_mass':None}
         else:
             return {'vol':vol, 'D':D, 'relative_positive_mass':positive_mass/total_mass}
-
+                
 
     def validate(self, urdme_solver_data):
         """ Validate the model data structures.
@@ -674,7 +736,7 @@ class URDMEModel(Model):
         # Subdomain vector
         # convert to dof ordering
         sd_vec_dof = numpy.zeros(num_dofvox)
-        for ndx, sd_val in enumerate(self.get_subdomain_vector(self.subdomains)):
+        for ndx, sd_val in enumerate(self.get_subdomain_vector()):
             sd_vec_dof[vertex_to_dof[ndx]] = sd_val
         urdme_solver_data['sd'] = sd_vec_dof
         
@@ -776,7 +838,6 @@ class URDMEModel(Model):
         for spec_name, species in self.listOfSpecies.items():
 
             # Find out what subdomains this species is active on
-            #subdomain_list = self.species_to_subdomains[species]
             weak_form_K[spec_name] = dolfin.inner(dolfin.nabla_grad(trial_functions[spec_name]), dolfin.nabla_grad(test_functions[spec_name]))*dolfin.dx
             weak_form_M[spec_name] = trial_functions[spec_name]*test_functions[spec_name]*dolfin.dx
 
@@ -822,7 +883,6 @@ class URDMEModel(Model):
         return sol.run(number_of_trajectories=number_of_trajectories, seed=seed)
 
 
-
 class URDMEMesh(dolfin.Mesh):
     """ A URDME mesh extends the Dolfin mesh class. 
 
@@ -840,8 +900,6 @@ class URDMEMesh(dolfin.Mesh):
     
     def __getstate__(self):
         
-      
-      #state = self.__dict__
         state = {}
         state['function_space'] = None
       
@@ -933,12 +991,19 @@ class URDMEMesh(dolfin.Mesh):
             coords = numpy.append(coords, numpy.tile([0],(coords.shape[0],1)), 1)
         return coords
 
-
     def closest_vertex(self,x):
         """ Get index of the vertex in the coordinate list closest to the point x. """
         coords = self.get_voxels()
         shape = coords.shape
-        reppoint = numpy.tile(x, (shape[0], 1))
+        
+        if isinstance(x,(int,float)):
+            x = [x]
+        
+        if len(x) == 2:
+            point = numpy.append(x,0.0)
+        else:
+            point = x
+        reppoint = numpy.tile(point, (shape[0], 1))
         dist = numpy.sqrt(numpy.sum((coords-reppoint)**2, axis=1))
         ix = numpy.argmin(dist)
         return ix
@@ -1086,6 +1151,7 @@ class URDMEMesh(dolfin.Mesh):
             
             If a colors list is specified, it should have the num_voxels entries
         """
+        self.init(2,0)
         document = {}
         document["metadata"] = {"formatVersion":3}
         gfdg,vtx = self.get_scaled_normalized_coordinates()
@@ -1120,7 +1186,6 @@ class URDMEMesh(dolfin.Mesh):
         
         document["colors"] = colors
         
-        self.init(2,0)
         connectivity = self.topology()(2,0)
         faces = []
         
@@ -1133,15 +1198,15 @@ class URDMEMesh(dolfin.Mesh):
 
                 f.append(int(ind))
             faces += ([128]+f+f)
-            document["faces"] = list(faces)
+        document["faces"] = list(faces)
         
         #Test that we can index into vertices
         vertices = document["vertices"]
         
         return json.dumps(document)
 
-    def _ipython_display_(self, filename=None):
-        jstr = self.export_to_three_js()
+    def _ipython_display_(self, filename=None,colors=None):
+        jstr = self.export_to_three_js(colors=colors)
         hstr = None
         with open(os.path.dirname(os.path.abspath(__file__))+"/data/three.js_templates/mesh.html",'r') as fd:
             hstr = fd.read()
@@ -1228,7 +1293,8 @@ class URDMEResult(dict):
         if self.model is None:
             raise Exception("can not continue a result with no model")
         # create a soft copy
-        model2 = copy.copy(self.model)
+        model_str = pickle.dumps(self.model)
+        model2 = pickle.loads(model_str)
         # set the initial conditions 
         model2.u0 = numpy.zeros(self.model.u0.shape)
         for s, sname in enumerate(self.model.listOfSpecies):
@@ -1249,6 +1315,9 @@ class URDMEResult(dict):
         state = self.__dict__
         state["filecontents"] = filecontents
         
+        state["v2d"] = self.get_v2d()
+        state["d2v"] = self.get_d2v()
+
         return state
 
 
@@ -1258,7 +1327,7 @@ class URDMEResult(dict):
         # If the object contains filecontents, write those to a new tmp file.
         try:
             filecontents = state.pop("filecontents",None)
-            fd = tempfile.NamedTemporaryFile(delete=False)
+            fd = tempfile.NamedTemporaryFile(delete=False, dir=os.environ.get('PYURDME_TMPDIR'))
             with open(fd.name, mode='wb') as fh:
                 fh.write(filecontents)
             state["filename"] = fd.name
@@ -1269,11 +1338,26 @@ class URDMEResult(dict):
         for k,v in state.items():
             self.__dict__[k] = v
 
+    def get_v2d(self):
+        """ Return the vertex-to-dof mapping. """
+        if not hasattr(self, 'v2d'):
+            fs = self.model.mesh.get_function_space()
+            self.v2d = dolfin.vertex_to_dof_map(fs)
+
+        return self.v2d
+
+    def get_d2v(self):
+        """ Return the dof-to-vertex mapping. """
+        if not hasattr(self, 'd2v'):
+            fs = self.model.mesh.get_function_space()
+            self.d2v = dolfin.dof_to_vertex_map(fs)
+
+        return self.d2v
+
     def _reorder_dof_to_voxel(self, M, num_species=None):
         """ Reorder the colums of M from dof ordering to vertex ordering. """
         
-        fs = self.model.mesh.get_function_space()
-        v2d = dolfin.vertex_to_dof_map(fs)
+        v2d = self.get_v2d()
         if len(M.shape) == 1:
             num_timepoints = 1
         else:
@@ -1429,8 +1513,8 @@ class URDMEResult(dict):
             raise URDMEError("URDMEResult.model must be set before the sol attribute can be accessed.")
         numvox = self.model.mesh.num_vertices()
         fs = self.model.mesh.get_function_space()
-        vertex_to_dof_map = dolfin.vertex_to_dof_map(fs)
-        dof_to_vertex_map = dolfin.dof_to_vertex_map(fs)
+        vertex_to_dof_map = self.get_v2d()
+        dof_to_vertex_map = self.get_d2v()
 
         # The result is loaded in dolfin Functions, one for each species and time point
         for i, spec in enumerate(self.model.listOfSpecies):
@@ -1537,7 +1621,9 @@ class URDMEResult(dict):
                 outfile.close()
 
 
-    def export_to_particle_js(self,species,time_index):
+
+    def _export_to_particle_js(self,species,time_index, colors=None):
+        """ Create a html string for displaying the particles as small spheres. """
         import random
         with open(os.path.dirname(os.path.abspath(__file__))+"/data/three.js_templates/particles.html",'r') as fd:
             template = fd.read()
@@ -1562,12 +1648,13 @@ class URDMEResult(dict):
         radius = []
 
         total_num_particles = 0
-        colors = ["blue","red","yellow", "green"]
+        #colors = ["blue","red","yellow", "green"]
+        if colors == None:
+            colors =  get_N_HexCol(len(species))
         
         for j,spec in enumerate(species):
             
-            timeslice = self.get_species(spec, 0)
-            #timeslice = US[time_index,:]
+            timeslice = self.get_species(spec, time_index)
             ns = numpy.sum(timeslice)
             total_num_particles += ns
 
@@ -1581,22 +1668,20 @@ class URDMEResult(dict):
                     x.append((coordinates[i,0]+random.uniform(-1,1)*hix))
                     y.append((coordinates[i,1]+random.uniform(-1,1)*hiy))
                     z.append((coordinates[i,2]+random.uniform(-1,1)*hiz))
-                    try:
+                    if self.model.listOfSpecies[spec].reaction_radius:
                         radius.append(self.model.listOfSpecies[spec].reaction_radius)
-                    except:
+                    else:
                         radius.append(0.01)
                     
                     c.append(colors[j])
     
-        docstr = template.replace("__NUM__MOLECULES__", str(total_num_particles))
-        docstr = docstr.replace("__X__",str(x))
-        docstr = docstr.replace("__Y__",str(y))
-        docstr = docstr.replace("__Z__",str(z))
-        docstr = docstr.replace("__COLOR__",str(c))
-        docstr = docstr.replace("__RADIUS__",str(radius))
-
-
-        return docstr
+        template = template.replace("__X__",str(x))
+        template = template.replace("__Y__",str(y))
+        template = template.replace("__Z__",str(z))
+        template = template.replace("__COLOR__",str(c))
+        template = template.replace("__RADIUS__",str(radius))
+        
+        return template
 
 
     def export_to_three_js(self, species, time_index):
@@ -1612,8 +1697,7 @@ class URDMEResult(dict):
             where the volume unit is defined by the user input.
         """
         
-        fs = self.model.mesh.get_function_space()
-        v2d = dolfin.vertex_to_dof_map(fs)
+        v2d = self.get_v2d()
         shape = numpy.shape(copy_number_data)
         if len(shape) == 1:
             shape = (1,shape[0])
@@ -1634,30 +1718,47 @@ class URDMEResult(dict):
         """ Create a color list for species at time. """
         
         timeslice = self.get_species(species,time_index, concentration = True)
-        import matplotlib.cm
-        
-        # Get RGB color map proportinal to the concentration.
-        cm = matplotlib.cm.ScalarMappable()
-        crgba= cm.to_rgba(timeslice, bytes = True)
-                                     
-        # Convert RGB to HEX
-        colors= []
-        for row in crgba:
-            colors.append(self._rgb_to_hex(tuple(list(row[1:]))))
-
-        # Convert Hex to Decimal
-        for i,c in enumerate(colors):
-            colors[i] = int(c,0)
-
+        colors = _compute_colors(timeslice)
         return colors
+    
+    def display_particles(self,species, time_index):
+        hstr = self._export_to_particle_js(species, time_index)
+        import uuid
+        displayareaid=str(uuid.uuid4())
+        hstr = hstr.replace('###DISPLAYAREAID###',displayareaid)
+        
+        html = '<div id="'+displayareaid+'" class="cell"></div>'
+        IPython.display.display(IPython.display.HTML(html+hstr))
 
-    def _rgb_to_hex(self, rgb):
-        return '0x%02x%02x%02x' % rgb
+
+    def display(self,species,time_index,opacity=1.0,wireframe=True):
+        """ Plot the trajectory as a PDE style plot. """
+        data = self.get_species(species,time_index,concentration=True)
+        fun = DolfinFunctionWrapper(self.model.mesh.get_function_space())
+        vec = fun.vector()
+        for i,d in enumerate(data):
+            vec[i] = d
+        fun.display(opacity=opacity, wireframe=wireframe)
 
 
-    def display(self,species,time_index):
-
-        jstr = self.export_to_three_js(species,time_index)
+class DolfinFunctionWrapper(dolfin.Function):
+    """ A dolfin.Function extended with methods to visualize it in
+        an IPyhthon notebook using three.js.
+        """
+    
+    def __init__(self, function_space):
+        dolfin.Function.__init__(self, function_space)
+    
+    def display(self, opacity=1.0,wireframe=True):
+        """ Plot the solution in an IPython notebook.
+            
+            opacity:    controls the degree of transparency
+            wireframe:  toggle display of the wireframe mesh on and off.
+            
+            """
+        u_vec = self.vector()
+        c = _compute_colors(u_vec)
+        jstr = URDMEMesh(self.function_space().mesh()).export_to_three_js(colors=c)
         hstr = None
         with open(os.path.dirname(os.path.abspath(__file__))+"/data/three.js_templates/solution.html",'r') as fd:
             hstr = fd.read()
@@ -1670,10 +1771,52 @@ class URDMEResult(dict):
         import uuid
         displayareaid=str(uuid.uuid4())
         hstr = hstr.replace('###DISPLAYAREAID###',displayareaid)
+        hstr = hstr.replace('###ALPHA###',str(opacity))
+        if wireframe:
+            hstr = hstr.replace('###WIREFRAME###',"true")
+        else:
+            hstr = hstr.replace('###WIREFRAME###',"false")
+        
         
         html = '<div id="'+displayareaid+'" class="cell"></div>'
         IPython.display.display(IPython.display.HTML(html+hstr))
 
+
+
+
+def get_N_HexCol(N=None):
+    import colorsys
+    HSV_tuples = [(x*1.0/N, 0.5, 0.5) for x in xrange(N)]
+    hex_out = []
+    for rgb in HSV_tuples:
+        rgb = map(lambda x: int(x*255),colorsys.hsv_to_rgb(*rgb))
+        hex_out.append("".join(map(lambda x: chr(x).encode('hex'),rgb)))
+    return ["red","green","blue", "yellow"]
+
+
+def _compute_colors(x):
+    import matplotlib.cm
+        
+    # Get RGB color map proportional to the concentration.
+    cm = matplotlib.cm.ScalarMappable()
+    crgba= cm.to_rgba(x, bytes = True)
+    
+    # Convert RGB to HEX
+    colors= []
+    for row in crgba:
+        # get R,G,B of RGBA
+        colors.append(_rgb_to_hex(tuple(list(row[0:3]))))
+    
+    # Convert Hex to Decimal
+    for i,c in enumerate(colors):
+        colors[i] = int(c,0)
+
+
+    return colors
+
+
+def _rgb_to_hex(rgb):
+    return '0x%02x%02x%02x' % rgb
 
 
 class URDMESolver:
@@ -1727,7 +1870,7 @@ class URDMESolver:
         #ret['vars']['model'] = None
         ret['vars']['is_compiled'] = False
         # Create temp root
-        tmproot = tempfile.mkdtemp()
+        tmproot = tempfile.mkdtemp(dir=os.environ.get('PYURDME_TMPDIR'))
         # Get the propensity file
         model_file = tmproot+'/'+self.model_name + '_pyurdme_generated_model'+ '.c'
         ret['model_file'] = os.path.basename(model_file)
@@ -1772,7 +1915,7 @@ class URDMESolver:
         for key, val in state['vars'].iteritems():
             self.__dict__[key] = val
         # 1. create temporary directory = URDME_ROOT
-        self.temp_urdme_root = tempfile.mkdtemp()
+        self.temp_urdme_root = tempfile.mkdtemp(dir=os.environ.get('PYURDME_TMPDIR'))
         self.URDME_ROOT = self.temp_urdme_root
         self.URDME_BUILD = self.temp_urdme_root+'/build/'
         origwd = os.getcwd()
@@ -1824,7 +1967,7 @@ class URDMESolver:
         """ Compile the model."""
 
         # Create a unique directory each time call to compile.
-        self.solver_base_dir = tempfile.mkdtemp()
+        self.solver_base_dir = tempfile.mkdtemp(dir=os.environ.get('PYURDME_TMPDIR'))
         self.solver_dir = self.solver_base_dir + '/.urdme/'
         #print "URDMESolver.compile()  self.solver_dir={0}".format(self.solver_dir)
 
@@ -1879,7 +2022,6 @@ class URDMESolver:
             print handle.stdout.read()
             print handle.stderr.read()
 
-
         self.is_compiled = True
 
 
@@ -1905,26 +2047,25 @@ class URDMESolver:
         if input_file is None:
             if self.infile_name is None or not os.path.exists(self.infile_name):
                 # Get temporary input and output files
-                infile = tempfile.NamedTemporaryFile(delete=False)
+                infile = tempfile.NamedTemporaryFile(delete=False, dir=os.environ.get('PYURDME_TMPDIR'))
 
                 # Write the model to an input file in .mat format
                 self.serialize(filename=infile, report_level=self.report_level)
                 infile.close()
                 self.infile_name = infile.name
-                #self.delete_infile = True
+                self.delete_infile = True
         else:
             self.infile_name = input_file
             self.delete_infile = False
-
-        outfile = tempfile.NamedTemporaryFile(delete=False)
-        outfile.close()
 
         if not os.path.exists(self.infile_name):
             raise URDMEError("input file not found.")
 
         # Execute the solver
-        urdme_solver_cmd = [self.solver_dir + self.propfilename + '.' + self.NAME, self.infile_name, outfile.name]
         for run_ndx in range(number_of_trajectories):
+            outfile = tempfile.NamedTemporaryFile(delete=False, dir=os.environ.get('PYURDME_TMPDIR'))
+            outfile.close()
+            urdme_solver_cmd = [self.solver_dir + self.propfilename + '.' + self.NAME, self.infile_name, outfile.name]
             
             if seed is not None:
                 urdme_solver_cmd.append(str(seed+run_ndx))
@@ -2021,12 +2162,11 @@ class URDMESolver:
             func = ""
             rname = self.model.listOfReactions[R].name
             func += funheader.replace("__NAME__", rname) + "\n{\n"
-            if self.model.listOfReactions[R].restrict_to == None:
+            if self.model.listOfReactions[R].restrict_to == None or (isinstance(self.model.listOfReactions[R].restrict_to, list) and len(self.model.listOfReactions[R].restrict_to) == 0):
                 func += self.model.listOfReactions[R].propensity_function
-
             else:
                 func += "if("
-                if isinstance(self.model.listOfReactions[R].restrict_to, list):
+                if isinstance(self.model.listOfReactions[R].restrict_to, list) and len(self.model.listOfReactions[R].restrict_to) > 0:
                     for sd in self.model.listOfReactions[R].restrict_to:
                         func += "sd == " + str(sd) + "||"
                     func = func[:-2]

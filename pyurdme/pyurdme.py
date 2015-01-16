@@ -494,8 +494,8 @@ class URDMEModel(Model):
                     self.u0[specindx, ndx] = num_spec
     
     
-    def set_initial_condition_place_near(self, spec_init, point=None):
-        """ Place all molecules of kind species in the voxel nearest a given point. """
+    def set_initial_condition_place_near(self, spec_init, point=None, add=False):
+        """ Place all molecules of kind species in the voxel nearest a given point. The species existing previously in this voxel are reset if add is set to False"""
 
         if not hasattr(self, "u0"):
             self.initialize_initial_condition()
@@ -520,9 +520,24 @@ class URDMEModel(Model):
             specindx = species_map[spec_name]
             #dofind = self.xmesh.vertex_to_dof_map[spec_name][ix]
             #ix = (dofind - specindx) / len(species_map)
-            self.u0[specindx, ix] = num_spec
+            self.u0[specindx, ix] = (self.u0[specindx,ix] if add else 0) + num_spec
 
+    def set_initial_condition_place_voxel(self, spec_init, voxel,add=False):
+        """Place all molecules of kind species in the given voxel. The species existing previously in this voxel are reset if add is set to False"""
 
+        if not hasattr(self, "u0"):
+            self.initialize_initial_condition()
+
+        if not hasattr(self, 'xmesh'):
+            self.create_extended_mesh()
+
+        for spec in spec_init:
+            spec_name = spec.name
+            num_spec = spec_init[spec]
+
+            species_map = self.get_species_map()
+            specindx = species_map[spec_name]
+            self.u0[specindx, voxel] = (self.u0[specindx,voxel] if add else 0) + num_spec
 
     def create_system_matrix(self):
         """ Create the system (diffusion) matrix for input to the URDME solvers. The matrix

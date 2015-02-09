@@ -74,7 +74,10 @@ class simple_diffusion2(pyurdme.URDMEModel):
 if __name__ == '__main__':
     
     model = simple_diffusion2()
-    result = model.run()
+    from extrinsicsolver import ExtrinsicSolver
+    extsolver = ExtrinsicSolver(model, solver_path="/Users/andreash/bitbucket/extrinsic")
+    res = extsolver.run()
+    #result = model.run()
 
     # Write output in Paraview compatible format.
     result.export_to_vtk(species="B",folder_name="Bout")

@@ -1580,7 +1580,7 @@ class URDMEResult(dict):
         for i, time in enumerate(self.tspan):
             solvector = (self.sol[species][time]).vector()
             for dof in range(numvox):
-                func_vector[dof] = solvector[dof]
+                func_vector[dof] = solvector[dof][0]
             fd << func
 
     def export_to_xyx(self, filename, species=None, file_format="VMD"):

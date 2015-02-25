@@ -199,7 +199,13 @@ class URDMEModel(Model):
         sd = self.get_subdomain_vector()
         c = _compute_colors(sd)
         self.mesh._ipython_display_(filename, colors=c)
-
+    
+    def write_stochss_subdomain_file(filename="stochss_sdfile.txt"):
+        # Write mesh and subdomain files for the StochSS UI
+        sd = self.get_subdomain_vector()
+        with open(filename,'w') as fd:
+            for ndx,val in enumerate(sd):
+                fd.write("{0},{1}\n".format(ndx,val))
 
     def display_mesh(self, subdomains):
         if isinstance(subdomains, int):
@@ -2115,7 +2121,7 @@ class URDMESolver:
             except OSError as e:
                 print "Error, execution of solver raised an exception: {0}".format(e)
                 print "urdme_solver_cmd = {0}".format(urdme_solver_cmd)
-                raise URDMEError("Solver execution failed")
+                    #raise URDMEError("Solver execution failed")
 
             if return_code != 0:
                 print outfile.name

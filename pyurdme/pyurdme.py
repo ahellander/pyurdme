@@ -200,7 +200,7 @@ class URDMEModel(Model):
         c = _compute_colors(sd)
         self.mesh._ipython_display_(filename, colors=c)
     
-    def write_stochss_subdomain_file(filename="stochss_sdfile.txt"):
+    def write_stochss_subdomain_file(self, filename="stochss_sdfile.txt"):
         # Write mesh and subdomain files for the StochSS UI
         sd = self.get_subdomain_vector()
         with open(filename,'w') as fd:

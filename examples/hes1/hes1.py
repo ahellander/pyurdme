@@ -19,7 +19,7 @@ class MeshSize(pyurdme.URDMEDataFunction):
         ret = self.h[self.mesh.closest_vertex(x)]
         return ret
 
-class hes1(pyurdme.URDMEModel):
+class Hes1(pyurdme.URDMEModel):
     def __init__(self,model_name="hes1"):
         pyurdme.URDMEModel.__init__(self, model_name)
 

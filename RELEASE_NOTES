@@ -15,6 +15,8 @@
 — Utility method to export subdomain file for a mesh in StochSS format. 
 — Now possible to directly specify a Gmsh mesh file (pyurdme does the conversion to Dolfin XML)
 — New example (hes1), that uses Gmsh import. 
+— New initial condition method, initial_condition_place_voxel - places molecules in a specific voxel
+— Now possible to choose between adding molecules or resetting the initial condition with initial_condition_place near and initial_condition_place_voxel.   
 — Compatibility with FEniCS 1.5 (and examples uses mshr module)
 
 

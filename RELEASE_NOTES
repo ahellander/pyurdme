@@ -6,3 +6,16 @@
 --------------
 - Fixes a bug in run_ensemle that led to the wrong result for more than one trajectory 
 - Minor updates and bug-fixes for compatibility with StochSS 1.4
+
+1.1.0
+————————————
+- Improved performance for assembling system matrix.
+— Simple volume rendering for solutions using transparent views.
+— Visualize solutions as particles (spheres).
+— Utility method to export subdomain file for a mesh in StochSS format. 
+— Now possible to directly specify a Gmsh mesh file (pyurdme does the conversion to Dolfin XML)
+— New example (hes1), that uses Gmsh import. 
+— Compatibility with FEniCS 1.5 (and examples uses mshr module)
+
+
+

@@ -1799,7 +1799,8 @@ class DolfinFunctionWrapper(dolfin.Function):
 
             """
         u_vec = self.vector()
-        c = _compute_colors(u_vec)
+        # Need to flatten the array for compatibility across Dolfin 1.4/1.5
+        c = _compute_colors(numpy.array(u_vec).flatten())
         jstr = URDMEMesh(self.function_space().mesh()).export_to_three_js(colors=c)
         hstr = None
         with open(os.path.dirname(os.path.abspath(__file__))+"/data/three.js_templates/solution.html",'r') as fd:
@@ -1822,7 +1823,11 @@ class DolfinFunctionWrapper(dolfin.Function):
         html = '<div id="'+displayareaid+'" class="cell"></div>'
         IPython.display.display(IPython.display.HTML(html+hstr))
 
-
+#   def vector(self):
+#        "We need to overload this method "
+#        u = super(DolfinFunctionWrapper,self).vector()
+#        u = numpy.array(u).flatten()
+#       return u
 
 
 def get_N_HexCol(N=None):
@@ -1841,7 +1846,6 @@ def _compute_colors(x):
     # Get RGB color map proportional to the concentration.
     cm = matplotlib.cm.ScalarMappable()
     crgba= cm.to_rgba(x, bytes = True)
-
     # Convert RGB to HEX
     colors= []
     for row in crgba:

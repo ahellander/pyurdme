@@ -11,6 +11,7 @@ import types
 import warnings
 import uuid
 
+
 import numpy
 import scipy.io
 import scipy.sparse
@@ -38,6 +39,26 @@ except:
 
 import pickle
 import json
+
+import functools
+
+def deprecated(func):
+    '''This is a decorator which can be used to mark functions
+     as deprecated. It will result in a warning being emitted
+     when the function is used.'''
+
+    @functools.wraps(func)
+    def new_func(*args, **kwargs):
+        warnings.warn_explicit(
+             "Call to deprecated function {}.".format(func.__name__),
+             category=DeprecationWarning,
+             filename=func.func_code.co_filename,
+             lineno=func.func_code.co_firstlineno + 1
+         )
+        return func(*args, **kwargs)
+    return new_func
+
+
 
 # Set log level to report only errors or worse
 dolfin.set_log_level(dolfin.ERROR)
@@ -76,7 +97,7 @@ class URDMEModel(Model):
         # URDMEDataFunction objects to construct the data vector.
         self.listOfDataFunctions = []
 
-        # Volume of each voxel in the dolfin dof ordering (not vetex ordering).
+        # Volume of each voxel in the dolfin dof ordering (not vertex ordering).
         self.dofvol = None
 
     def __getstate__(self):
@@ -1545,7 +1566,7 @@ class URDMEResult(dict):
             #print "URDMEResult.__del__: Could not delete result file'{0}': {1}".format(self.filename, e)
             pass
 
-
+    @deprecated
     def _initialize_sol(self):
         """ Initialize the sol variable. This is a helper function for export_to_vtk(). """
 
@@ -1596,19 +1617,24 @@ class URDMEResult(dict):
 
 
     def export_to_vtk(self, species, folder_name):
-        """ Dump the trajectory to a collection of vtk files in the folder folder_name (created if non-existant). """
+        """ Dump the trajectory to a collection of vtk files in the folder folder_name (created if non-existant).
+            The exported data is #molecules/volume, where the volume unit is implicit from the mesh dimension. """
 
-        self._initialize_sol()
+        #self._initialize_sol()
         subprocess.call(["mkdir", "-p", folder_name])
+        fd = dolfin.File(folder_name+"/trajectory.pvd")
         func = dolfin.Function(self.model.mesh.get_function_space())
         func_vector = func.vector()
-        fd = dolfin.File(folder_name+"/trajectory.pvd")
-        numvox = self.model.mesh.get_num_dof_voxels()
+        vertex_to_dof_map = self.get_v2d()
+        NA = 6.022e23/1000
 
         for i, time in enumerate(self.tspan):
-            solvector = (self.sol[species][time]).vector()
-            for dof in range(numvox):
-                func_vector[dof] = solvector[dof]
+            solvector = self.get_species(species,i,concentration=True)
+            # print numpy.max(solvector)
+            #exit(0)
+            for j, val in enumerate(solvector):
+                # We need this scaling because Dolfin drops small values.
+                func_vector[vertex_to_dof_map[j]] = val*NA
             fd << func
 
     def export_to_xyx(self, filename, species=None, file_format="VMD"):

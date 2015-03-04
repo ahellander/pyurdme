@@ -89,7 +89,9 @@ if __name__=="__main__":
     model = Hes1(model_name="hes1")
     result = model.run(report_level=1)
     model.write_stochss_subdomain_file("sd_data.txt")
-
+    import pickle
+    with open ("test.pyb",'wb') as fh:
+        fh.write(pickle.dumps(result))
     protein = result.get_species("protein")
     proteinsum = numpy.sum(protein,axis=1)
     plt.plot(model.tspan,proteinsum,'r')

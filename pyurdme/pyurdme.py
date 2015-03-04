@@ -132,7 +132,9 @@ class URDMEModel(Model):
         self.__dict__ = state
 
         if 'subdomains' in state:
+            #print state['subdomains']
             # Recreate the subdomain functions
+            # print state['mesh']
             try:
                 sddict = OrderedDict()
                 for sdkey, sd_func_str in state["subdomains"].items():
@@ -1634,7 +1636,7 @@ class URDMEResult(dict):
             #exit(0)
             for j, val in enumerate(solvector):
                 # We need this scaling because Dolfin drops small values.
-                func_vector[vertex_to_dof_map[j]] = val
+                func_vector[vertex_to_dof_map[j]] = val*NA
             fd << func
 
     def export_to_xyx(self, filename, species=None, file_format="VMD"):

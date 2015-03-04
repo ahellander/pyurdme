@@ -33,7 +33,7 @@ class Hes1(pyurdme.URDMEModel):
 
         #Domains
         basedir = os.path.dirname(os.path.abspath(__file__))
-        self.mesh = pyurdme.URDMEMesh.read_mesh(basedir+"/mesh/cell.msh")
+        self.mesh = pyurdme.URDMEMesh.read_mesh(basedir+"/mesh/cell_coarse.msh")
         
         volumes = dolfin.MeshFunction("size_t",self.mesh,0)
         volumes.set_all(2)
@@ -86,16 +86,19 @@ class Hes1(pyurdme.URDMEModel):
         self.timespan(range(1200))
 
 if __name__=="__main__":
-    model = hes1(model_name="hes1")
+    model = Hes1(model_name="hes1")
     result = model.run(report_level=1)
+    model.write_stochss_subdomain_file("sd_data.txt")
 
     protein = result.get_species("protein")
     proteinsum = numpy.sum(protein,axis=1)
     plt.plot(model.tspan,proteinsum,'r')
-    mRNA = result.get_species("mRNA")
-    mRNAsum=numpy.sum(mRNA[:],axis=1)
-    plt.plot(model.tspan,mRNAsum,'b')
+    #mRNA = result.get_species("mRNA")
+    #mRNAsum=numpy.sum(mRNA[:],axis=1)
+    plt.xlabel('Time [min]')
+    plt.ylabel('Total number of protein molecules')
+    #plt.plot(model.tspan,mRNAsum,'b')
     plt.show()
 
     #print 'Writing species "protein" to folder "proteinOut"'
-    #result.export_to_vtk(species='protein',folder_name='proteinOut')
+    result.export_to_vtk(species='protein',folder_name='proteinOut')

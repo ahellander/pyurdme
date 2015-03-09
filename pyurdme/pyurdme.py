@@ -11,6 +11,7 @@ import types
 import warnings
 import uuid
 
+
 import numpy
 import scipy.io
 import scipy.sparse
@@ -38,6 +39,26 @@ except:
 
 import pickle
 import json
+
+import functools
+
+def deprecated(func):
+    '''This is a decorator which can be used to mark functions
+     as deprecated. It will result in a warning being emitted
+     when the function is used.'''
+
+    @functools.wraps(func)
+    def new_func(*args, **kwargs):
+        warnings.warn_explicit(
+             "Call to deprecated function {}.".format(func.__name__),
+             category=DeprecationWarning,
+             filename=func.func_code.co_filename,
+             lineno=func.func_code.co_firstlineno + 1
+         )
+        return func(*args, **kwargs)
+    return new_func
+
+
 
 # Set log level to report only errors or worse
 dolfin.set_log_level(dolfin.ERROR)
@@ -76,7 +97,7 @@ class URDMEModel(Model):
         # URDMEDataFunction objects to construct the data vector.
         self.listOfDataFunctions = []
 
-        # Volume of each voxel in the dolfin dof ordering (not vetex ordering).
+        # Volume of each voxel in the dolfin dof ordering (not vertex ordering).
         self.dofvol = None
 
     def __getstate__(self):
@@ -199,7 +220,13 @@ class URDMEModel(Model):
         sd = self.get_subdomain_vector()
         c = _compute_colors(sd)
         self.mesh._ipython_display_(filename, colors=c)
-
+    
+    def write_stochss_subdomain_file(self, filename="stochss_sdfile.txt"):
+        # Write mesh and subdomain files for the StochSS UI
+        sd = self.get_subdomain_vector()
+        with open(filename,'w') as fd:
+            for ndx,val in enumerate(sd):
+                fd.write("{0},{1}\n".format(ndx,val))
 
     def display_mesh(self, subdomains):
         if isinstance(subdomains, int):
@@ -518,20 +545,17 @@ class URDMEModel(Model):
             for ndx in range(len(self.sd)):
                 if self.sd[ndx] in subdomains:
                     self.u0[specindx, ndx] = num_spec
+    
+    
+    def set_initial_condition_place_near(self, spec_init, point=None, add=False):
+        """ Place all molecules of kind species in the voxel nearest a given point. The species existing previously in this voxel are reset if add is set to False"""
 
-
-    def set_initial_condition_place_near(self, spec_init, point=None):
-        """ Place all molecules of kind species in the voxel nearest a given point. """
 
         if not hasattr(self, "u0"):
             self.initialize_initial_condition()
 
         if not hasattr(self, 'xmesh'):
             self.create_extended_mesh()
-
-#coords = self.mesh.get_voxels()
-#        shape = coords.shape
-#        print "Coord shapes", shape
 
         for spec in spec_init:
             spec_name = spec.name
@@ -546,9 +570,24 @@ class URDMEModel(Model):
             specindx = species_map[spec_name]
             #dofind = self.xmesh.vertex_to_dof_map[spec_name][ix]
             #ix = (dofind - specindx) / len(species_map)
-            self.u0[specindx, ix] = num_spec
+            self.u0[specindx, ix] = (self.u0[specindx,ix] if add else 0) + num_spec
 
+    def set_initial_condition_place_voxel(self, spec_init, voxel,add=False):
+        """Place all molecules of kind species in the given voxel. The species existing previously in this voxel are reset if add is set to False"""
 
+        if not hasattr(self, "u0"):
+            self.initialize_initial_condition()
+
+        if not hasattr(self, 'xmesh'):
+            self.create_extended_mesh()
+
+        for spec in spec_init:
+            spec_name = spec.name
+            num_spec = spec_init[spec]
+
+            species_map = self.get_species_map()
+            specindx = species_map[spec_name]
+            self.u0[specindx, voxel] = (self.u0[specindx,voxel] if add else 0) + num_spec
 
     def create_system_matrix(self):
         """ Create the system (diffusion) matrix for input to the URDME solvers. The matrix
@@ -1109,7 +1148,7 @@ class URDMEMesh(dolfin.Mesh):
     @classmethod
     def generate_unit_cube_mesh(cls, nx, ny, nz, periodic=False):
         """ Unit Cube (3D) of with nx, ny, nz points in the respective axes. """
-        return cls.generate_cube_mesh(nx=nx, ny=ny, nz=nz, periodic=periodic)
+        return cls.generate_cube_mesh(L=1,nx=nx, ny=ny, nz=nz, periodic=periodic)
 
     @classmethod
     def generate_interval_mesh(cls, nx, a, b, periodic=False):
@@ -1527,7 +1566,7 @@ class URDMEResult(dict):
             #print "URDMEResult.__del__: Could not delete result file'{0}': {1}".format(self.filename, e)
             pass
 
-
+    @deprecated
     def _initialize_sol(self):
         """ Initialize the sol variable. This is a helper function for export_to_vtk(). """
 
@@ -1578,19 +1617,24 @@ class URDMEResult(dict):
 
 
     def export_to_vtk(self, species, folder_name):
-        """ Dump the trajectory to a collection of vtk files in the folder folder_name (created if non-existant). """
+        """ Dump the trajectory to a collection of vtk files in the folder folder_name (created if non-existant).
+            The exported data is #molecules/volume, where the volume unit is implicit from the mesh dimension. """
 
-        self._initialize_sol()
+        #self._initialize_sol()
         subprocess.call(["mkdir", "-p", folder_name])
+        fd = dolfin.File(folder_name+"/trajectory.pvd")
         func = dolfin.Function(self.model.mesh.get_function_space())
         func_vector = func.vector()
-        fd = dolfin.File(folder_name+"/trajectory.pvd")
-        numvox = self.model.mesh.get_num_dof_voxels()
+        vertex_to_dof_map = self.get_v2d()
+        NA = 6.022e23/1000
 
         for i, time in enumerate(self.tspan):
-            solvector = (self.sol[species][time]).vector()
-            for dof in range(numvox):
-                func_vector[dof] = solvector[dof]
+            solvector = self.get_species(species,i,concentration=True)
+            # print numpy.max(solvector)
+            #exit(0)
+            for j, val in enumerate(solvector):
+                # We need this scaling because Dolfin drops small values.
+                func_vector[vertex_to_dof_map[j]] = val*NA
             fd << func
 
     def export_to_xyx(self, filename, species=None, file_format="VMD"):
@@ -1694,7 +1738,7 @@ class URDMEResult(dict):
                     y.append((coordinates[i,1]+random.uniform(-1,1)*hiy))
                     z.append((coordinates[i,2]+random.uniform(-1,1)*hiz))
                     if self.model.listOfSpecies[spec].reaction_radius:
-                        radius.append(self.model.listOfSpecies[spec].reaction_radius)
+                        radius.append(factor*self.model.listOfSpecies[spec].reaction_radius)
                     else:
                         radius.append(0.01)
 
@@ -1781,7 +1825,8 @@ class DolfinFunctionWrapper(dolfin.Function):
 
             """
         u_vec = self.vector()
-        c = _compute_colors(u_vec)
+        # Need to flatten the array for compatibility across Dolfin 1.4/1.5
+        c = _compute_colors(numpy.array(u_vec).flatten())
         jstr = URDMEMesh(self.function_space().mesh()).export_to_three_js(colors=c)
         hstr = None
         with open(os.path.dirname(os.path.abspath(__file__))+"/data/three.js_templates/solution.html",'r') as fd:
@@ -1804,7 +1849,11 @@ class DolfinFunctionWrapper(dolfin.Function):
         html = '<div id="'+displayareaid+'" class="cell"></div>'
         IPython.display.display(IPython.display.HTML(html+hstr))
 
-
+#   def vector(self):
+#        "We need to overload this method "
+#        u = super(DolfinFunctionWrapper,self).vector()
+#        u = numpy.array(u).flatten()
+#       return u
 
 
 def get_N_HexCol(N=None):
@@ -1823,7 +1872,6 @@ def _compute_colors(x):
     # Get RGB color map proportional to the concentration.
     cm = matplotlib.cm.ScalarMappable()
     crgba= cm.to_rgba(x, bytes = True)
-
     # Convert RGB to HEX
     colors= []
     for row in crgba:
@@ -2103,7 +2151,7 @@ class URDMESolver:
             except OSError as e:
                 print "Error, execution of solver raised an exception: {0}".format(e)
                 print "urdme_solver_cmd = {0}".format(urdme_solver_cmd)
-                raise URDMEError("Solver execution failed")
+                    #raise URDMEError("Solver execution failed")
 
             if return_code != 0:
                 print outfile.name

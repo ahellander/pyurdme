@@ -1622,17 +1622,15 @@ class URDMEResult(dict):
 
         #self._initialize_sol()
         subprocess.call(["mkdir", "-p", folder_name])
-        fd = dolfin.File(os.path.join(folder_name, "trajectory.pvd").encode('ascii', 'ignore'))
+        fd = dolfin.File(os.path.join(folder_name, "trajectory.xdmf").encode('ascii', 'ignore'))
         func = dolfin.Function(self.model.mesh.get_function_space())
         func_vector = func.vector()
         vertex_to_dof_map = self.get_v2d()
-        NA = 6.022e23/1000
 
         for i, time in enumerate(self.tspan):
             solvector = self.get_species(species,i,concentration=True)
             for j, val in enumerate(solvector):
-                # We need this scaling because Dolfin drops small values.
-                func_vector[vertex_to_dof_map[j]] = val*NA
+                func_vector[vertex_to_dof_map[j]] = val
             fd << func
 
     def export_to_xyx(self, filename, species=None, file_format="VMD"):

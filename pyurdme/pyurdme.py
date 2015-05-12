@@ -1615,6 +1615,35 @@ class URDMEResult(dict):
         self.sol_initialized = True
         return sol
 
+    def export_to_csv(self, folder_name):
+        """ Dump trajectory to a set CSV files, the first specifies the mesh (mesh.csv) and the rest specify trajectory data for each species (species_S.csv for species named 'S').
+            The columns of mesh.csv are: 'Voxel ID', 'X', 'Y', 'Z', 'Volume', 'Subdomain'.
+            The columns of species_S.csv are: 'Time', 'Voxel 0', Voxel 1', ... 'Voxel N'.
+        """
+        import csv
+        subprocess.call(["mkdir", "-p", folder_name])
+        #['Voxel ID', 'X', 'Y', 'Z', 'Volume', 'Subdomain']
+        with open(os.path.join(folder_name,'mesh.csv'), 'w+') as csvfile:
+            writer = csv.writer(csvfile, delimiter=',')
+            writer.writerow(['Voxel ID', 'X', 'Y', 'Z', 'Volume', 'Subdomain'])
+            vol = self.model.get_solver_datastructure()['vol']
+            for ndx in range(self.model.mesh.get_num_voxels()):
+                row = [ndx]+self.model.mesh.coordinates()[ndx,:].tolist()+[vol[ndx]]+[self.model.sd[ndx]]
+                writer.writerow(row)
+
+        for spec in self.model.listOfSpecies:
+            #['Time', 'Voxel 0', Voxel 1', ... 'Voxel N']
+            with open(os.path.join(folder_name,'species_{0}.csv'.format(spec)), 'w+') as csvfile:
+                data = self.get_species(spec)
+                (num_t,num_vox) = data.shape
+                writer = csv.writer(csvfile, delimiter=',')
+                row = ['Time']
+                for v in range(num_vox):
+                    row.append('Voxel {0}'.format(v))
+                writer.writerow(row)
+                timespan = self.get_timespan()
+                for t in range(num_t):
+                    writer.writerow([timespan[t].tolist()] + data[t,:].tolist())
 
     def export_to_vtk(self, species, folder_name):
         """ Dump the trajectory to a collection of vtk files in the folder folder_name (created if non-existant).
@@ -1622,19 +1651,15 @@ class URDMEResult(dict):
 
         #self._initialize_sol()
         subprocess.call(["mkdir", "-p", folder_name])
-        fd = dolfin.File(folder_name+"/trajectory.pvd")
+        fd = dolfin.File(os.path.join(folder_name, "trajectory.xdmf").encode('ascii', 'ignore'))
         func = dolfin.Function(self.model.mesh.get_function_space())
         func_vector = func.vector()
         vertex_to_dof_map = self.get_v2d()
-        NA = 6.022e23/1000
 
         for i, time in enumerate(self.tspan):
             solvector = self.get_species(species,i,concentration=True)
-            # print numpy.max(solvector)
-            #exit(0)
             for j, val in enumerate(solvector):
-                # We need this scaling because Dolfin drops small values.
-                func_vector[vertex_to_dof_map[j]] = val*NA
+                func_vector[vertex_to_dof_map[j]] = val
             fd << func
 
     def export_to_xyx(self, filename, species=None, file_format="VMD"):

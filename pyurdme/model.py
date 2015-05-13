@@ -2,7 +2,7 @@
     This module defines a model of a well mixed biochemical reaction network.
     
 """
-
+import uuid
 from collections import OrderedDict
 
 
@@ -124,10 +124,14 @@ class Model():
         param_type = type(reacs).__name__
         if param_type == 'list':
             for r in reacs:
+                if r.name is None or r.name == "":
+                    r.name = 'rxn' + str(uuid.uuid4()).replace('-', '_')
                 self.listOfReactions[r.name] = r
         elif param_type == 'dict' or param_type == 'OrderedDict':
             self.listOfReactions = reacs
         elif param_type == 'instance':
+                if reacs.name is None or reacs.name == "":
+                    reacs.name = 'rxn' + str(uuid.uuid4()).replace('-', '_')
                 self.listOfReactions[reacs.name] = reacs
         else:
             raise
@@ -326,7 +330,7 @@ class Reaction():
             raise ReactionError("Reaction: " +self.name + "A mass-action reaction cannot involve more than two species.")
     
         # Case EmptySet -> Y
-        propensity_function = 'return ' + self.marate.name;
+        propensity_function = self.marate.name;
              
         # There are only three ways to get 'total_stoch==2':
         for r in self.reactants:
@@ -345,7 +349,7 @@ class Reaction():
             propensity_function += "*vol"
 
 
-        self.propensity_function = propensity_function + ';'
+        self.propensity_function = "return " + propensity_function + ';'
             
     def set_type(self,type):
         if type not in {'mass-action','customized'}:

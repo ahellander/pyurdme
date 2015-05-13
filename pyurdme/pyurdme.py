@@ -2100,7 +2100,7 @@ class URDMESolver:
         """ Run one simulation of the model.
 
         number_of_trajectories: How many trajectories should be run.
-        seed: the random number seed (incimented by one for multiple runs).
+        seed: the random number seed (incremented by one for multiple runs).
         input_file: the filename of the solver input data file .
         loaddata: boolean, should the result object load the data into memory on creation.
 

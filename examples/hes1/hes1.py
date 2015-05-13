@@ -33,7 +33,7 @@ class Hes1(pyurdme.URDMEModel):
 
         #Domains
         basedir = os.path.dirname(os.path.abspath(__file__))
-        self.mesh = pyurdme.URDMEMesh.read_mesh(basedir+"/mesh/cell.msh")
+        self.mesh = pyurdme.URDMEMesh.read_mesh(basedir+"/mesh/cell_coarse.msh")
         
         volumes = dolfin.MeshFunction("size_t",self.mesh,0)
         volumes.set_all(2)

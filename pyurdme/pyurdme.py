@@ -940,6 +940,9 @@ class URDMEModel(Model):
             if solver == 'nsm':
                 from nsmsolver import NSMSolver
                 sol = NSMSolver(self, report_level=report_level)
+            elif solver == 'nsm2':
+                from nsm2solver import NSM2Solver
+                sol = NSM2Solver(self, report_level=report_level)
             else:
                 raise URDMEError("Unknown solver: {0}".format(solver_name))
         else:

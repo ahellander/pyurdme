@@ -760,6 +760,7 @@ class URDMEModel(Model):
            sd   - the subdomain vector
            data - the data vector
            u0   - the intial condition
+           R    - the list of the reactions
 
            This data is also returned, unlike in the Matlab URDME interface
 
@@ -844,6 +845,22 @@ class URDMEModel(Model):
                 for cndx in range(num_species):
                     u0_dof[cndx, dof_ndx] = self.u0[cndx, vox_ndx]
         urdme_solver_data['u0'] = u0_dof
+
+
+        reactions = []
+        for reaction in self.listOfReactions.values():
+            if not reaction.massaction:
+                raise ModelException(reaction.name + ": all reactions should be mass action.")
+            reactions += [[
+                            [reaction.marate.value],
+                            [len(reaction.reactants)],
+                            reaction.restrict_to if reaction.restrict_to else [-1],
+                            [i for (i,species) in enumerate(self.listOfSpecies)
+                                if species in reaction.reactants]
+                         ]]
+        urdme_solver_data['R'] = reactions
+
+
 
         tspan = numpy.asarray(self.tspan, dtype=numpy.float)
         urdme_solver_data['tspan'] = tspan

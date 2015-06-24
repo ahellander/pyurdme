@@ -30,6 +30,20 @@
 #include "hdf5_hl.h"
 
 /*
+ Chemical reaction datastructure.
+
+ This holds the information required to define a chemical reaction in the model
+*/
+
+typedef struct{
+    double rate;
+    int type;
+    int * sd;
+    int * species
+
+} reaction;
+
+/*
  
  URDME model struct. 
  

@@ -848,19 +848,41 @@ class URDMEModel(Model):
 
 
         reactions = []
-        for reaction in self.listOfReactions.values():
+        R, I = [], []
+        Ms = max([max(reaction.restrict_to) for reaction in self.listOfReactions.values() if reaction.restrict_to])
+        S = numpy.ones((Ms+1,len(self.listOfReactions)), dtype=numpy.int)
+
+        species_map = self.get_species_map()
+
+        for i, reaction in enumerate(self.listOfReactions.values()):
             if not reaction.massaction:
                 raise ModelException(reaction.name + ": all reactions should be mass action.")
-            reactions += [[
-                            [reaction.marate.value],
-                            [len(reaction.reactants)],
-                            reaction.restrict_to if reaction.restrict_to else [-1],
-                            [i for (i,species) in enumerate(self.listOfSpecies)
-                                if species in reaction.reactants]
-                         ]]
-        urdme_solver_data['R'] = reactions
+            if sum(reaction.reactants.values()) not in [0,1,2]:
+                raise ModelException(reaction.name + ": all reactions should be elementary.")
 
+            if len(reaction.reactants) == 0:
+                R += [[0,0,reaction.marate.value]]
+                I += [[-1,-1,-1]]
+            elif len(reaction.reactants) == 1:
+                if reaction.reactants.values()[0] == 1:
+                    R += [[0,reaction.marate.value,0]]
+                    I += [[-1,-1,species_map[reaction.reactants.keys()[0]]]]
+                elif reaction.reactants.values()[0] == 2:
+                    R += [[reaction.marate.value, 0, 0]]
+                    I += [[species_map[reaction.reactants.keys()[0]], species_map[reaction.reactants.keys()[0]], -1]]
+            elif len(reaction.reactants) == 2:
+                R += [[reaction.marate.value,0,0]]
+                I += [[species_map[reaction.reactants.keys()[0]],species_map[reaction.reactants.keys()[1]],-1]]
+            else:
+                raise ModelException(reaction.name + ": too many reactants")
 
+            if reaction.restrict_to:
+                for sd in reaction.restrict_to:
+                    S[sd,i] = 0
+
+        urdme_solver_data['R'] = R
+        urdme_solver_data['I'] = I
+        urdme_solver_data['S'] = S
 
         tspan = numpy.asarray(self.tspan, dtype=numpy.float)
         urdme_solver_data['tspan'] = tspan
@@ -2208,7 +2230,9 @@ class URDMESolver:
                 self.serialize(filename=infile, report_level=self.report_level)
                 infile.close()
                 self.infile_name = infile.name
-                self.delete_infile = True
+                self.delete_infile = False
+                print self.infile_name
+                #self.delete_infile = True
         else:
             self.infile_name = input_file
             self.delete_infile = False

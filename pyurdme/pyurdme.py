@@ -1136,6 +1136,70 @@ class URDMEMesh(dolfin.Mesh):
         return factor, factor*vtx
 
     @classmethod
+    def fromPoints(cls, points):
+        """ Create a mesh from a list of points (3D) only. Points is a list or numpy array
+            
+            [[x1,y1,z1],
+             [x2,y2,z2],
+              ...
+              ...]
+        
+        """
+        try:
+            import lxml.etree as etree
+            no_pretty_print = False
+        except:
+            import xml.etree.ElementTree as etree
+            import xml.dom.minidom
+            import re
+            no_pretty_print = True
+        
+        # Create a Delauny triangulation of the points
+        import scipy.spatial
+        tri = scipy.spatial.Delaunay(points, furthest_site=False)
+        
+        # Write a temporary Dolfin XML file.
+        tree = etree.Element('dolfin')
+        mesh = etree.Element('mesh')
+        mesh.set('celltype', 'tetrahedron')
+        mesh.set('dim', '3')
+        vertices = etree.Element('vertices')
+        dim = numpy.shape(tri.points)
+        vertices.set('size',str(dim[0]))
+
+        for i,v in enumerate(tri.points):
+            vtx = etree.Element('vertex')
+            vtx.set('index',str(i))
+            vtx.set('x',str(v[0]))
+            vtx.set('y',str(v[1]))
+            vtx.set('z',str(v[2]))
+            vertices.append(vtx)
+
+        mesh.append(vertices)
+        dim = numpy.shape(tri.simplices)
+        cells = etree.Element('cells')
+        cells.set('size',str(dim[0]))
+        for i,cell in enumerate(tri.simplices):
+            c = etree.Element('tetrahedron')
+            c.set('index',str(i))
+            c.set('v0',str(cell[0]))
+            c.set('v1',str(cell[1]))
+            c.set('v2',str(cell[2]))
+            c.set('v3',str(cell[3]))
+            cells.append(c)
+        mesh.append(cells)
+        tree.append(mesh)
+
+        f = tempfile.NamedTemporaryFile(suffix='.xml', delete=False)
+        filename = f.name
+        with open(f.name,'w') as fh:
+            fh.write(etree.tostring(tree))
+        msh = URDMEMesh(dolfin.Mesh(filename))
+        os.remove(filename)
+        return msh
+            
+
+    @classmethod
     def generate_unit_interval_mesh(cls, nx, periodic=False):
         """ Unit Interval (1D) of with nx points in the axes. """
         return cls.generate_interval_mesh(nx=nx, a=0, b=1, periodic=periodic)

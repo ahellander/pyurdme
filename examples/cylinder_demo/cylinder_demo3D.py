@@ -4,6 +4,7 @@
 import os
 import pyurdme
 import dolfin
+import mshr
 
 import matplotlib.pyplot as plt
 import numpy
@@ -36,8 +37,8 @@ class cylinderDemo3D(pyurdme.URDMEModel):
         # Define Geometry
         pt1 = dolfin.Point(MAX_X_DIM, 0, 0)
         pt2 = dolfin.Point(MIN_X_DIM, 0, 0)
-        cylinder = dolfin.Cylinder(pt1, pt2, 1.0)
-        self.mesh = pyurdme.URDMEMesh(mesh=dolfin.Mesh(cylinder, 32))
+        cylinder = mshr.Cylinder(pt1, pt2, 1.0, 1.0)
+        self.mesh = pyurdme.URDMEMesh(mesh=mshr.generate_mesh(cylinder, 32))
         
         # Define Subdomains
         self.add_subdomain(Edge1(), 2)
@@ -77,12 +78,15 @@ if __name__ == "__main__":
     # is written to a folder "Aout", where each snapshot is stored in a separate file. To open the "movie",
     # just open Aout/trajectory.pvd, then you can animate etc.
     if not os.path.isdir('Aout'):
-        print "Writing species 'A' to folder 'Aout'"
+        print "Writing species 'A' to folder 'Aout' in VTK format"
         result.export_to_vtk(species='A',folder_name="Aout")
     if not os.path.isdir('Bout'):
-        print "Writing species 'B' to folder 'Bout'"
+        print "Writing species 'B' to folder 'Bout' in VTK format"
         result.export_to_vtk(species='B',folder_name="Bout")
 
+    if not os.path.isdir('csv_out'):
+        print "Writing trajectory data in CSV format"
+        result.export_to_csv(folder_name="csv_out")
 
     # Plot of the time-average spatial concentration.
     x_vals = model.mesh.coordinates()[:, 0]

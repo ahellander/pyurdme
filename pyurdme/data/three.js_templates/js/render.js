@@ -3,12 +3,12 @@ var renderPyURDMEMesh= function(pyurdme_mesh_json, tmp, solution,alpha, iswirefr
     var dom = document.getElementById(tmp);
     var scene = new THREE.Scene();
     var width = 500;//$("#"+tmp).width();
-    var height = width;
-    var camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
+    var height = 0.75 * width;
+    var camera = new THREE.PerspectiveCamera( 75, 4.0 / 3.0, 0.1, 1000 );
     var renderer = new THREE.WebGLRenderer({alpha:true});
-    renderer.setSize( width, height);
+    renderer.setSize(width, height);
     
-    dom.appendChild( renderer.domElement );
+    dom.appendChild(renderer.domElement);
     
     var loader = new THREE.JSONLoader();
     function load_geometry(model){

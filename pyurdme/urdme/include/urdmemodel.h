@@ -30,20 +30,6 @@
 #include "hdf5_hl.h"
 
 /*
- Chemical reaction datastructure.
-
- This holds the information required to define a chemical reaction in the model
-*/
-
-typedef struct{
-    double rate;
-    int type;
-    int * sd;
-    int * species
-
-} reaction;
-
-/*
  
  URDME model struct. 
  
@@ -63,6 +49,7 @@ typedef struct{
 	int Mspecies;
 	int Mreactions;
 	int Ncells;
+    int Msubdomains;
 
 	/* Diffusion matrix (sparse CCS) */
 	size_t * irD;
@@ -100,6 +87,10 @@ typedef struct{
 	int dsize;
 	double *data;
 	
+    /* Reaction Matrices */
+    double * R;
+    int * I;
+    int * S;
 	/* 
      
        Output. It is up to the solver to attach the results after

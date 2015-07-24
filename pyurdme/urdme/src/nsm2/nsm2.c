@@ -194,12 +194,19 @@ void nsm2(void *data, urdme_output_writer *writer){
 	Ndofs = model->Ncells*model->Mspecies;
 	
     /* Core simulation routine. */
-	nsm2_core(model->irD, model->jcD, model->prD, model->u0,
-			 model->irN, model->jcN, model->prN, model->irG,
-			 model->jcG, model->tspan, model->tlen, 
-			 model->vol, model->data, model->sd, model->Ncells,
-			 model->Mspecies, model->Mreactions, model->dsize, report_level,
-			 model->irK, model->jcK, model->prK, writer);
+	nsm2_core(model->irD, model->jcD, model->prD,
+              model->u0,
+			  model->irN, model->jcN, model->prN,
+              model->irG, model->jcG,
+              model->tspan, model->tlen,
+			  model->vol, model->data, model->sd,
+              model->Ncells,
+              model->Mspecies, model->Mreactions,
+              model->Msubdomains,
+              model->dsize, report_level,
+			  model->irK, model->jcK, model->prK,
+              model->R, model->I, model->S,
+              writer);
     
 	
 		

@@ -29,8 +29,10 @@ void nsm2_core(const size_t *irD,const size_t *jcD,const double *prD,
               const double *vol,const double *data,const int *sd,
               const size_t Ncells,
               const size_t Mspecies,const size_t Mreactions,
+              const size_t Msubdomains,
               const size_t dsize,int report_level,
               const size_t *irK,const size_t *jcK,const double *prK,
+              const double *R, const int *I, const int *S,
               urdme_output_writer *writer)
 
 /* Specification of the inputs:

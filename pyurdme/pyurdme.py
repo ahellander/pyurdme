@@ -2410,7 +2410,7 @@ class CubeMeshPeriodicBoundary(dolfin.SubDomain):
         """ Left boundary is "target domain" G """
         # return True if on left or bottom boundary AND NOT on one of the two corners (0, 1) and (1, 0)
         return bool(
-                (dolfin.near(x[0], 0) or dolfin.near(x[1], 0) or dolfin.near(x[3], 0))
+                (dolfin.near(x[0], 0) or dolfin.near(x[1], 0) or dolfin.near(x[2], 0))
                 and (not (
                         (dolfin.near(x[0], 1) and dolfin.near(x[1], 0) and dolfin.near(x[1], 0)) or
                         (dolfin.near(x[0], 0) and dolfin.near(x[1], 1) and dolfin.near(x[1], 0)) or

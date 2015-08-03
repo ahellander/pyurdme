@@ -849,7 +849,7 @@ class URDMEModel(Model):
 
         reactions = []
         R, I = [], []
-        Ms = max([max(reaction.restrict_to) for reaction in self.listOfReactions.values() if reaction.restrict_to])
+        Ms = int(max(self.get_subdomain_vector()))
         S = numpy.ones((Ms+1,len(self.listOfReactions)), dtype=numpy.int)
 
         species_map = self.get_species_map()

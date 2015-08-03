@@ -879,6 +879,9 @@ class URDMEModel(Model):
             if reaction.restrict_to:
                 for sd in reaction.restrict_to:
                     S[sd,i] = 0
+            else:
+                for sd in range(Ms+1):
+                    S[sd,i] = 0
 
         urdme_solver_data['R'] = R
         urdme_solver_data['I'] = I

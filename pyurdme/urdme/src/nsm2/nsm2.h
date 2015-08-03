@@ -13,6 +13,10 @@
 #include "outputwriter.h"
 
 void nsm2(void *data, urdme_output_writer *writer);
+double rfun(const int *x, double t, const double vol, const double *data, int sd,
+            const int ireaction,
+            const double *R, const size_t Mreactions,
+            const int *I, const int *S, const size_t Msubdomains);
 void nsm2_core(const size_t *irD,const size_t *jcD,const double *prD,
               const int *u0,
               const size_t *irN,const size_t *jcN,const int *prN,
@@ -24,7 +28,7 @@ void nsm2_core(const size_t *irD,const size_t *jcD,const double *prD,
               const size_t Msubdomains,
               const size_t dsize,int report_level,
 			  const size_t *irK,const size_t *jcK,const double *prK, 
-              const double * R, const int * I, const int * S,
+              const double *R, const int *I, const int *S,
               urdme_output_writer *writer);
 
 #endif /* __nsm2_h */

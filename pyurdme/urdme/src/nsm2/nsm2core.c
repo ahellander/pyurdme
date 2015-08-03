@@ -21,6 +21,38 @@
 
 
 
+double rfun(const int *x, double t, const double vol, const double *data, int sd,
+            const int ireaction,
+            const double *R, const size_t Mreactions,
+            const int *I,
+            const int *S, const size_t Msubdomains){
+    if(!S[ireaction*Msubdomains + sd]){
+        if(I[ireaction] != -1 &&
+           I[ireaction] == I[Mreactions + ireaction] &&
+           I[2*Mreactions + ireaction] == -1)
+            return R[ireaction]*
+                x[I[ireaction]]*(x[I[ireaction]]-1)/(2*vol);
+        if(I[ireaction] != -1 &&
+           I[Mreactions + ireaction] != -1 &&
+           I[ireaction] != I[Mreactions + ireaction] &&
+           I[2*Mreactions + ireaction] == -1)
+            return R[ireaction]*
+                x[I[ireaction]]*x[I[Mreactions+ireaction]]/vol;
+
+        if(I[ireaction] == -1 &&
+           I[Mreactions + ireaction] == -1 &&
+           I[2*Mreactions + ireaction] != -1)
+            return R[Mreactions+ireaction]*x[I[2*Mreactions+ireaction]];
+
+        if(I[ireaction] == -1 &&
+           I[Mreactions + ireaction] == -1 &&
+           I[2*Mreactions + ireaction] == -1){
+            return R[2*Mreactions + ireaction]*vol;
+        }
+    }
+    return 0.;
+}
+
 void nsm2_core(const size_t *irD,const size_t *jcD,const double *prD,
               const int *u0,
               const size_t *irN,const size_t *jcN,const int *prN,
@@ -48,6 +80,9 @@ void nsm2_core(const size_t *irD,const size_t *jcD,const double *prD,
  Mreactions
  Total number of reactions.
  
+ Msubdomains
+ Total number of subdomains
+
  dsize
  Size of data vector sent to propensities.
  
@@ -73,7 +108,16 @@ void nsm2_core(const size_t *irD,const size_t *jcD,const double *prD,
  G(i,Mspecies+j) is non-zero if executing reaction j means that reaction i
  needs to be re-evaluated. The first Mspecies columns of G similarily cover
  diffusion events.
+
+ Rate matrix R. Double (3 X Mreactions).
+ R(:,j) describes the rates of reaction j.
+
+ Reactant matrix I. Int (3 X Mreactions).
+ I(:,j) describes the reactants involved in reaction j.
  
+ Subdomains matrix S, Int (Msubdomains X Mreactions).
+ S(:,j) describes on which subdomains reaction j is active.
+
  tspan. Double vector.
  Output times. tspan[0] is the start time and tspan[length(tspan)-1] is the
  stop time.
@@ -133,9 +177,6 @@ void nsm2_core(const size_t *irD,const size_t *jcD,const double *prD,
     const size_t Ndofs = Ncells*Mspecies;
     
     
-    PropensityFun *rfun;
-    rfun = ALLOC_propensities();
-    
     ReportFun report;
     if (report_level)
         report = &reportFun1;
@@ -163,7 +204,9 @@ void nsm2_core(const size_t *irD,const size_t *jcD,const double *prD,
             //(*rfun[j])(&xx[i*Mspecies],tt,vol[i],&data[i*dsize],sd[i],i,xx,irK,jcK,prK);
             //srrate[i] += rrate[i*Mreactions+j];
             rrate[i*Mreactions+j] =
-            (*rfun[j])(&xx[i*Mspecies],tt,vol[i],&data[i*dsize],sd[i]);
+            rfun(&xx[i*Mspecies],tt,vol[i],&data[i*dsize],sd[i],
+                    j,R,Mreactions,I,S,Msubdomains);
+            //(*rfun[j])(&xx[i*Mspecies],tt,vol[i],&data[i*dsize],sd[i]);
             srrate[i] += rrate[i*Mreactions+j];
         }
     }
@@ -269,7 +312,9 @@ void nsm2_core(const size_t *irD,const size_t *jcD,const double *prD,
                 // )-old;
                 rdelta +=
                 (rrate[subvol*Mreactions+j] =
-                 (*rfun[j])(&xx[subvol*Mspecies],tt,vol[subvol],&data[subvol*dsize],sd[subvol])
+                 //(*rfun[j])(&xx[subvol*Mspecies],tt,vol[subvol],&data[subvol*dsize],sd[subvol])
+                 rfun(&xx[subvol*Mspecies],tt,vol[subvol],&data[subvol*dsize],sd[subvol],
+                        j,R,Mreactions,I,S,Msubdomains)
                  )-old;
             }
             srrate[subvol] += rdelta;
@@ -330,7 +375,9 @@ void nsm2_core(const size_t *irD,const size_t *jcD,const double *prD,
                     //  )-old;
                     rdelta +=
                       (rrate[subvol*Mreactions+j] =
-                        (*rfun[j])(&xx[subvol*Mspecies],tt,vol[subvol],&data[subvol*dsize],sd[subvol])
+                        //(*rfun[j])(&xx[subvol*Mspecies],tt,vol[subvol],&data[subvol*dsize],sd[subvol])
+                        rfun(&xx[subvol*Mspecies],tt,vol[subvol],&data[subvol*dsize],sd[subvol],
+                                j,R,Mreactions,I,S,Msubdomains)
                       )-old;
                     old = rrate[to_vol*Mreactions+j];
                     
@@ -340,7 +387,9 @@ void nsm2_core(const size_t *irD,const size_t *jcD,const double *prD,
                     //  )-old;
                     rrdelta += 
 					  (rrate[to_vol*Mreactions+j] = 
-                        (*rfun[j])(&xx[to_vol*Mspecies],tt,vol[to_vol],&data[to_vol*dsize],sd[to_vol])
+                        //(*rfun[j])(&xx[to_vol*Mspecies],tt,vol[to_vol],&data[to_vol*dsize],sd[to_vol])
+                        rfun(&xx[to_vol*Mspecies],tt,vol[to_vol],&data[to_vol*dsize],sd[to_vol],
+                                j,R,Mreactions,I,S,Msubdomains)
                       )-old;
                 }
                 
@@ -395,7 +444,6 @@ void nsm2_core(const size_t *irD,const size_t *jcD,const double *prD,
     }
     
     
-    FREE_propensities(rfun);
     free(heap);
     free(node);
     free(rtimes);

@@ -257,8 +257,9 @@ urdme_model *read_model(char *file)
 	Rdouble = (double*)malloc(3*model->Mreactions*sizeof(double));
 	double * Rtemp;
 	Rtemp = mxGetPr(R);
-	for (i=0;i<3*model->Mreactions;i++)
-		Rdouble[i] = (int) Rtemp[i];
+	for (i=0;i<3*model->Mreactions;i++){
+		Rdouble[i] = (double) Rtemp[i];
+    }
 	model->R = Rdouble;
     mxDestroyArray(R);
 
@@ -271,10 +272,11 @@ urdme_model *read_model(char *file)
 	/* Typecast */
 	int * Iint;
 	Iint = (int*)malloc(3*model->Mreactions*sizeof(int));
-	int * Itemp;
+	double * Itemp;
 	Itemp = mxGetPr(I);
-	for (i=0;i<3*model->Mreactions;i++)
+	for (i=0;i<3*model->Mreactions;i++){
 		Iint[i] = (int) Itemp[i];
+    }
 	model->I = Iint;
     mxDestroyArray(I);
 
@@ -289,7 +291,7 @@ urdme_model *read_model(char *file)
 
 	int * Sint;
 	Sint = (int*)malloc(model->Msubdomains*model->Mreactions*sizeof(int));
-	int * Stemp;
+	double * Stemp;
 	Stemp = mxGetPr(S);
 	for (i=0;i<model->Msubdomains*model->Mreactions;i++)
 		Sint[i] = (int) Stemp[i];

@@ -33,7 +33,7 @@ except:
 
 try:
     import dolfin
-    dolfin.parameters["linear_algebra_backend"] = "uBLAS"
+    dolfin.parameters["linear_algebra_backend"] = "Eigen"
 except:
     raise Exception("PyURDME requires FeniCS/Dolfin.")
 
@@ -635,7 +635,7 @@ class URDMEModel(Model):
         for species, M in mass_matrices.iteritems():
 
             #dof2vtx = xmesh.dof_to_vertex_map[species]
-            rows, cols, vals = M.data()
+            rows, cols, vals = dolfin.as_backend_type(M).data()
             SM = scipy.sparse.csr_matrix((vals, cols, rows))
             vols = SM.sum(axis=1)
 
@@ -675,7 +675,7 @@ class URDMEModel(Model):
 
         for species, K in stiffness_matrices.iteritems():
 
-            rows, cols, vals = K.data()
+            rows, cols, vals = dolfin.as_backend_type(K).data()
 
             # Filter the matrix: get rid of all elements < 0 (inlcuding the diagonal)
             vals *= vals<0
@@ -742,7 +742,7 @@ class URDMEModel(Model):
         test_function = dolfin.TestFunction(fs)
         a_K = -1*dolfin.inner(dolfin.nabla_grad(trial_function), dolfin.nabla_grad(test_function)) * dolfin.dx
         K = dolfin.assemble(a_K)
-        rows, cols, vals = K.data()
+        rows, cols, vals = dolfin.as_backend_type(K).data()
         Kcrs = scipy.sparse.csc_matrix((vals, cols, rows))
         return Kcrs
 

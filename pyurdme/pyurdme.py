@@ -37,7 +37,7 @@ except:
     raise Exception("PyURDME requires FeniCS/Dolfin.")
 
 try:
-    dolfin.parameters["linear_algebra_backend"] = "uBlas"
+    dolfin.parameters["linear_algebra_backend"] = "uBLAS"
 except:
     dolfin.parameters["linear_algebra_backend"] = "Eigen"
 

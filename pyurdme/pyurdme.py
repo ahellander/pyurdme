@@ -33,9 +33,15 @@ except:
 
 try:
     import dolfin
-    dolfin.parameters["linear_algebra_backend"] = "Eigen"
 except:
     raise Exception("PyURDME requires FeniCS/Dolfin.")
+
+try:
+    dolfin.parameters["linear_algebra_backend"] = "uBlas"
+except:
+    dolfin.parameters["linear_algebra_backend"] = "Eigen"
+
+
 
 import pickle
 import json

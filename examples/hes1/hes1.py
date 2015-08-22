@@ -33,7 +33,7 @@ class Hes1(pyurdme.URDMEModel):
 
         #Domains
         basedir = os.path.dirname(os.path.abspath(__file__))
-        self.mesh = pyurdme.URDMEMesh.read_mesh(basedir+"/mesh/cell.msh")
+        self.mesh = pyurdme.URDMEMesh.read_mesh(basedir+"/mesh/cell_coarse.msh")
         
         volumes = dolfin.MeshFunction("size_t",self.mesh,0)
         volumes.set_all(2)
@@ -86,7 +86,7 @@ class Hes1(pyurdme.URDMEModel):
         self.timespan(range(1200))
 
 if __name__=="__main__":
-    model = hes1(model_name="hes1")
+    model = Hes1(model_name="hes1")
     result = model.run(report_level=1)
 
     protein = result.get_species("protein")

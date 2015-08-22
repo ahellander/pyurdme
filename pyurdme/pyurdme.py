@@ -675,7 +675,7 @@ class URDMEModel(Model):
 
         for species, K in stiffness_matrices.iteritems():
 
-            rows, cols, vals = K.data()
+            rows, cols, vals = dolfin.as_backend_type(K).data()
 
             # Filter the matrix: get rid of all elements < 0 (inlcuding the diagonal)
             vals *= vals<0
@@ -1157,6 +1157,7 @@ class URDMEMesh(dolfin.Mesh):
         # Create a Delauny triangulation of the points
         import scipy.spatial
         tri = scipy.spatial.Delaunay(points, furthest_site=False)
+        #tri = scipy.spatial.Delaunay(points)
         
         # Write a temporary Dolfin XML file.
         tree = etree.Element('dolfin')

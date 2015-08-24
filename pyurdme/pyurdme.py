@@ -634,14 +634,13 @@ class URDMEModel(Model):
 
         for species, M in mass_matrices.iteritems():
 
-            #dof2vtx = xmesh.dof_to_vertex_map[species]
+            dof2vtx = xmesh.dof_to_vertex_map[species]
             rows, cols, vals = M.data()
             SM = scipy.sparse.csr_matrix((vals, cols, rows))
             vols = SM.sum(axis=1)
 
             spec = self.species_map[species]
             for j in range(len(vols)):
-                #vx = dof2vtx[j]  # need to use dof ordering
                 vx = j
                 dof = Mspecies*vx+spec
                 vol[dof, 0] = vols[j]
@@ -1827,11 +1826,11 @@ class URDMEResult(dict):
         return self.model.mesh.export_to_three_js(colors=colors)
 
     def _copynumber_to_concentration(self,copy_number_data):
-        """ Scale compy numbers to concentrations (in unit mol/volume),
+        """ Scale comy numbers to concentrations (in unit mol/volume),
             where the volume unit is defined by the user input.
+            Dof-ordering is assumed in both solution and volumes.
         """
 
-        v2d = self.get_v2d()
         shape = numpy.shape(copy_number_data)
         if len(shape) == 1:
             shape = (1,shape[0])
@@ -1843,7 +1842,7 @@ class URDMEResult(dict):
         for t in range(dims[0]):
             timeslice = scaled_sol[t,:]
             for i,cn in enumerate(timeslice):
-                scaled_sol[t, i] = float(cn)/(6.022e23*self.model.dofvol[v2d[i]])
+                scaled_sol[t, i] = float(cn)/(6.022e23*self.model.dofvol[i])
 
         return scaled_sol
 
@@ -1869,8 +1868,12 @@ class URDMEResult(dict):
         data = self.get_species(species,time_index,concentration=True)
         fun = DolfinFunctionWrapper(self.model.mesh.get_function_space())
         vec = fun.vector()
-        for i,d in enumerate(data):
-            vec[i] = d
+        v2d= self.get_v2d()
+        (nd,) = numpy.shape(data)
+        for i in range(nd):
+            vec[i]=data[i]
+            #for i,d in enumerate(data):
+            #   vec[i] = d
         fun.display(opacity=opacity, wireframe=wireframe)
 
 

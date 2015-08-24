@@ -41,8 +41,6 @@ try:
 except:
     dolfin.parameters["linear_algebra_backend"] = "Eigen"
 
-
-
 import pickle
 import json
 
@@ -63,7 +61,6 @@ def deprecated(func):
          )
         return func(*args, **kwargs)
     return new_func
-
 
 
 # Set log level to report only errors or worse
@@ -92,7 +89,7 @@ class URDMEModel(Model):
         self.stiffness_matrices = None
         self.mass_matrices = None
 
-        # subdomins is a list of MeshFunctions with subdomain marker information
+        # subdomains is a list of MeshFunctions with subdomain marker information
         self.subdomains = OrderedDict()
         self.old_style_subdomain = False
 
@@ -111,7 +108,7 @@ class URDMEModel(Model):
             have Swig wrappers to extension modules, we need to remove some instance variables
             for the object to pickle. """
 
-        #  Filter out any instance variable that is not picklable...
+        # Filter out any instance variable that is not picklable...
         state = {}
         for key, item in self.__dict__.items():
             if key == "subdomains":
@@ -371,19 +368,6 @@ class URDMEModel(Model):
             is that a species is active in all the defined subdomains.
         """
 
-#        # If no subdomain function has been set by the user,
-#        # we need to create a default subdomain here.
-#        if len(self.subdomains) == 0:
-#            self._initialize_default_subdomain()
-#
-#        # The unique elements of the subdomain MeshFunctions
-#        sds = []
-#        for dim, subdomain in self.subdomains.items():
-#            sds = sds + list(numpy.unique(subdomain.array()).flatten())
-#        sds = numpy.unique(sds)
-#        sds = list(sds)
-#
-
         sds = list(numpy.unique(self.get_subdomain_vector()))
         # This conversion is necessary for UFL not to choke on the subdomain ids.
         for i, sd in enumerate(sds):
@@ -406,7 +390,6 @@ class URDMEModel(Model):
         self.species_to_subdomains[species] = subdomains
 
 
-
     def set_subdomain_vector(self, sd):
         """ Explicitly set the subdomain vector from an array. """
         self.sd = sd
@@ -422,13 +405,11 @@ class URDMEModel(Model):
         # We need to make sure that the highest dimension is applied
         # first, otherwise the cell level will overwrite all markings
         # applied on boundaries.
-
         if not hasattr(self,'xmesh'):
             self.create_extended_mesh()
 
         self.mesh.init()
 
-        # TODO: Support arbitrary sd-numbers and more than one subdomain
         sd = numpy.ones(self.mesh.get_num_voxels())
 
         if len(self.subdomains) == 0:
@@ -446,7 +427,7 @@ class URDMEModel(Model):
 
             for dim, subdomain in subdomains.items():
                 if dim == 0:
-                    # If we define subdomains on vertex, ONLY use those.
+                    # If we define subdomains on vertices, ONLY use those.
                     # Then it is a direct copy to the sd
                     for ndx,val in enumerate(subdomain):
                         sd[ndx] = val
@@ -465,6 +446,7 @@ class URDMEModel(Model):
 
     def initialize_initial_condition(self):
         """ Create all-zeros inital condition matrix. """
+        
         ns = self.get_num_species()
         if self.xmesh == None:
             self.create_extended_mesh()
@@ -568,14 +550,9 @@ class URDMEModel(Model):
             num_spec = spec_init[spec]
 
             # Find the voxel with center (vertex) nearest to the point
-            #reppoint = numpy.tile(point, (shape[0], 1))
-            #dist = numpy.sqrt(numpy.sum((coords-reppoint)**2, axis=1))
-            #ix = numpy.argmin(dist)
             ix = self.mesh.closest_vertex(point)
             species_map = self.get_species_map()
             specindx = species_map[spec_name]
-            #dofind = self.xmesh.vertex_to_dof_map[spec_name][ix]
-            #ix = (dofind - specindx) / len(species_map)
             self.u0[specindx, ix] = (self.u0[specindx,ix] if add else 0) + num_spec
 
     def set_initial_condition_place_voxel(self, spec_init, voxel,add=False):
@@ -623,11 +600,12 @@ class URDMEModel(Model):
             stiffness_matrices = self.stiffness_matrices
             mass_matrices = self.mass_matrices
 
-        # Make a dok matrix of dimension (Ndofs,Ndofs) for easier manipulatio
+        # Make a dok matrix of dimension (Ndofs,Ndofs) for easier manipulation
         i = 1
         Mspecies = len(self.listOfSpecies)
         if Mspecies == 0:
             raise ModelException("The model has no species, can not create system matrix.")
+        
         # Use dolfin 'dof' number of voxels, not the number of verticies
         Nvoxels = self.mesh.get_num_dof_voxels()
         Ndofs = Nvoxels*Mspecies
@@ -653,7 +631,7 @@ class URDMEModel(Model):
         # This is necessary in order for the array to have the right dimension (Ndofs,1)
         vol = vol.flatten()
 
-        # Assemble one big matrix from the indiviudal stiffness matrices. Multiply by the inverse of
+        # Assemble one big matrix from the individual stiffness matrices. Multiply by the inverse of
         # the lumped mass matrix, filter out any entries with the wrong sign and renormalize the columns.
         spec = 0
         positive_mass = 0.0
@@ -698,7 +676,7 @@ class URDMEModel(Model):
 
                 # Check if this is an edge that the species should diffuse along,
                 # if not, set the diffusion coefficient along this edge to zero. This is
-                # equivalent to how boundary species are handled in the current Matlab interface.
+                # equivalent to how boundary species are handled in legacy URDME.
                 if sd[ir] not in sdmap:
                     val = 0.0
 
@@ -720,8 +698,8 @@ class URDMEModel(Model):
     def validate(self, urdme_solver_data):
         """ Validate the model data structures.
 
-            validate should be called prior to writing the model to the solver input file,
-            since the solvers themselves do very limited error checking of the input.
+            validate should be called prior to writing the model to the solver input file.
+            The core solvers do very limited error checking of the input.
 
         """
 
@@ -754,8 +732,8 @@ class URDMEModel(Model):
         """ Return the datastructures needed by the URDME solvers.
 
            get_solver_datastructure() creates and populates a dictionary, urdme_solver_data,
-           containing the mandatory input data structures of the core NSM solver in URDME
-           that is derived from the model. The data strucyures are
+           containing the mandatory input data structures of the core NSM solver in URDME.
+           Those data structures are
 
            D    - the Diffusion matrix
            N    - the stochiometry matrix
@@ -765,12 +743,13 @@ class URDMEModel(Model):
            data - the data vector
            u0   - the intial condition
 
-           This data is also returned, unlike in the Matlab URDME interface
+           The follwing data is also returned, unlike in the legacy URDME interface:
 
            p - the vertex coordinates
            K - a (Nvoxel x Nvoxel) connectivity matrix
 
         """
+        
         urdme_solver_data = {}
         num_species = self.get_num_species()
 
@@ -786,14 +765,13 @@ class URDMEModel(Model):
         vol = result['vol']
         urdme_solver_data['dofvolumes'] = vol
 
-        #TODO: Make use of all dofs values, requires modification of CORE URDME...
+        #TODO: Make use of all dofs values, requires modification of the core URDME solver.
         self.dofvol = vol[::len(self.listOfSpecies)]
         urdme_solver_data['vol'] = self.dofvol
 
         D = result['D']
         urdme_solver_data['D'] = D
 
-        #
         num_dofvox = self.dofvol.shape[0]
 
         # Get vertex to dof ordering
@@ -918,7 +896,7 @@ class URDMEModel(Model):
                 self.mesh.set_num_dof_voxels(ndofs)
 
             # We cannot include the diffusion constant in the assembly, dolfin does not seem to deal well
-            # with small diffusion constants (drops small elements)
+            # with small diffusion constants (it drops small elements), so we multiply here. 
             stiffness_matrices[spec_name] = species.diffusion_constant * stiffness_matrices[spec_name]
             mass_matrices[spec_name] = dolfin.assemble(weak_form_M[spec_name])
 

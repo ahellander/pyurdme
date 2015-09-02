@@ -33,6 +33,7 @@ except:
 
 try:
     import dolfin
+    import mshr
 except:
     raise Exception("PyURDME requires FeniCS/Dolfin.")
 

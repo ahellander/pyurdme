@@ -1211,7 +1211,12 @@ class URDMEMesh(dolfin.Mesh):
     @classmethod
     def generate_square_mesh(cls, L, nx, ny, periodic=False):
         """ Unit Square (2D) of with nx, ny points in the respective axes, and side length L. """
-        mesh = dolfin.RectangleMesh(0, 0, L, L, nx, ny)
+        try:
+            mesh = dolfin.RectangleMesh(0, 0, L, L, nx, ny)
+        except (TypeError, NotImplementedError) as e:
+            # for Dolfin 1.6+
+            rect = mshr.Rectangle(dolfin.Point(0,0), dolfin.Point(L,L))
+            mesh = mshr.generate_mesh(rect, nx)
         ret = URDMEMesh(mesh)
         if isinstance(periodic, bool) and periodic:
             ret.add_periodic_boundary_condition(SquareMeshPeriodicBoundary(Lx=L, Ly=L))
@@ -1222,7 +1227,12 @@ class URDMEMesh(dolfin.Mesh):
     @classmethod
     def generate_cube_mesh(cls, L, nx, ny, nz, periodic=False):
         """ Unit Cube (3D) of with nx, ny, nz points in the respective axes, and side length L. """
-        mesh = dolfin.BoxMesh(0, 0, 0, L, L, L, nx, ny, nz)
+        try:
+            mesh = dolfin.BoxMesh(0, 0, 0, L, L, L, nx, ny, nz)
+        except (TypeError, NotImplementedError) as e:
+            # for Dolfin 1.6+
+            box = mshr.Box(dolfin.Point(0,0,0), dolfin.Point(L,L,L))
+            mesh = mshr.generate_mesh(box, nx)
         ret = URDMEMesh(mesh)
         if isinstance(periodic, bool) and periodic:
             ret.add_periodic_boundary_condition(CubeMeshPeriodicBoundary(Lx=L, Ly=L, Lz=L))

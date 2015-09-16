@@ -388,8 +388,6 @@ class URDMEModel(Model):
 
     def restrict(self, species, subdomains):
         """ Restrict the diffusion of a species to a subdomain. """
-        if not isinstance(subdomains, list):
-            subdomains = [subdomains]
         self.species_to_subdomains[species] = subdomains
 
 
@@ -481,9 +479,6 @@ class URDMEModel(Model):
     def set_initial_condition_scatter(self, spec_init, subdomains=None):
         """ Scatter an initial number of molecules over the voxels in a subdomain. """
 
-        if subdomains is not None and isinstance(subdomains, int):
-            subdomains = [subdomains]
-
         if not hasattr(self,"u0"):
             self.initialize_initial_condition()
 
@@ -521,9 +516,6 @@ class URDMEModel(Model):
 
     def set_initial_condition_distribute_uniformly(self, spec_init, subdomains=None):
         """ Place the same number of molecules of the species in each voxel. """
-        if subdomains is not None and isinstance(subdomains, int):
-            subdomains = [subdomains]
-
         if not hasattr(self, "u0"):
             self.initialize_initial_condition()
 
@@ -673,9 +665,6 @@ class URDMEModel(Model):
             Kcrs = scipy.sparse.csr_matrix((vals, cols, rows))
 
             sdmap  = self.species_to_subdomains[self.listOfSpecies[species]]
-            if not isinstance(sdmap, list):
-                sdmap = [sdmap]
-            print 'species',species,'sdmap',sdmap
 
             # Filter the matrix: get rid of all elements < 0 (inlcuding the diagonal)
             Kdok = Kcrs.todok()
@@ -716,7 +705,6 @@ class URDMEModel(Model):
         """
 
         for spec_name, species in self.listOfSpecies.items():
-            print 'spec_name',spec_name,'species',species,'self.species_to_subdomains[species]',self.species_to_subdomains[species]
             if 0 in self.species_to_subdomains[species]:
                 raise ModelException("Subdomain number 0 is reserved. Please check your model.")
 

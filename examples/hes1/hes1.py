@@ -19,7 +19,7 @@ class MeshSize(pyurdme.URDMEDataFunction):
         ret = self.h[self.mesh.closest_vertex(x)]
         return ret
 
-class Hes1(pyurdme.URDMEModel):
+class hes1(pyurdme.URDMEModel):
     def __init__(self,model_name="hes1"):
         pyurdme.URDMEModel.__init__(self, model_name)
 
@@ -31,27 +31,19 @@ class Hes1(pyurdme.URDMEModel):
 
         self.add_species([Pf,Po,mRNA,protein])
 
-        #Domains markers
-        cytoplasm = [1]
-        nucleus = [2]
-        promoter_site = [3]
-        
         #Domains
         basedir = os.path.dirname(os.path.abspath(__file__))
-        #self.mesh = pyurdme.URDMEMesh.read_mesh(basedir+"/mesh/cell_coarse.msh")
         self.mesh = pyurdme.URDMEMesh.read_mesh(basedir+"/mesh/cell.msh")
         
-#        volumes = dolfin.MeshFunction("size_t",self.mesh,0)
-#        volumes.set_all(2)
-#        nucleus = Nucleus()
-#        nucleus.mark(volumes,1)
-#        volumes[self.mesh.closest_vertex([0,0,0])] = 3
-#
-#        self.add_subdomain(volumes)
+        volumes = dolfin.MeshFunction("size_t",self.mesh,0)
+        volumes.set_all(2)
+        nucleus = Nucleus()
+        nucleus.mark(volumes,1)
+        volumes[self.mesh.closest_vertex([0,0,0])] = 3
 
-        self.add_subdomain(Nucleus(), nucleus)
+        self.add_subdomain(volumes)
 
-        #h = self.mesh.get_mesh_size()
+        h = self.mesh.get_mesh_size()
         self.add_data_function(MeshSize(self.mesh))
 
         #Parameters
@@ -65,6 +57,10 @@ class Hes1(pyurdme.URDMEModel):
         
         self.add_parameter([k1,k2,alpha_m,alpha_m_gamma,alpha_p,mu_m,mu_p])
 
+        #Domains markers
+        nucleus = [1]
+        cytoplasm = [2]
+        promoter_site = [3]
 
         #Reactions
         R1 = pyurdme.Reaction(name="R1",reactants={Pf:1,protein:1},products={Po:1},massaction=True,rate=k1, restrict_to=promoter_site)
@@ -90,7 +86,7 @@ class Hes1(pyurdme.URDMEModel):
         self.timespan(range(1200))
 
 if __name__=="__main__":
-    model = Hes1(model_name="hes1")
+    model = hes1(model_name="hes1")
     result = model.run(report_level=1)
 
     protein = result.get_species("protein")

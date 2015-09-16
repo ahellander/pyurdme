@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(name="pyurdme",
-      version="1.0.1",
+      version="1.1.0",
       packages=['pyurdme'],
       
       #include_package_data = True,
@@ -17,7 +17,7 @@ setup(name="pyurdme",
       license = "GPL",
       keywords = "pyurdme, urdme, spatial stochastic simulation, RDME",
       url = "http://www.pyurdme.org",
-      download_url = "https://github.com/pyurdme/pyurdme/tarball/master/v1.0.1"
+      download_url = "https://github.com/pyurdme/pyurdme/tarball/master/v1.1.0"
       
       )
       

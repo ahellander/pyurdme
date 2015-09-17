@@ -9,17 +9,7 @@ class Nucleus(dolfin.SubDomain):
     def inside(self,x,on_boundary):
         return dolfin.between(x[0]**2+x[1]**2+x[2]**2,(0,3.**2))
 
-class MeshSize(pyurdme.URDMEDataFunction):
-    def __init__(self,mesh):
-        pyurdme.URDMEDataFunction.__init__(self,name="MeshSize")
-        self.mesh = mesh
-        self.h = mesh.get_mesh_size()
-
-    def map(self,x):
-        ret = self.h[self.mesh.closest_vertex(x)]
-        return ret
-
-class Hes1(pyurdme.URDMEModel):
+class hes1(pyurdme.URDMEModel):
     def __init__(self,model_name="hes1"):
         pyurdme.URDMEModel.__init__(self, model_name)
 
@@ -31,20 +21,17 @@ class Hes1(pyurdme.URDMEModel):
 
         self.add_species([Pf,Po,mRNA,protein])
 
-        #Domains
+        #Mesh
         basedir = os.path.dirname(os.path.abspath(__file__))
-        self.mesh = pyurdme.URDMEMesh.read_mesh(basedir+"/mesh/cell_coarse.msh")
-        
-        volumes = dolfin.MeshFunction("size_t",self.mesh,0)
-        volumes.set_all(2)
-        nucleus = Nucleus()
-        nucleus.mark(volumes,1)
-        volumes[self.mesh.closest_vertex([0,0,0])] = 3
-
-        self.add_subdomain(volumes)
-
-        h = self.mesh.get_mesh_size()
-        self.add_data_function(MeshSize(self.mesh))
+        self.mesh = pyurdme.URDMEMesh.read_mesh(basedir+"/mesh/cell.msh")
+        #Domains markers
+        nucleus = [2]
+        cytoplasm = [1]
+        promoter_site = [3]
+        #Domains
+        self.add_subdomain(Nucleus(), nucleus[0])
+        self.get_subdomain_vector()
+        self.sd[self.mesh.closest_vertex([0,0,0])] = promoter_site[0]
 
         #Parameters
         k1 = pyurdme.Parameter(name="k1",expression=1.e9)
@@ -57,10 +44,6 @@ class Hes1(pyurdme.URDMEModel):
         
         self.add_parameter([k1,k2,alpha_m,alpha_m_gamma,alpha_p,mu_m,mu_p])
 
-        #Domains markers
-        nucleus = [1]
-        cytoplasm = [2]
-        promoter_site = [3]
 
         #Reactions
         R1 = pyurdme.Reaction(name="R1",reactants={Pf:1,protein:1},products={Po:1},massaction=True,rate=k1, restrict_to=promoter_site)
@@ -78,7 +61,6 @@ class Hes1(pyurdme.URDMEModel):
         self.restrict(Pf,promoter_site)
 
         #Distribute molecules over the mesh
-        #self.set_initial_condition_place_near({Pf:1},[0,0,0])
         self.set_initial_condition_scatter({Pf:1},promoter_site)
         self.set_initial_condition_scatter({protein:60},cytoplasm)
         self.set_initial_condition_scatter({mRNA:10},nucleus)
@@ -86,15 +68,16 @@ class Hes1(pyurdme.URDMEModel):
         self.timespan(range(1200))
 
 if __name__=="__main__":
-    model = Hes1(model_name="hes1")
+    model = hes1(model_name="hes1")
     result = model.run(report_level=1)
 
     protein = result.get_species("protein")
     proteinsum = numpy.sum(protein,axis=1)
-    plt.plot(model.tspan,proteinsum,'r')
+    plt.plot(model.tspan,proteinsum,'r', label='protein')
     mRNA = result.get_species("mRNA")
     mRNAsum=numpy.sum(mRNA[:],axis=1)
-    plt.plot(model.tspan,mRNAsum,'b')
+    plt.plot(model.tspan,mRNAsum,'b', label='mRNA')
+    plt.legend(loc='best')
     plt.show()
 
     #print 'Writing species "protein" to folder "proteinOut"'

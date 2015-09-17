@@ -2229,38 +2229,24 @@ class URDMESolver:
 
             if seed is not None:
                 urdme_solver_cmd.append(str(seed+run_ndx))
-            if self.report_level >= 1:
+            if self.report_level > 1:
                 print 'cmd: {0}\n'.format(urdme_solver_cmd)
+            stdout = ''
+            stderr = ''
             try:
-                #if self.report_level >= 1:  #stderr & stdout to the terminal
-                #    handle = subprocess.Popen(urdme_solver_cmd)
-                #else:
-                handle = subprocess.Popen(urdme_solver_cmd, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+                if self.report_level >= 1:  #stderr & stdout to the terminal
+                    handle = subprocess.Popen(urdme_solver_cmd)
+                else:
+                    handle = subprocess.Popen(urdme_solver_cmd, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+                    stdout, stderr = handle.communicate()
                 return_code = handle.wait()
             except OSError as e:
                 print "Error, execution of solver raised an exception: {0}".format(e)
                 print "urdme_solver_cmd = {0}".format(urdme_solver_cmd)
-                #raise URDMEError("Solver execution failed")
-
-            try:
-                stderr = handle.stderr.read()
-            except Exception as e:
-                stderr = 'Error reading stderr: {0}'.format(e)
-            try:
-                stdout = handle.stdout.read()
-            except Exception as e:
-                stdout = 'Error reading stdout: {0}'.format(e)
-
-            if self.report_level > 1:
-                print stdout
-                print stderr
 
             if return_code != 0:
-                print outfile.name
-                print return_code
                 if self.report_level >= 1:
                     try:
-                        #print handle.stderr.read(), handle.stdout.read()
                         print stderr, stdout
                     except Exception as e:
                         pass

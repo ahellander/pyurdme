@@ -50,6 +50,7 @@ class TestMinCDE(unittest.TestCase):
         mindpsd = numpy.abs(mindfft[:numpy.floor((N-1)/2)])
         mindfreq = numpy.arange(len(mindpsd), dtype=float)/T
         mind_max_period = 1/mindfreq[1+numpy.argmax(mindpsd[1:])]
+        print mind_max_period
         self.assertTrue(mind_max_period > 60)
         self.assertTrue(mind_max_period < 70)
 

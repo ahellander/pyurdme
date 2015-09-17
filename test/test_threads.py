@@ -5,7 +5,7 @@ import subprocess
 import time
 import pyurdme
 #from cylinder_demo.cylinder_demo3D import cylinderDemo3D
-from simple_diffusion.simple_diffusion import simple_diffusion as cylinderDemo3D
+from examples.simple_diffusion.simple_diffusion import simple_diffusion as cylinderDemo3D
 #from examples.cylinder_demo.cylinder_demo3D import cylinderDemo3D
 
 class Counter(threading.Thread):

@@ -1,7 +1,5 @@
 #!/usr/bin/env python
 import pyurdme
-from examples.cylinder_demo.cylinder_demo3D import cylinderDemo3D
-from examples.simple_diffusion import simple_diffusion
 import pyurdme.nsmsolver
 import scipy.fftpack
 
@@ -13,11 +11,9 @@ class SimpleDiffusion(pyurdme.URDMEModel):
     """ Initial condition is a delta function at the center voxel.
         The solution should be a Gaussian, up to the point where
         the BC becomes important. """
-    
-    def __init__(self):
+    def __init__(self, diffusion_constant=0.01):
         pyurdme.URDMEModel.__init__(self,name="simple_diffusion")
-        D = 0.01
-        A = pyurdme.Species(name="A",diffusion_constant=D,dimension=2)
+        A = pyurdme.Species(name="A",diffusion_constant=diffusion_constant,dimension=2)
         self.add_species([A])
         # A unit square
         self.mesh = pyurdme.URDMEMesh.generate_unit_square_mesh(10,10)
@@ -52,11 +48,10 @@ class TestSolverFunctionality(unittest.TestCase):
     
     def test_no_events(self):
         """ Test that nothing happens if the diffusion is set to zero. """
-        model = SimpleDiffusion()
-        model.listOfSpecies["A"].diffusion_constant = 0.0
+        model = SimpleDiffusion(diffusion_constant = 0.0)
         result = model.run()
-        A = result.get_species("A")
-        self.assertFalse((numpy.mean(A,axis=0)-model.u0).any())
+        A = result.get_species("A", -1)
+        self.assertFalse((A - model.u0).any())
     
     def test_same_seed(self):
         """ Test that the output is the same if the same seed is used, edxplicit solver creation  """
@@ -84,6 +79,11 @@ class TestSolverFunctionality(unittest.TestCase):
         result1 = solver.run()
         result2 = solver.run()
         self.assertNotEqual(result1,result2)
+
+    def test_mesh_pickle(self):
+        meshstr = pickle.dumps(self.model.mesh)
+        mesh = pickle.loads(meshstr)
+
 
     def test_model_pickle(self):
         """ Test that the model is picklable. We do not compare models directly, but rather the results after simulation. """

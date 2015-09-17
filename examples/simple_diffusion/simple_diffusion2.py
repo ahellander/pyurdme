@@ -25,7 +25,6 @@ class Cytosol(dolfin.SubDomain):
     def inside(self,x,on_boundary):
         return not on_boundary
 
-
 class simple_diffusion2(pyurdme.URDMEModel):
     """ One species diffusing on the boundary of a sphere and one species
         diffusing inside the sphere. """
@@ -38,9 +37,8 @@ class simple_diffusion2(pyurdme.URDMEModel):
 
         self.add_species([A,B])
 
-        # A circle
-        mesh = dolfin.UnitCircleMesh(20)
-        self.mesh = pyurdme.URDMEMesh(mesh)
+        # Import a circle mesh
+        self.mesh = pyurdme.URDMEMesh.read_dolfin_mesh("circle.xml")
         
         # A mesh function for the cells
         cell_function = dolfin.CellFunction("size_t",self.mesh)
@@ -77,29 +75,10 @@ if __name__ == '__main__':
     
     model = simple_diffusion2()
     result = model.run()
-    A = result.get_species("A")
-    #print numpy.sum(A,axis=1)
-    data = model.get_solver_datastructure()
-    u0 = model.u0
-    print numpy.sum(u0,axis=1)
-    ix = numpy.argmax(u0[0,:])
-    
-    c = model.mesh.coordinates()
-    x = c[:,0]
-    print c[ix,:]
-    dof2vtx = dolfin.dof_to_vertex_map(model.mesh.get_function_space())
-    u0 = data["u0"]
-    ixdof = numpy.argmax(u0[0,:])
-    print ix, dof2vtx[ixdof]
-    print u0[0,ixdof]
-    print A[0,ix]
-    print A[1,ix]
-#print A0[ixdof]
 
-    #print numpy.max(x)
-    #print numpy.min(x)
-    # Dump timeseries in Paraview format
+    # Write output in Paraview compatible format.
     result.export_to_vtk(species="B",folder_name="Bout")
     result.export_to_vtk(species="A",folder_name="Aout")
+
 
 

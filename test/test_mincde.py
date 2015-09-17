@@ -51,7 +51,7 @@ class TestMinCDE(unittest.TestCase):
         mindfreq = numpy.arange(len(mindpsd), dtype=float)/T
         mind_max_period = 1/mindfreq[1+numpy.argmax(mindpsd[1:])]
         print mind_max_period
-        self.assertTrue(mind_max_period > 60)
+        self.assertTrue(mind_max_period > 50)
         self.assertTrue(mind_max_period < 70)
 
     def test_mincde_oscillation_period_fange(self):

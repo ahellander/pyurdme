@@ -1,5 +1,6 @@
 # pylint: disable-msg=C0301
 # pylint: disable-msg=C0103
+import line_profiler
 
 import os
 import re
@@ -89,6 +90,7 @@ class URDMEModel(Model):
         self.xmesh = None
         self.stiffness_matrices = None
         self.mass_matrices = None
+        self.system_matrix = None
 
         # subdomains is a list of MeshFunctions with subdomain marker information
         self.subdomains = OrderedDict()
@@ -122,7 +124,7 @@ class URDMEModel(Model):
                     tmpfile.close()
 
                 state[key] = sddict
-            elif key in ["stiffness_matrices", "mass_matrices", "xmesh"]:
+            elif key in ["stiffness_matrices", "mass_matrices", "xmesh", "system_matrix"]:
                 state[key] = None
             else:
                 state[key] = item
@@ -596,6 +598,9 @@ class URDMEModel(Model):
 
         import time
 
+        if self.system_matrix :
+            return self.system_matrix
+
         # Check if the individual stiffness and mass matrices (per species) have been assembled, otherwise assemble them.
         if self.stiffness_matrices is not None and self.mass_matrices is not None:
             stiffness_matrices = self.stiffness_matrices
@@ -702,8 +707,10 @@ class URDMEModel(Model):
         D = S.tocsc()
 
         if total_mass == 0.0:
+            self.system_matrix = {'vol':vol, 'D':D, 'relative_positive_mass':None}
             return {'vol':vol, 'D':D, 'relative_positive_mass':None}
         else:
+            self.system_matrix = {'vol':vol, 'D':D, 'relative_positive_mass':positive_mass/total_mass}
             return {'vol':vol, 'D':D, 'relative_positive_mass':positive_mass/total_mass}
 
 
@@ -2263,6 +2270,7 @@ class URDMESolver:
 
         if input_file is None:
             if self.infile_name is None or not os.path.exists(self.infile_name):
+                print "Generating input file"
                 # Get temporary input and output files
                 infile = tempfile.NamedTemporaryFile(delete=False, dir=os.environ.get('PYURDME_TMPDIR'))
 

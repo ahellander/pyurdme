@@ -1,4 +1,4 @@
-###########################################################################
+##########################################################################
 # this file is normally executed by the MATLAB interface
 ###########################################################################
 
@@ -34,43 +34,35 @@ endif
 LFLAGS_BASE= -l hdf5 -l hdf5_hl 
 LFLAGS = $(LFLAGS_BASE) -lm
 
-###########################################################################
-ifeq ($(URDME_MODEL),)
-     $(error URDME_MODEL not set)
-endif
-###########################################################################
 # destination directory
-OUT=.urdme/
+OUT=$(URDME)/build/nsm2/
 ###########################################################################
 ###########################################################################
 ###########################################################################
 ###########################################################################
 
 all:  nsm2
-nsm2: $(OUT)$(URDME_MODEL).nsm2
+nsm2: $(OUT)solver.nsm2
 
 ###########################################################################
 
 ifeq ($(URDME_LIBMAT),)
-OBJS=nsm2.o nsm2core.o report.o binheap.o urdmemodel.o outputwriter.o $(URDME_MODEL).o
+OBJS=nsm2.o nsm2core.o report.o binheap.o urdmemodel.o outputwriter.o
 else
-OBJS=nsm2.o nsm2core.o report.o binheap.o urdmemodel.o read_matfile.o outputwriter.o $(URDME_MODEL).o
+OBJS=nsm2.o nsm2core.o report.o binheap.o urdmemodel.o read_matfile.o outputwriter.o
 endif
 
 DEPS= $(addprefix $(OUT),$(OBJS))
 
 testmakefile: 
-	-echo $(URDME_MODEL).nsm2
+	-echo solver.nsm2
 	-echo $(URDME)
 
-$(OUT)$(URDME_MODEL).nsm2: $(OUT) $(DEPS)
-	$(LINKER) -o $(OUT)$(URDME_MODEL).nsm2 $(DEPS) $(LFLAGS)
+$(OUT)solver.nsm2: $(OUT) $(DEPS)
+	$(LINKER) -o $(OUT)solver.nsm2 $(DEPS) $(LFLAGS)
 
 $(OUT):
 	-mkdir -p $(OUT)
-
-$(OUT)$(URDME_MODEL).o: $(OUT)$(URDME_MODEL).c
-	$(CC) $(CFLAGS) $(OUT)$(URDME_MODEL).c -o $(OUT)$(URDME_MODEL).o 
 
 $(OUT)nsm2.o: $(SRC)/nsm2/nsm2.c 
 	$(CC) $(CFLAGS) $(SRC)/nsm2/nsm2.c -o $(OUT)nsm2.o
@@ -96,5 +88,5 @@ $(OUT)binheap.o: $(SRC)/nsm2/binheap.c
 
 clean:
 	rm -f $(DEPS)
-	rm -f $(OUT)$(URDME_MODEL).nsm2 
+	rm -f $(OUT)solver.nsm2 
 

@@ -124,7 +124,7 @@ class URDMEModel(Model):
                     tmpfile.close()
 
                 state[key] = sddict
-            elif key in ["stiffness_matrices", "mass_matrices", "xmesh", "system_matrix"]:
+            elif key in ["stiffness_matrices", "mass_matrices", "xmesh"]:
                 state[key] = None
             else:
                 state[key] = item
@@ -598,9 +598,6 @@ class URDMEModel(Model):
 
         import time
 
-        if self.system_matrix :
-            return self.system_matrix
-
         # Check if the individual stiffness and mass matrices (per species) have been assembled, otherwise assemble them.
         if self.stiffness_matrices is not None and self.mass_matrices is not None:
             stiffness_matrices = self.stiffness_matrices
@@ -613,6 +610,9 @@ class URDMEModel(Model):
             self.mass_matrices = matrices['M']
             stiffness_matrices = self.stiffness_matrices
             mass_matrices = self.mass_matrices
+
+        #if self.system_matrix :
+        #    return self.system_matrix
 
         # Make a dok matrix of dimension (Ndofs,Ndofs) for easier manipulation
         i = 1
@@ -707,10 +707,8 @@ class URDMEModel(Model):
         D = S.tocsc()
 
         if total_mass == 0.0:
-            self.system_matrix = {'vol':vol, 'D':D, 'relative_positive_mass':None}
             return {'vol':vol, 'D':D, 'relative_positive_mass':None}
         else:
-            self.system_matrix = {'vol':vol, 'D':D, 'relative_positive_mass':positive_mass/total_mass}
             return {'vol':vol, 'D':D, 'relative_positive_mass':positive_mass/total_mass}
 
 
@@ -849,7 +847,6 @@ class URDMEModel(Model):
         urdme_solver_data['u0'] = u0_dof
 
 
-        reactions = []
         R, I = [], []
         Ms = int(max(self.get_subdomain_vector()))
         S = numpy.ones((Ms+1,len(self.listOfReactions)), dtype=numpy.int)
@@ -858,9 +855,11 @@ class URDMEModel(Model):
 
         for i, reaction in enumerate(self.listOfReactions.values()):
             if not reaction.massaction:
-                raise ModelException(reaction.name + ": all reactions should be mass action.")
+                #We need all the reactions to be mass action
+                break
             if sum(reaction.reactants.values()) not in [0,1,2]:
-                raise ModelException(reaction.name + ": all reactions should be elementary.")
+                #We need all the reactions to be elementary
+                break
 
             if len(reaction.reactants) == 0:
                 R += [[0,0,reaction.marate.value]]
@@ -876,7 +875,8 @@ class URDMEModel(Model):
                 R += [[reaction.marate.value,0,0]]
                 I += [[species_map[reaction.reactants.keys()[0]],species_map[reaction.reactants.keys()[1]],-1]]
             else:
-                raise ModelException(reaction.name + ": too many reactants")
+                #We need all the reactions to be elementary
+                break
 
             if reaction.restrict_to:
                 for sd in reaction.restrict_to:
@@ -884,10 +884,10 @@ class URDMEModel(Model):
             else:
                 for sd in range(Ms+1):
                     S[sd,i] = 0
-
-        urdme_solver_data['R'] = R
-        urdme_solver_data['I'] = I
-        urdme_solver_data['S'] = S
+        else:
+            urdme_solver_data['R'] = R
+            urdme_solver_data['I'] = I
+            urdme_solver_data['S'] = S
 
         tspan = numpy.asarray(self.tspan, dtype=numpy.float)
         urdme_solver_data['tspan'] = tspan

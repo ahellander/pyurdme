@@ -250,53 +250,57 @@ urdme_model *read_model(char *file)
 	R = matGetVariable(input_file, "R");
 	if (R == NULL){
 		printf("Initial condition (R) is missing in the model file.\n");
-		return NULL;
 	}
-	/* Typecast */
-	double * Rdouble;
-	Rdouble = (double*)malloc(3*model->Mreactions*sizeof(double));
-	double * Rtemp;
-	Rtemp = mxGetPr(R);
-	for (i=0;i<3*model->Mreactions;i++){
-		Rdouble[i] = (double) Rtemp[i];
+    else{
+        /* Typecast */
+        double * Rdouble;
+        Rdouble = (double*)malloc(3*model->Mreactions*sizeof(double));
+        double * Rtemp;
+        Rtemp = mxGetPr(R);
+        for (i=0;i<3*model->Mreactions;i++){
+            Rdouble[i] = (double) Rtemp[i];
+        }
+        model->R = Rdouble;
+        mxDestroyArray(R);
     }
-	model->R = Rdouble;
-    mxDestroyArray(R);
 
     /* Reactants matrix */
 	I = matGetVariable(input_file, "I");
 	if (I == NULL){
 		printf("Initial condition (I) is missing in the model file.\n");
-		return NULL;
 	}
-	/* Typecast */
-	int * Iint;
-	Iint = (int*)malloc(3*model->Mreactions*sizeof(int));
-	double * Itemp;
-	Itemp = mxGetPr(I);
-	for (i=0;i<3*model->Mreactions;i++){
-		Iint[i] = (int) Itemp[i];
+    else{
+        /* Typecast */
+        int * Iint;
+        Iint = (int*)malloc(3*model->Mreactions*sizeof(int));
+        double * Itemp;
+        Itemp = mxGetPr(I);
+        for (i=0;i<3*model->Mreactions;i++){
+            Iint[i] = (int) Itemp[i];
+        }
+        model->I = Iint;
+        mxDestroyArray(I);
     }
-	model->I = Iint;
-    mxDestroyArray(I);
 
     /* Subdomains matrix */
 	S = matGetVariable(input_file, "S");
 	if (S == NULL){
 		printf("Initial condition (S) is missing in the model file.\n");
-		return NULL;
 	}
-	/* Typecast */
-    model->Msubdomains   = (int) mxGetM(S);
+    else {
+	    /* Typecast */
+        model->Msubdomains   = (int) mxGetM(S);
 
-	int * Sint;
-	Sint = (int*)malloc(model->Msubdomains*model->Mreactions*sizeof(int));
-	double * Stemp;
-	Stemp = mxGetPr(S);
-	for (i=0;i<model->Msubdomains*model->Mreactions;i++)
-		Sint[i] = (int) Stemp[i];
-	model->S = Sint;
-    mxDestroyArray(S);
+        int * Sint;
+        Sint = (int*)malloc(model->Msubdomains*model->Mreactions*sizeof(int));
+        double * Stemp;
+        Stemp = mxGetPr(S);
+        for (i=0;i<model->Msubdomains*model->Mreactions;i++)
+            Sint[i] = (int) Stemp[i];
+        model->S = Sint;
+        mxDestroyArray(S);
+    }
+
     /* Maximum number of solutions defaults to one. */
     model->nsolmax = 1;
     

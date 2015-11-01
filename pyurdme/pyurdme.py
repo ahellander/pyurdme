@@ -1935,7 +1935,7 @@ class DolfinFunctionWrapper(dolfin.Function):
             hstr = hstr.replace('###WIREFRAME###',"false")
 
 
-        html = '<div id="'+displayareaid+'" class="cell"></div>'
+        html = '<div style="width: 500px; height: 375px;" id="'+displayareaid+'" ></div>'
         IPython.display.display(IPython.display.HTML(html+hstr))
 
 #   def vector(self):

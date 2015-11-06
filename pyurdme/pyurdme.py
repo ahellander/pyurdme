@@ -1812,8 +1812,9 @@ class URDMEResult(dict):
         if colors == None:
             colors =  get_N_HexCol(len(species))
 
+        if not isinstance(species, list):
+           species = [species]
         for j,spec in enumerate(species):
-
             timeslice = self.get_species(spec, time_index)
             ns = numpy.sum(timeslice)
             total_num_particles += ns

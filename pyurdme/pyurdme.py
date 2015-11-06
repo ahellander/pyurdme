@@ -1329,7 +1329,10 @@ class URDMEMesh(dolfin.Mesh):
 
         return json.dumps(document)
 
-    def _ipython_display_(self, filename=None, colors=None, width=500, height=375):
+    def _ipython_display_(self, filename=None, colors=None, width=500):
+        self.display(filename=filename, colors=colors, width=width)
+
+    def display(self, filename=None, colors=None, width=500):
         jstr = self.export_to_three_js(colors=colors)
         hstr = None
         with open(os.path.dirname(os.path.abspath(__file__))+"/data/three.js_templates/mesh.html",'r') as fd:
@@ -1337,6 +1340,8 @@ class URDMEMesh(dolfin.Mesh):
         if hstr is None:
             raise Exception("could note open template mesh.html")
         hstr = hstr.replace('###PYURDME_MESH_JSON###',jstr)
+        hstr = hstr.replace('###WIDTH###',str(width))
+        height = int(width * 0.75)
         # Create a random id for the display div. This is to avioid multiple plots ending up in the same
         # div in Ipython notebook
         displayareaid=str(uuid.uuid4())
@@ -1876,17 +1881,18 @@ class URDMEResult(dict):
         colors = _compute_colors(timeslice)
         return colors
 
-    def display_particles(self,species, time_index, width=500, height=375):
+    def display_particles(self,species, time_index, width=500):
         hstr = self._export_to_particle_js(species, time_index)
         displayareaid=str(uuid.uuid4())
         hstr = hstr.replace('###DISPLAYAREAID###',displayareaid)
+        hstr = hstr.replace('###WIDTH###',str(width))
+        height = int(width*0.75)
 
-        #html = '<div style="width: 500px; height: 375px;" id="'+displayareaid+'" ></div>'
         html = '<div style="width: {0}px; height: {1}px;" id="{2}" ></div>'.format(width, height, displayareaid)
         IPython.display.display(IPython.display.HTML(html+hstr))
 
 
-    def display(self, species, time_index, opacity=1.0, wireframe=True, width=500, height=375):
+    def display(self, species, time_index, opacity=1.0, wireframe=True, width=500):
         """ Plot the trajectory as a PDE style plot. """
         data = self.get_species(species,time_index,concentration=True)
         fun = DolfinFunctionWrapper(self.model.mesh.get_function_space())
@@ -1897,7 +1903,7 @@ class URDMEResult(dict):
             vec[i]=data[i]
             #for i,d in enumerate(data):
             #   vec[i] = d
-        fun.display(opacity=opacity, wireframe=wireframe, width=width, height=height)
+        fun.display(opacity=opacity, wireframe=wireframe, width=width)
 
 
 class DolfinFunctionWrapper(dolfin.Function):
@@ -1908,7 +1914,7 @@ class DolfinFunctionWrapper(dolfin.Function):
     def __init__(self, function_space):
         dolfin.Function.__init__(self, function_space)
 
-    def display(self, opacity=1.0, wireframe=True, width=500, height=375):
+    def display(self, opacity=1.0, wireframe=True, width=500):
         """ Plot the solution in an IPython notebook.
 
             opacity:    controls the degree of transparency
@@ -1935,7 +1941,8 @@ class DolfinFunctionWrapper(dolfin.Function):
             hstr = hstr.replace('###WIREFRAME###',"true")
         else:
             hstr = hstr.replace('###WIREFRAME###',"false")
-
+        hstr = hstr.replace('###WIDTH###',str(width))
+        height = int(width * 0.75)
 
         html = '<div style="width: {0}px; height: {1}px;" id="{2}" ></div>'.format(width, height, displayareaid)
         IPython.display.display(IPython.display.HTML(html+hstr))

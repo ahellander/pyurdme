@@ -1,6 +1,5 @@
 # pylint: disable-msg=C0301
 # pylint: disable-msg=C0103
-import line_profiler
 
 import os
 import re

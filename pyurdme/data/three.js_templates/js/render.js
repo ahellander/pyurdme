@@ -82,7 +82,6 @@ var renderParticles = function(tmp, x, y, z, c, radius, width)
 {
     var dom = document.getElementById(tmp);
     var scene = new THREE.Scene();
-    var width = 500;//$("#"+tmp).width();
     var height = 0.75 * width;
     var camera = new THREE.PerspectiveCamera( 75, 4.0 / 3.0, 0.1, 1000 );
     var renderer = new THREE.WebGLRenderer({alpha:true});

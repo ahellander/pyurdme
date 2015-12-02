@@ -1,4 +1,8 @@
-import matplotlib.pyplot as plt
+try:
+    import matplotlib.pyplot as plt
+except:
+    pass
+
 import os.path
 import pyurdme
 import dolfin
@@ -71,14 +75,17 @@ if __name__=="__main__":
     model = hes1(model_name="hes1")
     result = model.run(report_level=1)
 
-    protein = result.get_species("protein")
-    proteinsum = numpy.sum(protein,axis=1)
-    plt.plot(model.tspan,proteinsum,'r', label='protein')
-    mRNA = result.get_species("mRNA")
-    mRNAsum=numpy.sum(mRNA[:],axis=1)
-    plt.plot(model.tspan,mRNAsum,'b', label='mRNA')
-    plt.legend(loc='best')
-    plt.show()
+    try:
+        protein = result.get_species("protein")
+        proteinsum = numpy.sum(protein,axis=1)
+        plt.plot(model.tspan,proteinsum,'r', label='protein')
+        mRNA = result.get_species("mRNA")
+        mRNAsum=numpy.sum(mRNA[:],axis=1)
+        plt.plot(model.tspan,mRNAsum,'b', label='mRNA')
+        plt.legend(loc='best')
+        plt.show()
+    except:
+        pass
 
     #print 'Writing species "protein" to folder "proteinOut"'
     #result.export_to_vtk(species='protein',folder_name='proteinOut')

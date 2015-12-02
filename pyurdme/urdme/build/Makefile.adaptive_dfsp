@@ -17,7 +17,7 @@ SET_ARCH=-arch $(ARCHS)
 endif
 ###########################################################################
 INCLUDE = -I$(URDME_ROOT)/include -I$(SOLVER_ROOT)/include
-CC	=gcc
+CC     = gcc
 LINKER = gcc
 #OPTION_SET = -DOUTPUT_ALL -DESTIMATE_ERROR_MEAN -DERROR_L2
 #OPTION_SET = -DRECORD_TIMESTEPS

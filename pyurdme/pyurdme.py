@@ -96,6 +96,10 @@ class URDMEModel(Model):
 
         # This dictionary hold information about the subdomains each species is active on
         self.species_to_subdomains = {}
+
+        # This dictionary defines how species jump between subdomains
+        self.barriers = {}
+
         self.tspan = None
 
         # URDMEDataFunction objects to construct the data vector.
@@ -391,6 +395,14 @@ class URDMEModel(Model):
         if not isinstance(subdomains, list):
             subdomains = [subdomains]
         self.species_to_subdomains[species] = subdomains
+
+    def one_way_barrier(self, species, subdomain1, subdomain2):
+        """ Make transition from subdomain1 to subdomain2 one way. """
+        barrier = (subdomain1, subdomain2)
+        if species not in self.barriers:
+            self.barriers[species] = [barrier]
+        else:
+            self.barriers[species].append(barrier)
 
 
     def set_subdomain_vector(self, sd):
@@ -691,6 +703,10 @@ class URDMEModel(Model):
                 # equivalent to how boundary species are handled in legacy URDME.
                 if sd[ir] not in sdmap:
                     val = 0.0
+                if species in self.barriers:
+                    for barrier in self.barriers[species]:
+                        if sd[ir] in barrier[0] and sd[ij] in barrier[1]:
+                            val = 0.0
 
                 S[Mspecies*ir+spec, Mspecies*ij+spec] = -val/vi[Mspecies*ij+spec]
 

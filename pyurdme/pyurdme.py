@@ -1898,12 +1898,14 @@ class URDMEResult(dict):
         data = self.get_species(species,time_index,concentration=True)
         fun = DolfinFunctionWrapper(self.model.mesh.get_function_space())
         vec = fun.vector()
-        v2d= self.get_v2d()
         (nd,) = numpy.shape(data)
-        for i in range(nd):
-            vec[i]=data[i]
-            #for i,d in enumerate(data):
-            #   vec[i] = d
+        if nd == len(vec):
+            for i in range(nd):
+                vec[i]=data[i]
+        else:
+            #v2d= self.get_v2d()
+            for i in range(len(vec)):
+                vec[i] = data[i] # shouldn't we use v2d or d2v here?  But it doesn't work if I do.
         fun.display(opacity=opacity, wireframe=wireframe, width=width)
 
 

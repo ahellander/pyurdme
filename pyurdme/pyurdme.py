@@ -1917,7 +1917,7 @@ class DolfinFunctionWrapper(dolfin.Function):
     def __init__(self, function_space):
         dolfin.Function.__init__(self, function_space)
 
-    def display(self, opacity=1.0, wireframe=True, width=500):
+    def display(self, opacity=1.0, wireframe=True, width=500, camera=[0,0,1]):
         """ Plot the solution in an IPython notebook.
 
             opacity:    controls the degree of transparency
@@ -1932,7 +1932,7 @@ class DolfinFunctionWrapper(dolfin.Function):
         with open(os.path.dirname(os.path.abspath(__file__))+"/data/three.js_templates/solution.html",'r') as fd:
             hstr = fd.read()
         if hstr is None:
-            raise Exception("could note open template mesh.html")
+            raise Exception("could note open template solution.html")
         hstr = hstr.replace('###PYURDME_MESH_JSON###',jstr)
 
         # Create a random id for the display div. This is to avioid multiple plots ending up in the same
@@ -1946,6 +1946,12 @@ class DolfinFunctionWrapper(dolfin.Function):
             hstr = hstr.replace('###WIREFRAME###',"false")
         hstr = hstr.replace('###WIDTH###',str(width))
         height = int(width * 0.75)
+
+        # ###CAMERA_X###, ###CAMERA_Y###, ###CAMERA_Z###
+        hstr = hstr.replace('###CAMERA_X###',str(camera[0]))
+        hstr = hstr.replace('###CAMERA_Y###',str(camera[1]))
+        hstr = hstr.replace('###CAMERA_Z###',str(camera[2]))
+
 
         html = '<div style="width: {0}px; height: {1}px;" id="{2}" ></div>'.format(width, height, displayareaid)
         IPython.display.display(IPython.display.HTML(html+hstr))

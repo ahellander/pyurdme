@@ -1893,7 +1893,7 @@ class URDMEResult(dict):
         IPython.display.display(IPython.display.HTML(html+hstr))
 
 
-    def display(self, species, time_index, opacity=1.0, wireframe=True, width=500):
+    def display(self, species, time_index, opacity=1.0, wireframe=True, width=500, camera=[0,0,1]):
         """ Plot the trajectory as a PDE style plot. """
         data = self.get_species(species,time_index,concentration=True)
         fun = DolfinFunctionWrapper(self.model.mesh.get_function_space())
@@ -1906,7 +1906,7 @@ class URDMEResult(dict):
             #v2d= self.get_v2d()
             for i in range(len(vec)):
                 vec[i] = data[i] # shouldn't we use v2d or d2v here?  But it doesn't work if I do.
-        fun.display(opacity=opacity, wireframe=wireframe, width=width)
+        fun.display(opacity=opacity, wireframe=wireframe, width=width, camera=camera)
 
 
 class DolfinFunctionWrapper(dolfin.Function):

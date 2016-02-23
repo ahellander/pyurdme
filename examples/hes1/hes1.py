@@ -27,7 +27,7 @@ class hes1(pyurdme.URDMEModel):
 
         #Mesh
         basedir = os.path.dirname(os.path.abspath(__file__))
-        self.mesh = pyurdme.URDMEMesh.read_dolfin_mesh(basedir+"/mesh/test.xml")
+        self.mesh = pyurdme.URDMEMesh.read_mesh(basedir+"/mesh/cell.msh")
         #Domains markers
         nucleus = [2]
         cytoplasm = [1]

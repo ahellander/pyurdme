@@ -229,10 +229,11 @@ class URDMEModel(Model):
         # Write mesh and subdomain files for the StochSS UI
         sd = self.get_subdomain_vector()
         with open(filename,'w') as fd:
-            for ndx,val in enumerate(sd):
-                fd.write("{0},{1}\n".format(ndx,val))
+            for ndx, val in enumerate(sd):
+                fd.write("{0},{1}\n".format(ndx, val))
 
-    def display_mesh(self, subdomains):
+    def display_mesh(self, subdomains, width=500, height=375):
+        ''' WebGL display of the wireframe mesh.'''
         if isinstance(subdomains, int):
             jstr = self._subdomains_to_threejs(subdomains={1:'blue', subdomains:'red'})
         elif isinstance(subdomains, list):
@@ -243,16 +244,16 @@ class URDMEModel(Model):
         elif isinstance(subdomains, dict):
             jstr = self._subdomains_to_threejs(subdomains=subdomains)
         hstr = None
-        with open(os.path.dirname(os.path.abspath(__file__))+"/data/three.js_templates/mesh.html",'r') as fd:
+        with open(os.path.dirname(os.path.abspath(__file__))+"/data/three.js_templates/mesh.html", 'r') as fd:
             hstr = fd.read()
         if hstr is None:
             raise Exception("could note open template mesh.html")
-        hstr = hstr.replace('###PYURDME_MESH_JSON###',jstr)
+        hstr = hstr.replace('###PYURDME_MESH_JSON###', jstr)
         # Create a random id for the display div. This is to avioid multiple plots ending up in the same
         # div in Ipython notebook
-        displayareaid=str(uuid.uuid4())
-        hstr = hstr.replace('###DISPLAYAREAID###',displayareaid)
-        html = '<div id="'+displayareaid+'" class="cell"></div>'
+        displayareaid = str(uuid.uuid4())
+        hstr = hstr.replace('###DISPLAYAREAID###', displayareaid)
+        html = '<div style="width: {0}px; height: {1}px;" id="{2}" ></div>'.format(width, height, displayareaid)
         IPython.display.display(IPython.display.HTML(html+hstr))
 
 
@@ -287,7 +288,7 @@ class URDMEModel(Model):
         # We cannot safely generate a dependency graph (without attempting to analyze the propensity string itself)
         # if the model contains custom propensities.
         mass_action_model = True
-        for name,reaction in self.listOfReactions.items():
+        for name, reaction in self.listOfReactions.items():
             if not reaction.massaction:
                 GF = numpy.ones((self.get_num_reactions(), self.get_num_reactions() + self.get_num_species()))
                 mass_action_model = False
@@ -312,7 +313,7 @@ class URDMEModel(Model):
             species_to_reactions = []
             for species in self.listOfSpecies:
                 temp = []
-                for j,x in enumerate(reactants):
+                for j, x in enumerate(reactants):
                     if species_map[species] in x:
                         temp.append(j)
                 species_to_reactions.append(temp)
@@ -335,11 +336,11 @@ class URDMEModel(Model):
             # Populate G
             for j, spec in enumerate(species_to_reactions):
                 for s in spec:
-                    GF[s,j] = 1
+                    GF[s, j] = 1
 
             for i,reac in enumerate(reaction_to_reaction):
                 for r in reac:
-                    GF[r,self.get_num_species()+i] = 1
+                    GF[r, self.get_num_species()+i] = 1
 
 
         try:
@@ -388,8 +389,6 @@ class URDMEModel(Model):
 
     def restrict(self, species, subdomains):
         """ Restrict the diffusion of a species to a subdomain. """
-        if not isinstance(subdomains, list):
-            subdomains = [subdomains]
         self.species_to_subdomains[species] = subdomains
 
 
@@ -432,7 +431,7 @@ class URDMEModel(Model):
                 if dim == 0:
                     # If we define subdomains on vertices, ONLY use those.
                     # Then it is a direct copy to the sd
-                    for ndx,val in enumerate(subdomain):
+                    for ndx, val in enumerate(subdomain):
                         sd[ndx] = val
                     break
                 else:
@@ -481,9 +480,6 @@ class URDMEModel(Model):
     def set_initial_condition_scatter(self, spec_init, subdomains=None):
         """ Scatter an initial number of molecules over the voxels in a subdomain. """
 
-        if subdomains is not None and isinstance(subdomains, int):
-            subdomains = [subdomains]
-
         if not hasattr(self,"u0"):
             self.initialize_initial_condition()
 
@@ -521,9 +517,6 @@ class URDMEModel(Model):
 
     def set_initial_condition_distribute_uniformly(self, spec_init, subdomains=None):
         """ Place the same number of molecules of the species in each voxel. """
-        if subdomains is not None and isinstance(subdomains, int):
-            subdomains = [subdomains]
-
         if not hasattr(self, "u0"):
             self.initialize_initial_condition()
 
@@ -562,7 +555,7 @@ class URDMEModel(Model):
             ix = self.mesh.closest_vertex(point)
             species_map = self.get_species_map()
             specindx = species_map[spec_name]
-            self.u0[specindx, ix] = (self.u0[specindx,ix] if add else 0) + num_spec
+            self.u0[specindx, ix] = (self.u0[specindx, ix] if add else 0) + num_spec
 
     def set_initial_condition_place_voxel(self, spec_init, voxel,add=False):
         """Place all molecules of kind species in the given voxel. The species existing previously in this voxel are reset if add is set to False"""
@@ -669,13 +662,10 @@ class URDMEModel(Model):
             rows, cols, vals = dolfin.as_backend_type(K).data()
 
             # Filter the matrix: get rid of all elements < 0 (inlcuding the diagonal)
-            vals *= vals<0
+            vals *= vals < 0
             Kcrs = scipy.sparse.csr_matrix((vals, cols, rows))
 
             sdmap  = self.species_to_subdomains[self.listOfSpecies[species]]
-            if not isinstance(sdmap, list):
-                sdmap = [sdmap]
-            print 'species',species,'sdmap',sdmap
 
             # Filter the matrix: get rid of all elements < 0 (inlcuding the diagonal)
             Kdok = Kcrs.todok()
@@ -716,7 +706,6 @@ class URDMEModel(Model):
         """
 
         for spec_name, species in self.listOfSpecies.items():
-            print 'spec_name',spec_name,'species',species,'self.species_to_subdomains[species]',self.species_to_subdomains[species]
             if 0 in self.species_to_subdomains[species]:
                 raise ModelException("Subdomain number 0 is reserved. Please check your model.")
 
@@ -725,7 +714,7 @@ class URDMEModel(Model):
         colsum = numpy.abs(urdme_solver_data['D'].sum(axis=0))
         colsum = colsum.flatten()
         maxcolsum = numpy.argmax(colsum)
-        if colsum[0,maxcolsum] > 1e-10:
+        if colsum[0, maxcolsum] > 1e-10:
             D = urdme_solver_data["D"]
             raise InvalidSystemMatrixException("Invalid diffusion matrix. The sum of the columns does not sum to zero. " + str(maxcolsum) + ' ' + str(colsum[0,maxcolsum]) + "\nThis can be caused by a large difference between the largest and smallest diffusion coefficients.")
 
@@ -847,7 +836,7 @@ class URDMEModel(Model):
         # convert to dof ordering
         p_dof = numpy.zeros((num_dofvox, 3))
         for vox_ndx, row in enumerate(self.mesh.get_voxels()):
-            p_dof[vertex_to_dof[vox_ndx],:len(row)] = row
+            p_dof[vertex_to_dof[vox_ndx], :len(row)] = row
         urdme_solver_data['p'] = p_dof
 
         # Connectivity matrix
@@ -977,7 +966,7 @@ class URDMEMesh(dolfin.Mesh):
                 cdd['source'] = inspect.getsource(self.constrained_domain.__class__)
                 cdd['name'] = self.constrained_domain.__class__.__name__
                 cdd['dict'] = {}
-                for k,v in self.constrained_domain.__dict__.iteritems():
+                for k, v in self.constrained_domain.__dict__.iteritems():
                     if type(v).__name__ != 'SwigPyObject':
                         cdd['dict'][k] = v
                 state['constrained_domain'] = cdd
@@ -989,7 +978,7 @@ class URDMEMesh(dolfin.Mesh):
 
         return state
 
-    def __setstate__(self,state):
+    def __setstate__(self, state):
         """ Used by pickle to set state when unpickling. """
 
         try:
@@ -1005,7 +994,7 @@ class URDMEMesh(dolfin.Mesh):
                 compiled_class = compile(cdd['source'], 'pyurdme.mesh.constrained_domain', 'exec')
                 eval(compiled_class)
                 compiled_object = eval("{0}()".format(cdd['name']))
-                for k,v in cdd['dict'].iteritems():
+                for k, v in cdd['dict'].iteritems():
                     compiled_object.__dict__[k] = v
                 self.constrained_domain = compiled_object
             if 'num_dof_voxels' in state and state['num_dof_voxels'] is not None:
@@ -1051,16 +1040,16 @@ class URDMEMesh(dolfin.Mesh):
             coords = numpy.append(coords, numpy.tile([0],(coords.shape[0],1)), 1)
         return coords
 
-    def closest_vertex(self,x):
+    def closest_vertex(self, x):
         """ Get index of the vertex in the coordinate list closest to the point x. """
         coords = self.get_voxels()
         shape = coords.shape
 
-        if isinstance(x,(int,float)):
+        if isinstance(x, (int, float)):
             x = [x]
 
         if len(x) == 2:
-            point = numpy.append(x,0.0)
+            point = numpy.append(x, 0.0)
         else:
             point = x
         reppoint = numpy.tile(point, (shape[0], 1))
@@ -1340,7 +1329,10 @@ class URDMEMesh(dolfin.Mesh):
 
         return json.dumps(document)
 
-    def _ipython_display_(self, filename=None,colors=None):
+    def _ipython_display_(self, filename=None, colors=None, width=500):
+        self.display(filename=filename, colors=colors, width=width)
+
+    def display(self, filename=None, colors=None, width=500):
         jstr = self.export_to_three_js(colors=colors)
         hstr = None
         with open(os.path.dirname(os.path.abspath(__file__))+"/data/three.js_templates/mesh.html",'r') as fd:
@@ -1348,13 +1340,15 @@ class URDMEMesh(dolfin.Mesh):
         if hstr is None:
             raise Exception("could note open template mesh.html")
         hstr = hstr.replace('###PYURDME_MESH_JSON###',jstr)
+        hstr = hstr.replace('###WIDTH###',str(width))
+        height = int(width * 0.75)
         # Create a random id for the display div. This is to avioid multiple plots ending up in the same
         # div in Ipython notebook
         displayareaid=str(uuid.uuid4())
         hstr = hstr.replace('###DISPLAYAREAID###',displayareaid)
-        html = '<div id="'+displayareaid+'" class="cell"></div>'
+        html = '<div style="width: {0}px; height: {1}px;" id="{2}" ></div>'.format(width, height, displayareaid)
 
-        if filename != None:
+        if filename is not None:
             with open(filename, 'w') as fd:
                 fd.write("""
 <html>
@@ -1818,8 +1812,9 @@ class URDMEResult(dict):
         if colors == None:
             colors =  get_N_HexCol(len(species))
 
+        if not isinstance(species, list):
+           species = [species]
         for j,spec in enumerate(species):
-
             timeslice = self.get_species(spec, time_index)
             ns = numpy.sum(timeslice)
             total_num_particles += ns
@@ -1887,16 +1882,18 @@ class URDMEResult(dict):
         colors = _compute_colors(timeslice)
         return colors
 
-    def display_particles(self,species, time_index):
+    def display_particles(self,species, time_index, width=500):
         hstr = self._export_to_particle_js(species, time_index)
         displayareaid=str(uuid.uuid4())
         hstr = hstr.replace('###DISPLAYAREAID###',displayareaid)
+        hstr = hstr.replace('###WIDTH###',str(width))
+        height = int(width*0.75)
 
-        html = '<div id="'+displayareaid+'" class="cell"></div>'
+        html = '<div style="width: {0}px; height: {1}px;" id="{2}" ></div>'.format(width, height, displayareaid)
         IPython.display.display(IPython.display.HTML(html+hstr))
 
 
-    def display(self,species,time_index,opacity=1.0,wireframe=True):
+    def display(self, species, time_index, opacity=1.0, wireframe=True, width=500):
         """ Plot the trajectory as a PDE style plot. """
         data = self.get_species(species,time_index,concentration=True)
         fun = DolfinFunctionWrapper(self.model.mesh.get_function_space())
@@ -1907,7 +1904,7 @@ class URDMEResult(dict):
             vec[i]=data[i]
             #for i,d in enumerate(data):
             #   vec[i] = d
-        fun.display(opacity=opacity, wireframe=wireframe)
+        fun.display(opacity=opacity, wireframe=wireframe, width=width)
 
 
 class DolfinFunctionWrapper(dolfin.Function):
@@ -1918,7 +1915,7 @@ class DolfinFunctionWrapper(dolfin.Function):
     def __init__(self, function_space):
         dolfin.Function.__init__(self, function_space)
 
-    def display(self, opacity=1.0,wireframe=True):
+    def display(self, opacity=1.0, wireframe=True, width=500):
         """ Plot the solution in an IPython notebook.
 
             opacity:    controls the degree of transparency
@@ -1945,9 +1942,10 @@ class DolfinFunctionWrapper(dolfin.Function):
             hstr = hstr.replace('###WIREFRAME###',"true")
         else:
             hstr = hstr.replace('###WIREFRAME###',"false")
+        hstr = hstr.replace('###WIDTH###',str(width))
+        height = int(width * 0.75)
 
-
-        html = '<div id="'+displayareaid+'" class="cell"></div>'
+        html = '<div style="width: {0}px; height: {1}px;" id="{2}" ></div>'.format(width, height, displayareaid)
         IPython.display.display(IPython.display.HTML(html+hstr))
 
 #   def vector(self):
@@ -2159,7 +2157,7 @@ class URDMESolver:
         # Write the propensity file
         self.propfilename = self.model_name + '_pyurdme_generated_model'
         if self.model_file == None:
-            prop_file_name=self.solver_dir + self.propfilename + '.c'
+            prop_file_name = self.solver_dir + self.propfilename + '.c'
             if self.report_level > 1:
                 print "Creating propensity file {0}".format(prop_file_name)
             self.create_propensity_file(file_name=prop_file_name)
@@ -2167,7 +2165,7 @@ class URDMESolver:
             cmd = " ".join(['cp', self.model_file, self.solver_dir + self.propfilename + '.c'])
             if self.report_level > 1:
                 print cmd
-            subprocess.call(cmd,shell=True)
+            subprocess.call(cmd, shell=True)
 
         # Build the solver
         makefile = 'Makefile.' + self.NAME
@@ -2241,38 +2239,24 @@ class URDMESolver:
 
             if seed is not None:
                 urdme_solver_cmd.append(str(seed+run_ndx))
-            if self.report_level >= 1:
+            if self.report_level > 1:
                 print 'cmd: {0}\n'.format(urdme_solver_cmd)
+            stdout = ''
+            stderr = ''
             try:
-                #if self.report_level >= 1:  #stderr & stdout to the terminal
-                #    handle = subprocess.Popen(urdme_solver_cmd)
-                #else:
-                handle = subprocess.Popen(urdme_solver_cmd, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+                if self.report_level >= 1:  #stderr & stdout to the terminal
+                    handle = subprocess.Popen(urdme_solver_cmd)
+                else:
+                    handle = subprocess.Popen(urdme_solver_cmd, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+                    stdout, stderr = handle.communicate()
                 return_code = handle.wait()
             except OSError as e:
                 print "Error, execution of solver raised an exception: {0}".format(e)
                 print "urdme_solver_cmd = {0}".format(urdme_solver_cmd)
-                #raise URDMEError("Solver execution failed")
-
-            try:
-                stderr = handle.stderr.read()
-            except Exception as e:
-                stderr = 'Error reading stderr: {0}'.format(e)
-            try:
-                stdout = handle.stdout.read()
-            except Exception as e:
-                stdout = 'Error reading stdout: {0}'.format(e)
-
-            if self.report_level > 1:
-                print stdout
-                print stderr
 
             if return_code != 0:
-                print outfile.name
-                print return_code
                 if self.report_level >= 1:
                     try:
-                        #print handle.stderr.read(), handle.stdout.read()
                         print stderr, stdout
                     except Exception as e:
                         pass

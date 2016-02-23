@@ -1893,18 +1893,20 @@ class URDMEResult(dict):
         IPython.display.display(IPython.display.HTML(html+hstr))
 
 
-    def display(self, species, time_index, opacity=1.0, wireframe=True, width=500):
+    def display(self, species, time_index, opacity=1.0, wireframe=True, width=500, camera=[0,0,1]):
         """ Plot the trajectory as a PDE style plot. """
         data = self.get_species(species,time_index,concentration=True)
         fun = DolfinFunctionWrapper(self.model.mesh.get_function_space())
         vec = fun.vector()
-        v2d= self.get_v2d()
         (nd,) = numpy.shape(data)
-        for i in range(nd):
-            vec[i]=data[i]
-            #for i,d in enumerate(data):
-            #   vec[i] = d
-        fun.display(opacity=opacity, wireframe=wireframe, width=width)
+        if nd == len(vec):
+            for i in range(nd):
+                vec[i]=data[i]
+        else:
+            #v2d= self.get_v2d()
+            for i in range(len(vec)):
+                vec[i] = data[i] # shouldn't we use v2d or d2v here?  But it doesn't work if I do.
+        fun.display(opacity=opacity, wireframe=wireframe, width=width, camera=camera)
 
 
 class DolfinFunctionWrapper(dolfin.Function):
@@ -1915,7 +1917,7 @@ class DolfinFunctionWrapper(dolfin.Function):
     def __init__(self, function_space):
         dolfin.Function.__init__(self, function_space)
 
-    def display(self, opacity=1.0, wireframe=True, width=500):
+    def display(self, opacity=1.0, wireframe=True, width=500, camera=[0,0,1]):
         """ Plot the solution in an IPython notebook.
 
             opacity:    controls the degree of transparency
@@ -1930,7 +1932,7 @@ class DolfinFunctionWrapper(dolfin.Function):
         with open(os.path.dirname(os.path.abspath(__file__))+"/data/three.js_templates/solution.html",'r') as fd:
             hstr = fd.read()
         if hstr is None:
-            raise Exception("could note open template mesh.html")
+            raise Exception("could note open template solution.html")
         hstr = hstr.replace('###PYURDME_MESH_JSON###',jstr)
 
         # Create a random id for the display div. This is to avioid multiple plots ending up in the same
@@ -1944,6 +1946,12 @@ class DolfinFunctionWrapper(dolfin.Function):
             hstr = hstr.replace('###WIREFRAME###',"false")
         hstr = hstr.replace('###WIDTH###',str(width))
         height = int(width * 0.75)
+
+        # ###CAMERA_X###, ###CAMERA_Y###, ###CAMERA_Z###
+        hstr = hstr.replace('###CAMERA_X###',str(camera[0]))
+        hstr = hstr.replace('###CAMERA_Y###',str(camera[1]))
+        hstr = hstr.replace('###CAMERA_Z###',str(camera[2]))
+
 
         html = '<div style="width: {0}px; height: {1}px;" id="{2}" ></div>'.format(width, height, displayareaid)
         IPython.display.display(IPython.display.HTML(html+hstr))

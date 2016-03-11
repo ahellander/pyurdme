@@ -1,4 +1,3 @@
-""" NSM solver. """
 import pyurdme
 import os
 import tempfile
@@ -16,7 +15,8 @@ except:
     pass
 
 class sGFRDSolver(pyurdme.URDMESolver):
-    """ Micro solver class. """
+    """ Micro solver class.TODO: Add short description. """
+    
     NAME = 'sGFRD'
     
     def __init__(self, model, solver_path=None, report_level=0, model_file=None, sopts=None):

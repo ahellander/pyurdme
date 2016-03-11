@@ -1230,11 +1230,18 @@ class URDMEMesh(dolfin.Mesh):
     def generate_cube_mesh(cls, L, nx, ny, nz, periodic=False):
         """ Unit Cube (3D) of with nx, ny, nz points in the respective axes, and side length L. """
         try:
-            mesh = dolfin.BoxMesh(dolfin.Point(0, 0, 0), dolfin.Point(L, L, L), nx, ny, nz)
+             # Dolfin 1.5.0
+            mesh = dolfin.BoxMesh(0,0,0, L,L,L, nx, ny, nz)
+            
         except (TypeError, NotImplementedError) as e:
-            # for Dolfin 1.6+
-            box = mshr.Box(dolfin.Point(0,0,0), dolfin.Point(L,L,L))
-            mesh = mshr.generate_mesh(box, nx)
+            try:
+                # Dolfin 1.6+
+                mesh = dolfin.BoxMesh(dolfin.Point(0, 0, 0), dolfin.Point(L, L, L), nx, ny, nz)
+            except:
+                # for Dolfin 1.6+
+                box = mshr.Box(dolfin.Point(0,0,0), dolfin.Point(L,L,L))
+                mesh = mshr.generate_mesh(box, nx)
+
         ret = URDMEMesh(mesh)
         if isinstance(periodic, bool) and periodic:
             ret.add_periodic_boundary_condition(CubeMeshPeriodicBoundary(Lx=L, Ly=L, Lz=L))

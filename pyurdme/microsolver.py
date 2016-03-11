@@ -14,10 +14,10 @@ try:
 except:
     pass
 
-class sGFRDSolver(pyurdme.URDMESolver):
+class MMMSSolver(pyurdme.URDMESolver):
     """ Micro solver class.TODO: Add short description. """
     
-    NAME = 'sGFRD'
+    NAME = 'mmms'
     
     def __init__(self, model, solver_path=None, report_level=0, model_file=None, sopts=None):
         pyurdme.URDMESolver.__init__(self,model,solver_path,report_level,model_file,sopts)
@@ -49,8 +49,7 @@ class sGFRDSolver(pyurdme.URDMESolver):
         # Write the model dimension
         (np,dim) = numpy.shape(self.model.mesh.coordinates())
         input_file.write("DIMENSION {0}\n".format(dim))
-        input_file.write("BOUNDARY 0 100 0 100 0 100\n")
-        input_file.write("VOXELS 5\n")
+        input_file.write("BOUNDARY 0 1e-6 0 1e-6 0 1e-6\n")
         
         self.model.resolve_parameters()
         params = ""
@@ -82,7 +81,7 @@ class sGFRDSolver(pyurdme.URDMESolver):
             reacstr += "> "
             
             for j, product in enumerate(R.products):
-                reacstr += str(product)
+                reacstr += str(product)+" "
             reacstr += " {0}\n".format(str(R.marate.value))
             
         input_file.write(reacstr)
@@ -124,14 +123,14 @@ class sGFRDSolver(pyurdme.URDMESolver):
         infile.close()
         
         # Generate output directory
-        outfolder_name = tempfile.mkdtemp(prefix="pyurdme_hybrid_")
+        outfolder_name = tempfile.mkdtemp(prefix="pyurdme_mmms_")
         
         if self.report_level > 2:
             print model_str
         if number_of_trajectories > 1:
             result_list = []
 
-        solver_str=os.path.dirname(__file__)+"/bin/hybrid"
+        solver_str=os.path.dirname(__file__)+"/mmms/bin/mmms"
         #solver_str="/Users/andreash/bitbucket/hybrid/bin/hybrid"
 
         solver_cmd = [solver_str,self.infile_name, outfolder_name]

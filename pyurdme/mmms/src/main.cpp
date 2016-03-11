@@ -30,6 +30,17 @@
 #include "../include/utils.h"
 #include "../include/rand_gen.h"
 
+#ifdef OLD_HEADER_FILENAME
+#include <iostream.h>
+#else
+#include <iostream>
+#endif
+#include <string>
+#include "H5Cpp.h"
+#ifndef H5_NO_NAMESPACE
+    using namespace H5;
+#endif
+
 int dimension;
 int nxsteps = 20;
 int ntsteps = 30;
@@ -43,8 +54,6 @@ void main_simulator(group *grp,vector <species>& specs,vector <association>& ass
 bool compare_events (tent_event e1,tent_event e2) {
     return e1.t<e2.t;
 }
-
-
 
 double check_association(vector <particle>& particles,vector <species>& spec,vector <tent_event>& tent_events,vector <association> associations,gsl_rng *rng,double t,int i,int j,double dt,double *micro_param){
     
@@ -690,6 +699,7 @@ void main_simulator(group *grp,vector <species>& specs,vector <association>& ass
 
 
 int main(int argc, char* argv[]) {
+
     
 #ifdef __MACH__
     uint64_t seed;
@@ -707,6 +717,7 @@ int main(int argc, char* argv[]) {
     gettimeofday(&start, NULL);
     
     simulation sim;
+
     /* Set some default values. */
     sim.ntraj = 1;
     sim.ncores = 1;
@@ -745,6 +756,7 @@ int main(int argc, char* argv[]) {
     strcpy(filename_temp,filename1);
     int FF = 2;
     char num_temp[MAX_CHARACTERS];
+
     while(mkdir(filename_temp,0777)==-1){
         strcpy(filename_temp,filename1);
         sprintf(num_temp,"_%d",FF);
@@ -773,6 +785,7 @@ int main(int argc, char* argv[]) {
         
         
         /* Open appropriate output streams. */
+
         char traj_num[30];
         sprintf(traj_num,"/%d_total.txt",l);
         char outputfile[MAX_CHARACTERS];
@@ -791,6 +804,8 @@ int main(int argc, char* argv[]) {
         file_pos = fopen(outputpos,"w");
         
         
+        H5File file( FILE_NAME, H5F_ACC_TRUNC );
+
         group grp;
 
         
@@ -827,6 +842,7 @@ int main(int argc, char* argv[]) {
         
         print_molecules(&grp,0.0,file_pos);
         fflush(file_pos);
+
         while(t<T){
             /* TODO: We should check for birth processes here. */
             main_simulator(&grp,specs,assocs,dissocs,sim.boundary,dt,rng,l);

@@ -210,14 +210,7 @@ class MICROResult():
         if colors == None:
             colors =  get_N_HexCol(len(species))
         
-        vtx = factor*vtx
-        centroid = numpy.mean(vtx,axis=0)
-        # Shift so the centroid is now origo
-        normalized_vtx = numpy.zeros(numpy.shape(vtx))
-        for i,v in enumerate(vtx):
-            normalized_vtx[i,:] = v - centroid
-        vtx=normalized_vtx
-
+ 
         spec_map = self.model.get_species_map()
 
         for j,spec in enumerate(species):
@@ -226,13 +219,18 @@ class MICROResult():
             vtx = particles['positions']
             maxvtx = numpy.max(numpy.amax(vtx,axis=0))
             factor = 1/maxvtx
+            vtx = factor*vtx
+            centroid = numpy.mean(vtx,axis=0)
+            # Shift so the centroid is now origo
+            normalized_vtx = numpy.zeros(numpy.shape(vtx))
+            for i,v in enumerate(vtx):
+                normalized_vtx[i,:] = v - centroid
+            vtx=normalized_vtx
 
-            for k,p in enumerate(particles):
-                type = int(p[0])
-                if type == spec_ind:
-                    x.append(vtx[k,0])
-                    y.append(vtx[k,1])
-                    z.append(vtx[k,2])
+            for v in vtx:
+                    x.append(v[0])
+                    y.append(v[1])
+                    z.append(v[2])
                     c.append(colors[j])
                     radius.append(0.01)
         

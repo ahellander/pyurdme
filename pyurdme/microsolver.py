@@ -201,19 +201,6 @@ class MICROResult():
             template = fd.read()
         
         
-        factor, coordinates = self.model.mesh.get_scaled_normalized_coordinates()
-        dims = numpy.shape(coordinates)
-        if dims[1]==2:
-            is3d = 0
-            vtxx = numpy.zeros((dims[0],3))
-            for i, v in enumerate(coordinates):
-                vtxx[i,:]=(list(v)+[0])
-            coordinates = vtxx
-        else:
-            is3d = 1
-        
-        h = self.model.mesh.get_mesh_size()
-        
         x=[]
         y=[]
         z=[]
@@ -222,11 +209,6 @@ class MICROResult():
         
         if colors == None:
             colors =  get_N_HexCol(len(species))
-        
-        particles = self.get_particles(time_index)
-        vtx = particles[:,1:4]
-        maxvtx = numpy.max(numpy.amax(vtx,axis=0))
-        factor = 1/maxvtx
         
         vtx = factor*vtx
         centroid = numpy.mean(vtx,axis=0)
@@ -237,8 +219,14 @@ class MICROResult():
         vtx=normalized_vtx
 
         spec_map = self.model.get_species_map()
+
         for j,spec in enumerate(species):
             spec_ind=spec_map[spec]
+            particles = self.get_particles(spec_ind, time_index)
+            vtx = particles['positions']
+            maxvtx = numpy.max(numpy.amax(vtx,axis=0))
+            factor = 1/maxvtx
+
             for k,p in enumerate(particles):
                 type = int(p[0])
                 if type == spec_ind:

@@ -1,7 +1,7 @@
 CC=g++
 SRC=src/main.cpp
 EXECUTABLE=bin/mmms
-FLAGS=-Wall -pedantic `gsl-config --cflags --libs` -g -O3 
+FLAGS=-Wall -pedantic `gsl-config --cflags --libs` -g -O3 -lhdf5 -lhdf5_hl -lhdf5_cpp
 
 CURR_DIR = $(shell pwd)
 

@@ -7,6 +7,7 @@ import numpy
 from pyurdme import get_N_HexCol
 import json
 import uuid
+import h5py
 
 try:
     # This is only needed if we are running in an Ipython Notebook
@@ -87,7 +88,7 @@ class MMMSSolver(pyurdme.URDMESolver):
         input_file.write(reacstr)
 
         input_file.write("T {0}\n".format(str(self.model.tspan[-1])))
-        nint = (self.model.tspan[-1]-self.model.tspan[0])/(self.model.tspan[-1]-self.model.tspan[-2])
+        nint = len(self.model.tspan)
         input_file.write("NINT {0}\n".format(str(int(nint))))
 
     def run(self, number_of_trajectories=1, seed=None, input_file=None, loaddata=False):
@@ -116,14 +117,17 @@ class MMMSSolver(pyurdme.URDMESolver):
         infile = tempfile.NamedTemporaryFile(delete=False, dir=os.environ.get('PYURDME_TMPDIR'))
         self.infile_name = infile.name
         self.create_input_file(infile.name)
+
         #  print infile.read()
         with open('test.txt','w') as fh:
             fh.write(infile.read())
+
         #infile.write(model_str)
         infile.close()
         
-        # Generate output directory
-        outfolder_name = tempfile.mkdtemp(prefix="pyurdme_mmms_")
+        # Generate output file
+        outfile = tempfile.NamedTemporaryFile(delete=False, dir=os.environ.get('PYURDME_TMPDIR'))
+        outfile.close()        
         
         if self.report_level > 2:
             print model_str
@@ -133,13 +137,13 @@ class MMMSSolver(pyurdme.URDMESolver):
         solver_str=os.path.dirname(__file__)+"/mmms/bin/mmms"
         #solver_str="/Users/andreash/bitbucket/hybrid/bin/hybrid"
 
-        solver_cmd = [solver_str,self.infile_name, outfolder_name]
+        solver_cmd = [solver_str,self.infile_name, outfile.name]
         handle = subprocess.Popen(solver_cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         handle.wait()
         
         
         try:
-            result = MICROResult(self.model,outfolder_name)
+            result = MICROResult(self.model,outfile.name)
             return result
         except IOError,e:
             print handle.stderr.read()
@@ -147,31 +151,52 @@ class MMMSSolver(pyurdme.URDMESolver):
 
 class MICROResult():
 
-    def __init__(self,model, output_folder_name=None):
-        self.output_folder_name=output_folder_name
+    def __init__(self,model, filename=None):
+        self.filename=filename
         self.model = model
     
-    def get_particles(self,time):
-        """ Return all particles at a certain time point. """
-        with open(self.output_folder_name+"/0_pos.txt", 'r') as fh:
-            for line in fh.readlines():
-                timepoint = json.loads(line)
-                if timepoint['time'] == time:
-                    return numpy.fromstring(timepoint['particles'],sep=' ').reshape((timepoint['number_of_particles'],8))
-    
-    def get_species(self,spec_name, time):
-        """ Return copy number of spec_name. """
-        
-        with open(self.output_folder_name+"/0_pos.txt", 'r') as fh:
-            print fh.read()
+    def get_particles(self,species, time_index):
+        """ Return a dict with the unique ids and positions of all particles of type species
+            at time point time. """
 
+        file = h5py.File(self.filename)
+        return {
+                'unique_ids':numpy.array(file.get("Trajectories/0/Type_{0}/unique_ids_{1}".format(species, time_index))),
+                'positions':numpy.array(file.get("Trajectories/0/Type_{0}/positions_{1}".format(species,time_index)))
+                }
+
+    def get_species(self,spec_name, time_index):
+        """ Return copy number of spec_name in each voxel of the mesh. This function mimics the
+            functionality of the mesoscopic solvers, so we insert particles in the voxels
+            based on their position.  """
+
+        return None
+        #with open(self.output_folder_name+"/0_pos.txt", 'r') as fh:
+        #    print fh.read()
+
+    def get_summary_statistic(self, species, time_indices=None):
+        """ Return the sum of molecules of a species for set of time points.
+            If the result file contains multiple trajectories, then the 
+            mean is taken over the realizations. 
+
+            TODO: Implement mean value. 
+
+        """
+        
+        if time_indices == None:
+            tind = range(len(self.model.tspan))
+
+        num_mol = []
+        for ti in tind:
+            r = self.get_particles(species, ti)
+            (nm,dim) = numpy.shape(r['unique_ids'])
+            num_mol.append(nm)
+
+        return numpy.array(num_mol)
 
     def _export_to_particle_js(self,species,time_index, colors=None):
         """ Create a html string for displaying the particles as small spheres. """
         import random
-        #with open(os.path.dirname(os.path.abspath(__file__))+"/data/three.js_templates/particles.html",'r') as fd:
-            #template = fd.read()
-        
         with open(os.path.dirname(pyurdme.__file__)+"/data/three.js_templates/particles.html",'r') as fd:
             template = fd.read()
         
@@ -241,7 +266,14 @@ class MICROResult():
         IPython.display.display(IPython.display.HTML(html+hstr))
 
     def __del__(self):
-        shutil.rmtree(self.output_folder_name)
+        """ Deconstructor. """
+            #   if not self.data_is_loaded:
+        try:
+            # Clean up data file
+            os.remove(self.filename)
+        except OSError as e:
+            #print "URDMEResult.__del__: Could not delete result file'{0}': {1}".format(self.filename, e)
+            pass
 
 
 

@@ -697,6 +697,47 @@ void main_simulator(group *grp,vector <species>& specs,vector <association>& ass
 
 }
 
+void add_time_point_to_file(H5File file, group grp, int num_specs, int traj_num, int time_index){
+
+    
+    hsize_t  dims[2];        
+    double position_buffer[10000][3];
+    int ids_buffer[10000];
+    int num_spec_type;
+
+
+    for (int spec=0;spec<num_specs;spec++){
+
+        num_spec_type=0;
+        for(int j=0;j<(int)(grp.particles.size());j++){
+
+            int type = grp.particles[j].type;
+
+            if (type == spec){ 
+               num_spec_type++; 
+               position_buffer[j][0] = grp.particles[j].pos[0];
+               position_buffer[j][1] = grp.particles[j].pos[1];
+               position_buffer[j][2] = grp.particles[j].pos[2];
+               ids_buffer[j] = grp.particles[j].unique_id;
+            }
+
+        }
+
+        dims[0] = num_spec_type;
+        dims[1] = 3;
+        DataSpace position_dataspace = DataSpace(2, dims); 
+        dims[1]=1;
+        DataSpace ids_dataspace = DataSpace(2, dims); 
+
+        DataSet positions = file.createDataSet("/Trajectories/"+to_string(traj_num)+"/Type_"+to_string(spec)+"/positions_"+to_string(time_index), PredType::NATIVE_DOUBLE,position_dataspace);
+        DataSet ids = file.createDataSet("/Trajectories/"+to_string(traj_num)+"/Type_"+to_string(spec)+"/unique_ids_"+to_string(time_index), PredType::NATIVE_INT,ids_dataspace);
+
+        positions.write(position_buffer, PredType::NATIVE_DOUBLE);
+        ids.write(ids_buffer, PredType::NATIVE_INT);
+
+    }
+}
+
 
 int main(int argc, char* argv[]) {
 
@@ -732,84 +773,23 @@ int main(int argc, char* argv[]) {
     parse_model(argv[1],&sim,specs,assocs,dissocs,births,parameters);
     dimension = sim.dimension;
     
-    print_model(specs,assocs,dissocs,births,&sim);
-    
-    /* Create output directory. */
-    
-    struct tm *tm;
-    char str_date[100];
-    time_t curr_time;
-    curr_time = time(NULL);
-    tm = localtime(&curr_time);
-    strftime(str_date,sizeof(str_date),"%Y-%m-%d-%H-%M-%S",tm);
-    
-    char filename1[MAX_CHARACTERS];
-    memset(filename1,'\0',sizeof(filename1));
-    strcat(filename1,"out/");
-    mkdir(filename1,0777);
-    strcat(filename1,sim.name);
-    mkdir(filename1,0777);
-    strcat(filename1,"/");
-    strcat(filename1,str_date);
-    char filename_temp[MAX_CHARACTERS];
-    memset(filename_temp,'\0',sizeof(filename_temp));
-    strcpy(filename_temp,filename1);
-    int FF = 2;
-    char num_temp[MAX_CHARACTERS];
+    //print_model(specs,assocs,dissocs,births,&sim);
 
-    while(mkdir(filename_temp,0777)==-1){
-        strcpy(filename_temp,filename1);
-        sprintf(num_temp,"_%d",FF);
-        strcat(filename_temp,num_temp);
-    }
-    
-    
-    
-    /* Copy model file. We assume that the model file has not been changed since start of execution. */
-    char model_file[MAX_CHARACTERS];
-    char model_file_out[MAX_CHARACTERS];
-    sprintf(model_file,"/%s.txt",sim.name);
-    strcpy(model_file_out,filename_temp);
-    strcat(model_file_out,model_file);
-    cp(model_file_out,argv[1]);
-    
-    
-    
+    string output_filename = argv[2];
+
+    /* Create output directory. */
     
     /* Do simulations. */
     for(int l=0;l<sim.ntraj;++l){
+
         /* Initialize random number generator. */
         gsl_rng *rng = gsl_rng_alloc(gsl_rng_taus);
         long int seed_loc = lrand48();
         gsl_rng_set(rng,seed_loc);
         
         
-        /* Open appropriate output streams. */
-
-        char traj_num[30];
-        sprintf(traj_num,"/%d_total.txt",l);
-        char outputfile[MAX_CHARACTERS];
-        char outputpos[MAX_CHARACTERS];
-        memset(outputfile,'\0',sizeof(outputfile));
-        strcpy(outputfile,filename_temp);
-        strcpy(outputpos,filename_temp);
-        strcat(outputfile,traj_num);
-        sprintf(traj_num,"/%d_pos.txt",l);
-        strcat(outputpos,traj_num);
-   
-        FILE *file_total;
-        file_total = fopen(outputfile,"w");
-    
-        FILE *file_pos;
-        file_pos = fopen(outputpos,"w");
-        
-        
-        H5File file( FILE_NAME, H5F_ACC_TRUNC );
-
-        group grp;
-
-        
         /* Initialize molecules. */
+        group grp;
         for(int i=0;i<(int)(specs.size());i++){
             generate_particles(&grp,sim.boundary,specs[i].initial_value,i,rng);
         }
@@ -819,56 +799,36 @@ int main(int argc, char* argv[]) {
         double t = 0.0;
     
         int num_specs = (int)(specs.size());
-        int *num_mol;
-        num_mol = (int *)malloc(sizeof(int)*num_specs);
-        
-        for(int j=0;j<num_specs;j++){
-            num_mol[j] = 0;
+    
+    
+        H5File file = H5File(output_filename, H5F_ACC_TRUNC );
+
+        /*
+        * Create the base group in the file
+        */
+        Group trajectory_group = file.createGroup( "/Trajectories" );
+        string prefix = "/Trajectories/"+to_string(l);
+        Group trajectory_0 = file.createGroup( prefix );
+        for (int spec=0; spec<num_specs;spec++){
+            Group trajectory_0 = file.createGroup( prefix +"/Type_"+ to_string(spec));
         }
-        
-        for(int j=0;j<(int)(grp.particles.size());j++){
-            num_mol[grp.particles[j].type]++;
-        }
-        for(int j=0;j<num_specs;j++){
-            fprintf(file_total,"%d ",num_mol[j]);
-        }
-        for(int j=0;j<num_specs;j++){
-            num_mol[j] = 0;
-        }
-        
-        fprintf(file_total,"%.5g ",0.0);
-        fprintf(file_total,"\n");
-        
-        
-        print_molecules(&grp,0.0,file_pos);
-        fflush(file_pos);
+
+
+        int time_index = 0;
+        add_time_point_to_file(file,grp,num_specs,l,time_index);
 
         while(t<T){
+
             /* TODO: We should check for birth processes here. */
             main_simulator(&grp,specs,assocs,dissocs,sim.boundary,dt,rng,l);
-            
             t += dt;
-            
-            print_molecules(&grp,t,file_pos);
-            
-            for(int j=0;j<(int)(grp.particles.size());j++){
-                num_mol[grp.particles[j].type]++;
-            }
-            for(int j=0;j<num_specs;j++){
-                fprintf(file_total,"%d ",num_mol[j]);
-            }
-            fprintf(file_total,"%.5g ",t);
-            fprintf(file_total,"\n");
-            for(int j=0;j<num_specs;j++){
-                num_mol[j] = 0;
-            }
-            fflush(file_total);
-            fflush(file_pos);
+            time_index++;
+            // Write solution to file.
+            add_time_point_to_file(file,grp,num_specs,l,time_index);
+
         }
+
         gsl_rng_free(rng);
-        free(num_mol);
-        fclose(file_total);
-        fclose(file_pos);
     }
     
     

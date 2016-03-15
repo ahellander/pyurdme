@@ -1,9 +1,34 @@
 #ifndef STRUCTS_H
 #define STRUCTS_H
 
+#include <vector>
+#include <iostream>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <sstream>
+
+/* Gnu scientific library */
+#include "gsl/gsl_rng.h"
+#include "gsl/gsl_randist.h"
+#include "gsl/gsl_errno.h"
+
+#include "global_params.h"
+#include "mesh.h"
+
 using namespace std;
 
-int grp_id,p_id=0;
+//int grp_id,p_id=0;
+
+typedef struct mmmsmodel{
+    fem_mesh *mesh;
+
+    int Mspecies;
+    int *sd;
+
+
+}mmmsmodel;
 
 typedef struct simulation{
     int ntraj;
@@ -15,8 +40,6 @@ typedef struct simulation{
     int num_intervals;
     double boundary[6];
     double volume;
-    
-    
     
     int num_voxels;
     char name[MAX_CHARACTERS];
@@ -83,17 +106,15 @@ typedef struct node{
     
 }node;
 
-typedef struct tetrahedron{
-    int type;
-    int nodes[4];
-}tetrahedron;
-
 typedef struct plane{
     double p[3];
     double v1[3];
     double v2[3];
     double n[3];
     int cn;
+    int isbnd; 
+    vector <int> type;
+
 }plane;
 
 

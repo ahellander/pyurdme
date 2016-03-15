@@ -11,7 +11,7 @@
 #include "gsl/gsl_sf_gamma.h"
 
 
-#define pi 3.141592653589793
+#define rand_gen_constant_pi 3.141592653589793
 
 
 
@@ -61,9 +61,9 @@ double gen_rnd_theta(double D,double t,double r, const int N,gsl_rng *rng)
 	 }
 	 */
 	double *theta = (double *)malloc(N*sizeof(double));
-	double right = (15*sqrt(2*D*t))/(pi*r);//sqrt(2*D*t/(r_0*r_0))/(pi*r_0*r_0);
-	if(right>pi)
-		right = pi;
+	double right = (15*sqrt(2*D*t))/(rand_gen_constant_pi*r);//sqrt(2*D*t/(r_0*r_0))/(rand_gen_constant_pi*r_0*r_0);
+	if(right>rand_gen_constant_pi)
+		right = rand_gen_constant_pi;
 	double h = right/N;
 	for(int i = 0;i<N;i++)
 	{
@@ -189,9 +189,9 @@ double random_time_num(double k_r,double r_0,double sigma,
 	
 	double const_d = 0.0;
 	if(d==3)
-		const_d = 4*pi*sigma*sigma*D;
+		const_d = 4*rand_gen_constant_pi*sigma*sigma*D;
 	else if (d==2)
-		const_d = 2*pi*sigma*D;
+		const_d = 2*rand_gen_constant_pi*sigma*D;
 	else if (d==1)
 		const_d = D;
 	
@@ -219,9 +219,9 @@ double random_time_num(double k_r,double r_0,double sigma,
     }
     
 	if(d == 3)
-		p[INIT] = 1.0/(4*pi*r[INIT]*r[INIT]*h);
+		p[INIT] = 1.0/(4*rand_gen_constant_pi*r[INIT]*r[INIT]*h);
 	else if(d == 2)
-		p[INIT] = 1.0/(2*pi*r[INIT]*h);
+		p[INIT] = 1.0/(2*rand_gen_constant_pi*r[INIT]*h);
 	else if(d == 1)
 		p[INIT] = 1.0/h;
     
@@ -281,12 +281,12 @@ double random_time_num(double k_r,double r_0,double sigma,
 		}
 		
 		if(d==3){
-			con1 = 4*pi*sigma*sigma;
-			con2 = 4*pi*r[0]*r[0];
+			con1 = 4*rand_gen_constant_pi*sigma*sigma;
+			con2 = 4*rand_gen_constant_pi*r[0]*r[0];
 		}
 		else if(d==2){
-			con1 = 2*pi*sigma;
-			con2 = 2*pi*r[0];
+			con1 = 2*rand_gen_constant_pi*sigma;
+			con2 = 2*rand_gen_constant_pi*r[0];
 		}
 		else if(d==1){
 			con1 = 1;
@@ -298,12 +298,12 @@ double random_time_num(double k_r,double r_0,double sigma,
 		for(int j = 0;j<J-1;j++)
 		{
 			if(d == 3) {
-				con2 = 4*pi*r[j]*r[j];
-				con3 = 4*pi*r[j+1]*r[j+1];
+				con2 = 4*rand_gen_constant_pi*r[j]*r[j];
+				con3 = 4*rand_gen_constant_pi*r[j+1]*r[j+1];
 			}
 			else if(d == 2) {
-				con2 = 2*pi*r[j];
-				con3 = 2*pi*r[j+1];
+				con2 = 2*rand_gen_constant_pi*r[j];
+				con3 = 2*rand_gen_constant_pi*r[j+1];
 			}
 			else if(d == 1) {
 				con2 = 1;
@@ -350,9 +350,9 @@ double random_time_num(double k_r,double r_0,double sigma,
 	for(int i = 0;i<J;i++)
 	{
 		if(d == 3)
-			con2 = 4*pi*r[i]*r[i];
+			con2 = 4*rand_gen_constant_pi*r[i]*r[i];
 		else if(d == 2)
-			con2 = 2*pi*r[i];
+			con2 = 2*rand_gen_constant_pi*r[i];
 		else if(d == 1)
 			con2 = 1;
 		pdf[i] = con2*p[i];
@@ -466,9 +466,9 @@ double random_time_num(double k_r,double r_0,double sigma,
 //	
 //	double const_d = 0.0;
 //	if(d==3)
-//    const_d = 4*pi*sigma*sigma*D;
+//    const_d = 4*rand_gen_constant_pi*sigma*sigma*D;
 //	else if (d==2)
-//    const_d = 2*pi*sigma*D;
+//    const_d = 2*rand_gen_constant_pi*sigma*D;
 //	else if (d==1)
 //    const_d = D;
 //	
@@ -499,12 +499,12 @@ double random_time_num(double k_r,double r_0,double sigma,
 //    /*
 //     if(d==3) {
 //     for(int i = 0;i<J;i++) {
-//     p[i] = 1.0/(4*pi*pow(r[i],2))*gsl_ran_gaussian_pdf(r[i]-h-r_0,sqrt(2*D*t));
+//     p[i] = 1.0/(4*rand_gen_constant_pi*pow(r[i],2))*gsl_ran_gaussian_pdf(r[i]-h-r_0,sqrt(2*D*t));
 //     }
 //     }
 //     else if(d==2) {
 //     for(int i = 0;i<J;i++) {
-//     p[i] = 1.0/(2*pi*r[i])*gsl_ran_gaussian_pdf(r[i]-h-r_0,sqrt(2*D*t));
+//     p[i] = 1.0/(2*rand_gen_constant_pi*r[i])*gsl_ran_gaussian_pdf(r[i]-h-r_0,sqrt(2*D*t));
 //     }
 //     }
 //     else if(d==1) {
@@ -514,9 +514,9 @@ double random_time_num(double k_r,double r_0,double sigma,
 //     }*/
 //    
 //	if(d == 3)
-//    p[INIT] = 1.0/(4*pi*r[INIT]*r[INIT]*h);
+//    p[INIT] = 1.0/(4*rand_gen_constant_pi*r[INIT]*r[INIT]*h);
 //	else if(d == 2)
-//    p[INIT] = 1.0/(2*pi*r[INIT]*h);
+//    p[INIT] = 1.0/(2*rand_gen_constant_pi*r[INIT]*h);
 //	else if(d == 1)
 //    p[INIT] = 1.0/h;
 //    
@@ -579,14 +579,14 @@ double random_time_num(double k_r,double r_0,double sigma,
 //		
 //		
 //        /*	double p_0 = 1/(1+(h*k_r)/(const_d))*p[0];
-//         double pdf_0 = 2*pi*sigma*p_0;// *sigma*p_0;
-//         double simp = h/3.0*(pdf_0+4*2*pi*r[0]*p[0]+2*pi*r[1]*p[1]);
+//         double pdf_0 = 2*rand_gen_constant_pi*sigma*p_0;// *sigma*p_0;
+//         double simp = h/3.0*(pdf_0+4*2*rand_gen_constant_pi*r[0]*p[0]+2*rand_gen_constant_pi*r[1]*p[1]);
 //         for(int j = 2;j<J-1;j+=2)
 //         {
 //         double temp1,temp2,temp3;
-//         temp1 = 2*pi*r[j-1];
-//         temp2 = 2*pi*r[j];
-//         temp3 = 2*pi*r[j+1];
+//         temp1 = 2*rand_gen_constant_pi*r[j-1];
+//         temp2 = 2*rand_gen_constant_pi*r[j];
+//         temp3 = 2*rand_gen_constant_pi*r[j+1];
 //         simp += h/3.0*(temp1*p[j-1]+4*temp2*p[j]+temp3*p[j+1]);
 //         }*/
 //		/*
@@ -600,12 +600,12 @@ double random_time_num(double k_r,double r_0,double sigma,
 //		
 //		
 //		if(d==3){
-//			con1 = 4*pi*sigma*sigma;
-//			con2 = 4*pi*r[0]*r[0];
+//			con1 = 4*rand_gen_constant_pi*sigma*sigma;
+//			con2 = 4*rand_gen_constant_pi*r[0]*r[0];
 //		}
 //		else if(d==2){
-//			con1 = 2*pi*sigma;
-//			con2 = 2*pi*r[0];
+//			con1 = 2*rand_gen_constant_pi*sigma;
+//			con2 = 2*rand_gen_constant_pi*r[0];
 //		}
 //		else if(d==1){
 //			con1 = 1;
@@ -617,12 +617,12 @@ double random_time_num(double k_r,double r_0,double sigma,
 //		for(int j = 0;j<J-1;j++)
 //		{
 //			if(d == 3) {
-//				con2 = 4*pi*r[j]*r[j];
-//				con3 = 4*pi*r[j+1]*r[j+1];
+//				con2 = 4*rand_gen_constant_pi*r[j]*r[j];
+//				con3 = 4*rand_gen_constant_pi*r[j+1]*r[j+1];
 //			}
 //			else if(d == 2) {
-//				con2 = 2*pi*r[j];
-//				con3 = 2*pi*r[j+1];
+//				con2 = 2*rand_gen_constant_pi*r[j];
+//				con3 = 2*rand_gen_constant_pi*r[j+1];
 //			}
 //			else if(d == 1) {
 //				con2 = 1;
@@ -679,15 +679,15 @@ double random_time_num(double k_r,double r_0,double sigma,
 //	for(int i = 0;i<J;i++)
 //	{
 //		if(d == 3)
-//        con2 = 4*pi*r[i]*r[i];
+//        con2 = 4*rand_gen_constant_pi*r[i]*r[i];
 //		else if(d == 2)
-//        con2 = 2*pi*r[i];
+//        con2 = 2*rand_gen_constant_pi*r[i];
 //		else if(d == 1)
 //        con2 = 1;
 //		pdf[i] = con2*p[i];
 //	}
 //	/*double p_0 = 1/(1+(h*k_r)/(const_d))*p[0];
-//     double pdf_0 = 4*pi*sigma*sigma*p_0;
+//     double pdf_0 = 4*rand_gen_constant_pi*sigma*sigma*p_0;
 //     double simp = h/3.0*(pdf_0+4*pdf[0]+pdf[1]);
 //     for(int i = 3;i<J-1;i+=2) {
 //     simp += h/3.0*(pdf[i-1]+4*pdf[i]+pdf[i+1]);
@@ -703,9 +703,9 @@ double random_time_num(double k_r,double r_0,double sigma,
 //	int i = 1;
 //    /*
 //     if(d == 3)
-//     p_dist = h/2*(1/(1+(h*k_r)/(const_d))*(4*pi*sigma*sigma*p[0])+pdf[0]);
+//     p_dist = h/2*(1/(1+(h*k_r)/(const_d))*(4*rand_gen_constant_pi*sigma*sigma*p[0])+pdf[0]);
 //     else if(d==2)
-//     p_dist = h/2*(1/(1+(h*k_r)/(const_d))*(2*pi*sigma*p[0])+pdf[0]);
+//     p_dist = h/2*(1/(1+(h*k_r)/(const_d))*(2*rand_gen_constant_pi*sigma*p[0])+pdf[0]);
 //     else if(d==1)
 //     p_dist = h/2*(1/(1+(h*k_r)/(const_d))*(p[0])+pdf[0]);
 //     */
@@ -748,7 +748,7 @@ double W2_real(double a,double b)
 	{
 		//printf("a=%10g,b=%g\n",a,b);
 		double x = a+b;
-		double temp = exp(-a*a)/(x*sqrt(pi));
+		double temp = exp(-a*a)/(x*sqrt(rand_gen_constant_pi));
 		double sum = 0;
 		int i = 1;
 		double term = 0;
@@ -778,7 +778,7 @@ double W2_real(double a,double b)
 
 double cdf_exact_refl(double t,double r_0,double r,double sigma,double D)
 {
-	double term1 = -(sqrt(D*t))/(r_0*sqrt(pi))*(exp(-pow(r-r_0,2)/(4*D*t))-
+	double term1 = -(sqrt(D*t))/(r_0*sqrt(rand_gen_constant_pi))*(exp(-pow(r-r_0,2)/(4*D*t))-
                                                 exp(-pow(r+r_0-2*sigma,2)/(4*D*t)))+
     0.5*(erf((r-r_0)/sqrt(4*D*t))+erf((r+r_0-2*sigma)/sqrt(4*D*t)));
 	
@@ -791,9 +791,9 @@ double cdf_exact_refl(double t,double r_0,double r,double sigma,double D)
 
 
 double p_irr(double t,double r_0,double r,double k_r,double sigma,double D){
-    double a = 1.0/(4*pi*r*r_0*sqrt(D));
-    double b = 1.0/sqrt(4*pi*t);
-    double k_D = 4*pi*sigma*D;
+    double a = 1.0/(4*rand_gen_constant_pi*r*r_0*sqrt(D));
+    double b = 1.0/sqrt(4*rand_gen_constant_pi*t);
+    double k_D = 4*rand_gen_constant_pi*sigma*D;
     double alpha_irr = (1+k_r/k_D)*sqrt(D)/sigma;
     double arg1 = -pow((r-r_0),2)/(4*D*t);
     double arg2 = -pow((r+r_0-2*sigma),2)/(4*D*t);
@@ -804,15 +804,15 @@ double p_irr(double t,double r_0,double r,double k_r,double sigma,double D){
 double p_irr_helper(double h,void *params){
 	double *temp = (double *)params;
     
-	return 4*pi*h*h*p_irr(temp[0],temp[1],h,temp[2],temp[3],temp[4]);
+	return 4*rand_gen_constant_pi*h*h*p_irr(temp[0],temp[1],h,temp[2],temp[3],temp[4]);
 }
 
 double cdf_exact_irr(double t,double r_0,double r,double k_r,
                      double sigma,double D)
 {
-	double term1 = -(sqrt(D*t))/(r_0*sqrt(pi))*(exp(-pow(r-r_0,2)/(4*D*t))-exp(-pow(r+r_0-2*sigma,2)/(4*D*t)))+0.5*(erf((r-r_0)/sqrt(4*D*t))+erf((r+r_0-2*sigma)/sqrt(4*D*t)));
+	double term1 = -(sqrt(D*t))/(r_0*sqrt(rand_gen_constant_pi))*(exp(-pow(r-r_0,2)/(4*D*t))-exp(-pow(r+r_0-2*sigma,2)/(4*D*t)))+0.5*(erf((r-r_0)/sqrt(4*D*t))+erf((r+r_0-2*sigma)/sqrt(4*D*t)));
 	//printf("term1_irr = %.15f\n",term1);
-	double k_D = 4*pi*sigma*D;
+	double k_D = 4*rand_gen_constant_pi*sigma*D;
 	double alpha_irr = (1+k_r/k_D)*sqrt(D)/sigma;
 	//printf("alpha_irr = %.15f\n",alpha_irr);
 	double K = (r+r_0-2*sigma)/sqrt(4*D*t);
@@ -822,7 +822,7 @@ double cdf_exact_irr(double t,double r_0,double r,double k_r,
 	//complex w2_test2 = W2(K,&temp);
 	//printf("W2_real = %.15f	 W2_complex = %.15f\n",w2_test,w2_test2.real);
 	double term2 = 1/r_0*(r-sqrt(D)/alpha_irr)*W2_real(K,alpha_irr*sqrt(t));
-	double term3 = k_r/(4*pi*r_0*sigma*sqrt(D))*(-1.0/alpha_irr*W2_real((r_0-sigma)/sqrt(4*D*t),alpha_irr*sqrt(t)));
+	double term3 = k_r/(4*rand_gen_constant_pi*r_0*sigma*sqrt(D))*(-1.0/alpha_irr*W2_real((r_0-sigma)/sqrt(4*D*t),alpha_irr*sqrt(t)));
     //	printf("term2_irr = %.15f\n",term2);
 	return term1-term2-term3;
 }
@@ -844,7 +844,7 @@ double cdf_irr(double t,double r_0,double r,double k_r,double sigma,double D){
 
 double survivalA_irr(double t,double r_0,double k_r,double sigma,double D)
 {
-	double k_D = 4*pi*sigma*D;
+	double k_D = 4*rand_gen_constant_pi*sigma*D;
 	double alpha_irr = (1+k_r/k_D)*sqrt(D)/sigma;
 	//printf("x=%.15g\n",(r_0-sigma)/sqrt(4*D*t));
     double erfc_term = 0.0;
@@ -866,7 +866,7 @@ double survivalA_irr(double t,double r_0,double k_r,double sigma,double D)
 			sum += term;
 			i++;
 		}
-        erfc_term = exp(-x*x)/(x*sqrt(pi))*(1+sum);
+        erfc_term = exp(-x*x)/(x*sqrt(rand_gen_constant_pi))*(1+sum);
     }
     else{
         erfc_term = erfc((r_0-sigma)/sqrt(4*D*t));

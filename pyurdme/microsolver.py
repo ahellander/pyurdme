@@ -1,4 +1,5 @@
 import pyurdme
+import dolfin
 import os
 import tempfile
 import subprocess
@@ -25,6 +26,7 @@ class MMMSSolver(pyurdme.URDMESolver):
 
         self.solver_name = 'hybrid'
         self.solver_path = ''
+        self.urdme_infile_name = ''
     
     def __getstate__(self):
         """ TODO: Implement"""
@@ -34,13 +36,67 @@ class MMMSSolver(pyurdme.URDMESolver):
     
     def __del__(self):
         """ Remove the temporary output folder """
+        if self.delete_infile:
+            try:
+                os.remove(self.infile_name)
+            except OSError as e:
+                print "Could not delete '{0}'".format(self.infile_name)
     #shutil.rmtree(self.outfolder_name)
     
     def serialize(self, filename=None, report_level=0,sopts=None):
         """ Write the mesh and derived datastructures needed by the 
             hybrid solver to file. """
 
+
+    def _write_mesh_file(self, filename=None):
+        """ Write the mesh data to a HDF5 file that the mmmms solver understands. """
+        
+        meshfile = h5py.File(filename,"w")
+        meshfile.create_group("mesh")
+        meshfile.create_group("boundarymesh")
+        grp = meshfile["mesh"] 
     
+        mesh = self.model.mesh
+        mesh.init()
+        
+        cells = mesh.cells()
+        grp.create_dataset("t", data = cells)
+        vertices = mesh.coordinates()
+        grp.create_dataset("p",data=vertices)
+
+        # Create the bounday mesh triangle entities 
+        boundary_mesh = dolfin.BoundaryMesh(mesh, "exterior")
+
+        #print numpy.shape(boundary_mesh.coordinates())
+       # print numpy.shape(boundary_mesh.cells())
+    
+        # Vertex map
+        vm = boundary_mesh.entity_map(0).array()
+        #print vm
+        
+        bndtri= []
+        for tri in boundary_mesh.cells():
+            bndtri.append([vm[v] for v in tri])
+
+        grp.create_dataset("boundaryfacets",data=numpy.array(bndtri))
+
+
+        #for cell in dolfin.cells(mesh):
+        #    for face in dolfin.faces(cell):
+        #        print [v for v in face.entities(0)] 
+        
+        #print cells
+        #D = mesh.topology().dim()
+        #fct = dolfin.facets(mesh)
+
+        #edges = []
+        #for facet in fct:
+        #   edges.append([v for v in facet.entities(D)])
+        #print numpy.array(edges)
+
+        #grp.create_dataset("edges",data=numpy.array(edges))
+        
+
     def create_input_file(self, filename):
     
         input_file = open(filename,'w')
@@ -105,15 +161,21 @@ class MMMSSolver(pyurdme.URDMESolver):
             a list of URDMEResult objects
         """
         
-        # Grab a working manually generated file for now.
-        #  testfnm = os.path.dirname(__file__)+'/models/pyurdme_test.txt'
-        #testfnm = '/Users/andreash/bitbucket/hybrid/models/nl_example3.txt'
+        # Create the urdme input file that contains connectivity matrices etc
+        if self.urdme_infile_name is None or not os.path.exists(self.urdme_infile_name):
+            # Get temporary input and output files
+            urdme_infile = tempfile.NamedTemporaryFile(delete=False, dir=os.environ.get('PYURDME_TMPDIR'))
+                
+            # Write the model to an input file in .mat format
+            self.serialize(filename=urdme_infile, report_level=self.report_level)
+            urdme_infile.close()
+            self.urdme_infile_name = urdme_infile.name
+            self.delete_infile = True
+
+        if not os.path.exists(self.urdme_infile_name):
+            raise URDMEError("input file not found.")
         
-        #print testfnm
-        #with open(testfnm, 'r') as fh:
-        #    model_str = fh.read()
-        
-        # Generate the input file
+        # Generate the input file containing the microsolver specific 
         infile = tempfile.NamedTemporaryFile(delete=False, dir=os.environ.get('PYURDME_TMPDIR'))
         self.infile_name = infile.name
         self.create_input_file(infile.name)
@@ -122,8 +184,16 @@ class MMMSSolver(pyurdme.URDMESolver):
         with open('test.txt','w') as fh:
             fh.write(infile.read())
 
-        #infile.write(model_str)
         infile.close()
+
+        # Create the mesh input file
+        mesh_infile = tempfile.NamedTemporaryFile(delete=False, dir=os.environ.get('PYURDME_TMPDIR'))
+        self._write_mesh_file(mesh_infile.name)
+        self.mesh_infile_name=mesh_infile.name
+        mesh_infile.close()
+
+        if not os.path.exists(self.mesh_infile_name):
+            raise URDMEError("Mesh input file not found.")
         
         # Generate output file
         outfile = tempfile.NamedTemporaryFile(delete=False, dir=os.environ.get('PYURDME_TMPDIR'))
@@ -137,7 +207,7 @@ class MMMSSolver(pyurdme.URDMESolver):
         solver_str=os.path.dirname(__file__)+"/mmms/bin/mmms"
         #solver_str="/Users/andreash/bitbucket/hybrid/bin/hybrid"
 
-        solver_cmd = [solver_str,self.infile_name, outfile.name]
+        solver_cmd = [solver_str,self.infile_name, self.urdme_infile_name,self.mesh_infile_name, outfile.name]
         handle = subprocess.Popen(solver_cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         handle.wait()
         

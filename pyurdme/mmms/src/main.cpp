@@ -23,12 +23,12 @@
 #include <mach/mach_time.h>
 #endif
 
-#include "../include/global_params.h"
-#include "../include/structs.h"
-#include "../include/model_parser.h"
+#include "global_params.h"
+#include "structs.h"
+#include "model_parser.h"
 
-#include "../include/utils.h"
-#include "../include/rand_gen.h"
+#include "utils.h"
+#include "rand_gen.h"
 
 #ifdef OLD_HEADER_FILENAME
 #include <iostream.h>
@@ -40,6 +40,13 @@
 #ifndef H5_NO_NAMESPACE
     using namespace H5;
 #endif
+
+#include "mesh.h"
+#include "coupling.h"
+
+#include "urdmemodel.h"
+//#include "read_model.h"
+#include "read_matfile.h"
 
 int dimension;
 int nxsteps = 20;
@@ -481,7 +488,7 @@ void simulate_group(group *grp,vector <species>& specs,double T,vector <associat
                     
                     
                     if(dimension==3){
-                        psi = 2*pi*gsl_rng_uniform(rng);
+                        psi = 2*rand_gen_constant_pi*gsl_rng_uniform(rng);
                         double temp2[] = {relativePosition[0],relativePosition[1],relativePosition[2]};
                         double rotax[] = {relativePosition[1],-relativePosition[0],0.0};
                         rotation(relativePosition,rotax,theta,r_new);
@@ -738,8 +745,87 @@ void add_time_point_to_file(H5File file, group grp, int num_specs, int traj_num,
     }
 }
 
+void read_p(fem_mesh *mesh, H5File mesh_file){
+
+    DataSet dataset = mesh_file.openDataSet("/mesh/p");
+    DataSpace dataspace = dataset.getSpace();
+    /*
+    * Get the number of dimensions in the dataspace.
+    */
+    int rank = dataspace.getSimpleExtentNdims();
+    hsize_t dims_out[2];
+    int ndims = dataspace.getSimpleExtentDims( dims_out, NULL);
+    cout << "rank " << rank << ", dimensions " <<
+          (unsigned long)(dims_out[0]) << " x " <<
+          (unsigned long)(dims_out[1]) << endl;
+
+    double *p;
+    p=(double *)malloc(dims_out[0]*dims_out[1]*sizeof(double));
+    dataset.read(p,PredType::NATIVE_DOUBLE);
+
+    mesh->Ncells=dims_out[0];
+    mesh->p=p;     
+    
+}
+
+void read_t(fem_mesh *mesh, H5File mesh_file){
+
+    DataSet dataset = mesh_file.openDataSet("/mesh/t");
+    DataSpace dataspace = dataset.getSpace();
+    /*
+    * Get the number of dimensions in the dataspace.
+    */
+    int rank = dataspace.getSimpleExtentNdims();
+    hsize_t dims_out[2];
+    int ndims = dataspace.getSimpleExtentDims( dims_out, NULL);
+    cout << "rank " << rank << ", dimensions " <<
+          (unsigned long)(dims_out[0]) << " x " <<
+          (unsigned long)(dims_out[1]) << endl;
+
+    int *t;
+    t=(int *)malloc(dims_out[0]*dims_out[1]*sizeof(int));
+    dataset.read(t,PredType::NATIVE_INT);
+
+    mesh->ntet = dims_out[0];
+    mesh->t=t;     
+    
+}
+
+void read_bnd(fem_mesh *mesh, H5File mesh_file){
+
+    DataSet dataset = mesh_file.openDataSet("/mesh/boundaryfacets");
+    DataSpace dataspace = dataset.getSpace();
+    /*
+    * Get the number of dimensions in the dataspace.
+    */
+    int rank = dataspace.getSimpleExtentNdims();
+    hsize_t dims_out[2];
+    int ndims = dataspace.getSimpleExtentDims( dims_out, NULL);
+    cout << "rank " << rank << ", dimensions " <<
+          (unsigned long)(dims_out[0]) << " x " <<
+          (unsigned long)(dims_out[1]) << endl;
+
+    int *t;
+    t=(int *)malloc(dims_out[0]*dims_out[1]*sizeof(int));
+    dataset.read(t,PredType::NATIVE_INT);
+
+    /*for (int i=0;i<dims_out[0];i++){
+        for (int j=0;j<dims_out[1];j++)
+            cout << p[i+j*dims_out[0]] << " ";
+        cout << "\n";
+    }*/
+    mesh->ntri = dims_out[0];
+    mesh->e=t;     
+    
+}
+
 
 int main(int argc, char* argv[]) {
+
+// argv[1]: model.txt file
+// argv[2]: model.mat file
+// argv[3]: mesh.h5 file
+// argv[4]: output.h5 file
 
     
 #ifdef __MACH__
@@ -758,7 +844,6 @@ int main(int argc, char* argv[]) {
     gettimeofday(&start, NULL);
     
     simulation sim;
-
     /* Set some default values. */
     sim.ntraj = 1;
     sim.ncores = 1;
@@ -767,15 +852,41 @@ int main(int argc, char* argv[]) {
     vector <association> assocs;
     vector <dissociation> dissocs;
     vector <birth> births;
-    vector<parameter> parameters;
+    vector <parameter> parameters;
     
     /* Read model. See documentation for full specification. */
     parse_model(argv[1],&sim,specs,assocs,dissocs,births,parameters);
     dimension = sim.dimension;
-    
-    //print_model(specs,assocs,dissocs,births,&sim);
 
-    string output_filename = argv[2];
+    // Read in the legacy urdme_model datastructure. This is still needed for some of the routines.
+    char *urdmeinputfile;
+    urdmeinputfile= argv[2]; 
+    urdme_model *model;
+    model = read_model(urdmeinputfile);
+    model->infile = urdmeinputfile;
+    
+    if (model == NULL){
+        printf("Fatal error. Couldn't load model file or currupt model file.");
+        return(-1);
+    }
+
+    fem_mesh *mesh;
+    mesh = (fem_mesh *)malloc(sizeof(fem_mesh));
+
+    string mesh_file_name = argv[3];
+    H5File mesh_file = H5File(mesh_file_name, H5F_ACC_RDONLY );
+    read_p(mesh, mesh_file);
+    read_t(mesh, mesh_file);
+    read_bnd(mesh, mesh_file);
+
+    /* Initialize the primal/dual mesh format. Do we need this for pure micro?? */
+    mesh_primal2dual(mesh);
+
+    /* Compute all the planes that approximates the boundaries */
+    vector <plane> boundaries;
+    
+    boundaries = voxel_boundaries(model, mesh);
+    string output_filename = argv[4];
 
     /* Create output directory. */
     
@@ -831,6 +942,9 @@ int main(int argc, char* argv[]) {
         gsl_rng_free(rng);
     }
     
+
+    //print_model(specs,assocs,dissocs,births,&sim);
+
     
     gettimeofday(&end, NULL);
     printf("Run time: %.5g\n",(end.tv_sec+1e-6*end.tv_usec)-(start.tv_sec+1e-6*start.tv_usec));

@@ -21,15 +21,6 @@ using namespace std;
 
 //int grp_id,p_id=0;
 
-typedef struct mmmsmodel{
-    fem_mesh *mesh;
-
-    int Mspecies;
-    int *sd;
-
-
-}mmmsmodel;
-
 typedef struct simulation{
     int ntraj;
     int ncores;
@@ -107,6 +98,7 @@ typedef struct node{
 }node;
 
 typedef struct plane{
+    int id;
     double p[3];
     double v1[3];
     double v2[3];

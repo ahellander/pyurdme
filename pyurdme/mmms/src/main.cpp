@@ -765,6 +765,12 @@ void read_p(fem_mesh *mesh, H5File mesh_file){
 
     mesh->Ncells=dims_out[0];
     mesh->p=p;     
+
+   /* for (int i=0;i<dims_out[0];i++){
+        for (int j=0;j<dims_out[1];j++)
+            cout << p[i+j*dims_out[0]] << " ";
+        cout << "\n";
+    }*/
     
 }
 
@@ -827,7 +833,6 @@ int main(int argc, char* argv[]) {
 // argv[3]: mesh.h5 file
 // argv[4]: output.h5 file
 
-    
 #ifdef __MACH__
     uint64_t seed;
     seed = mach_absolute_time();
@@ -859,6 +864,7 @@ int main(int argc, char* argv[]) {
     dimension = sim.dimension;
 
     // Read in the legacy urdme_model datastructure. This is still needed for some of the routines.
+    // we should update this code to use only HDF5. 
     char *urdmeinputfile;
     urdmeinputfile= argv[2]; 
     urdme_model *model;
@@ -882,12 +888,27 @@ int main(int argc, char* argv[]) {
     /* Initialize the primal/dual mesh format. Do we need this for pure micro?? */
     mesh_primal2dual(mesh);
 
-    /* Compute all the planes that approximates the boundaries */
-    vector <plane> boundaries;
-    
-    boundaries = voxel_boundaries(model, mesh);
-    string output_filename = argv[4];
+    /*for (int i=0; i<mesh->ntet;i++){
+        print_tet(mesh->tets[i]);
+    }
+    */
 
+    /* for (int i=0; i<mesh->ntri;i++){
+        print_tri(mesh->bnd[i]);
+    }*/
+
+    /* Compute all the planes that approximates the boundaries */
+   // cout << "\n Ncells:" << mesh->Ncells << "\n";
+
+    vector <plane> boundaries;
+    boundaries = voxel_boundaries(model, mesh);
+    //cout << "Ncells:" << mesh->Ncells;
+    //cout << boundaries.empty();
+    //for (int i=0; i<(int)boundaries.size();i++){
+    //    print_plane(&boundaries[i]);
+    //}
+
+    string output_filename = argv[4];
     /* Create output directory. */
     
     /* Do simulations. */
@@ -924,7 +945,6 @@ int main(int argc, char* argv[]) {
             Group trajectory_0 = file.createGroup( prefix +"/Type_"+ to_string(spec));
         }
 
-
         int time_index = 0;
         add_time_point_to_file(file,grp,num_specs,l,time_index);
 
@@ -941,10 +961,6 @@ int main(int argc, char* argv[]) {
 
         gsl_rng_free(rng);
     }
-    
-
-    //print_model(specs,assocs,dissocs,births,&sim);
-
     
     gettimeofday(&end, NULL);
     printf("Run time: %.5g\n",(end.tv_sec+1e-6*end.tv_usec)-(start.tv_sec+1e-6*start.tv_usec));

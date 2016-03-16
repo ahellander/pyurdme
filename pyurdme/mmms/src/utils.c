@@ -96,6 +96,18 @@ void print_vecs(particle *p){
     printf("\n");
 }
 
+void print_plane(plane *pl)
+{
+
+  printf("plane, id = %i;\n",pl->id); 
+  printf("\tisbnd = %i;\n",pl->isbnd); 
+  printf("\tp = [%.3e %.3e %.3e];\n",pl->p[0],pl->p[1],pl->p[2]);   
+  printf("\tv1 = [%.3e %.3e %.3e];\n",pl->v1[0],pl->v1[1],pl->v1[2]);  
+  printf("\tv2 = [%.3e %.3e %.3e];\n",pl->v2[0],pl->v2[1],pl->v2[2]);
+  printf("\tn = [%.3e %.3e %.3e];\n",pl->n[0],pl->n[1],pl->n[2]);
+  
+}
+
 
 void cross(double *v1,double *v2,double *out){
     out[0] = v1[1]*v2[2]-v1[2]*v2[1];

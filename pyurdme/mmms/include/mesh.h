@@ -139,6 +139,8 @@ typedef struct{
 
 
 void print_tet(tetrahedron *tet);
+void print_tri(triangle *tri);
+
 
 /* Simple geometry */
 //double dot(double *x,double *y);
@@ -169,7 +171,7 @@ int tri_which_macro_element(triangle *tri,double *x);
 double triangle_area(tetrahedron *tet);
 double tetrahedron_vol(tetrahedron *tet);
 
-void cross(double *v,double *x, double *y);
+void cross_mesh(double *v,double *x, double *y);
 double quadarea(double *v1,double *v2,double *v3, double *v4,double *n);
 double triarea(double *v1,double *v2,double *v3,double *n);
 

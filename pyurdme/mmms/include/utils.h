@@ -34,6 +34,7 @@ void diffuse(particle *p,vector <species>& specs,double dt,gsl_rng *rng);
 void divide_into_cubes(group *grp,vector <group>& grps,int Nx,int Ny,int Nz,double *boundary);
 void sort_molecules(group *grp,vector <group>& grps,vector <species>& specs);
 int cp(const char *to, const char *from);
+void print_plane(plane *pl);
 
 
 #endif

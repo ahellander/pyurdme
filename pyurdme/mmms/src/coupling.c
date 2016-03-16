@@ -112,12 +112,13 @@ vector <plane> voxel_boundaries(urdme_model *model, fem_mesh *mesh)
 		
 		/* Compute the unit normal of that triangle.*/
 		trinormal(tri,n);
+//        printf("n1=[%g %g %g];\n",alpha*n[0],alpha*n[1],alpha*n[2]);
 		/* Need to check that all normals that we assemble point in a direction that
 		   the species may move. */
 		 
 		radius = norm(tri->v1);
 		a = dot(vec,n);
-		
+//        printf("a=%g\n",a);
 		
 		/* Add that normal to accumulated mean normals of the vertices of the triangle.*/
 		sv = tri->v1p;
@@ -153,7 +154,7 @@ vector <plane> voxel_boundaries(urdme_model *model, fem_mesh *mesh)
 			if (amax < 0.0) {
 				alpha = -1.0;
 			}
-		
+//            printf("n2=[%g %g %g];\n",alpha*n[0],alpha*n[1],alpha*n[2]);
 			boundaries[Mspecies*sv+j].n[0]+=alpha*n[0];
 			boundaries[Mspecies*sv+j].n[1]+=alpha*n[1];
 			boundaries[Mspecies*sv+j].n[2]+=alpha*n[2];
@@ -188,6 +189,8 @@ vector <plane> voxel_boundaries(urdme_model *model, fem_mesh *mesh)
 				alpha = -1.0;
 			}
 			
+//			printf("n3=[%g %g %g];\n",alpha*n[0],alpha*n[1],alpha*n[2]);
+
 			boundaries[dof].n[0]+=alpha*n[0];
 			boundaries[dof].n[1]+=alpha*n[1];
 			boundaries[dof].n[2]+=alpha*n[2];
@@ -222,15 +225,16 @@ vector <plane> voxel_boundaries(urdme_model *model, fem_mesh *mesh)
 			if (amax < 0.0) {
 				alpha = -1.0;
 			}
-			
+//			printf("n4=[%g %g %g];\n",alpha*n[0],alpha*n[1],alpha*n[2]);
 			boundaries[Mspecies*sv+j].n[0]+=alpha*n[0];
 			boundaries[Mspecies*sv+j].n[1]+=alpha*n[1];
 			boundaries[Mspecies*sv+j].n[2]+=alpha*n[2];
 			boundaries[Mspecies*sv+j].isbnd=1;
 
 			
-		}	
-				
+		}
+        if(boundaries[Mspecies*sv+j].isbnd==1)
+		printf("n=[%g %g %g];\n",boundaries[Mspecies*sv+j].n[0],boundaries[Mspecies*sv+j].n[1],boundaries[Mspecies*sv+j].n[2]);
 	}
 	
 	/* Normalize the mean normals */

@@ -103,40 +103,56 @@ void cross(double *v1,double *v2,double *out){
     out[2] = v1[0]*v2[1]-v1[1]*v2[0];
 }
 
+//double get_boundary_dist_pair(double dt,vector <particle>& particles,vector <species>& specs,vector <plane>& boundaries, int dimension){
+//    
+//    /* TODO: This can be made much more efficient if we know which voxel we are in, and if a plane is associated to that voxel. */
+//    
+//    double temp=INFINITY,temp2=INFINITY;
+//    
+//    int M = (int)(boundaries.size());
+//    for(int j=0;j<2;j++){
+//        for(int i=0;i<M;i++){
+//            temp2 = min(fabs(particles[j].pos[i]-boundary[2*i]),fabs(particles[j].pos[i]-boundary[2*i+1]));
+//            if(temp2<temp){
+//                temp = temp2;
+//            }
+//        }
+//    }
+//    
+//}
+
+
 /* Gets the time step for a pair of molecules, taking into account the distance to the boundary. */
-double get_boundary_dist_pair(double dt,vector <particle>& particles,vector <species>& specs,double *boundary, int dimension){
-//    double dt_in = dt;
-    double temp = INFINITY,temp2 = INFINITY;
-    
-    for(int j=0;j<2;++j){
-        for(int i=0;i<dimension;++i){
-            temp2 = min(fabs(particles[j].pos[i]-boundary[2*i]),fabs(particles[j].pos[i]-boundary[2*i+1]));
-            if(temp2<temp){
-                temp = temp2;
-            }
-        }
-    }
-    double sigma = specs[particles[0].type].sigma+specs[particles[1].type].sigma;
-    double D = specs[particles[0].type].D+specs[particles[1].type].D;
-    temp = pow(temp,2)/(50*D);
-    
-    if(temp<dt){
-//        printf("temp=%g, dt=%g\n",temp,dt);
-        /* TODO: 20 should be defined in a parameter struct. */
-        double dp = pow(dist3(particles[0].pos,particles[1].pos)-sigma,2)/(30*D);
-        
-        if(dp<dt){
-//            printf("dt_in=%g, dt_out=%g\n",dt_in,max(temp,dp));
-            return max(temp,dp);
-        }
-        else{
-            return dt;
-        }
-        
-    }
-    
-    return dt;
-}
+//double get_boundary_dist_pair(double dt,vector <particle>& particles,vector <species>& specs,double *boundary, int dimension){
+//    double temp = INFINITY,temp2 = INFINITY;
+//    
+//    for(int j=0;j<2;++j){
+//        for(int i=0;i<dimension;++i){
+//            temp2 = min(fabs(particles[j].pos[i]-boundary[2*i]),fabs(particles[j].pos[i]-boundary[2*i+1]));
+//            if(temp2<temp){
+//                temp = temp2;
+//            }
+//        }
+//    }
+//    double sigma = specs[particles[0].type].sigma+specs[particles[1].type].sigma;
+//    double D = specs[particles[0].type].D+specs[particles[1].type].D;
+//    temp = pow(temp,2)/(50*D);
+//    
+//    if(temp<dt){
+//        /* TODO: 20 should be defined in a parameter struct. */
+//        double dp = pow(dist3(particles[0].pos,particles[1].pos)-sigma,2)/(30*D);
+//        
+//        if(dp<dt){
+//            return max(temp,dp);
+//        }
+//        else{
+//            return dt;
+//        }
+//        
+//    }
+//    
+//    return dt;
+//}
 
 void check_positions(group *grp){
     int M = (int)(grp->particles.size());
@@ -151,22 +167,40 @@ void check_positions(group *grp){
     }
 }
 
-void generate_particles(group *grp,double *boundary,int N,int type,gsl_rng *rng){
+
+void generate_particles(group *grp,fem_mesh *mesh,int N,int type,gsl_rng *rng){
     
     int M = (int)(grp->particles.size());
     grp->particles.resize(M+N);
     
-    double hx = boundary[1]-boundary[0];
-    double hy = boundary[3]-boundary[2];
-    double hz = boundary[5]-boundary[4];
+//    double hx = boundary[1]-boundary[0];
+//    double hy = boundary[3]-boundary[2];
+//    double hz = boundary[5]-boundary[4];
+    
+    int rtet;
+    double pos[3];
     
     for(int i=M;i<M+N;i++){
-        grp->particles[i].pos[0] = hx*gsl_rng_uniform(rng);
-        grp->particles[i].pos[1] = hy*gsl_rng_uniform(rng);
-        grp->particles[i].pos[2] = hz*gsl_rng_uniform(rng);
+        
+        rtet = floor(gsl_rng_uniform(rng)*mesh->ntet);
+        
+        tetrahedron_randunif(mesh->tets[rtet],pos);
+        grp->particles[i].pos[0] = pos[0];
+        grp->particles[i].pos[1] = pos[1];
+        grp->particles[i].pos[2] = pos[2];
+//        grp->particles[i].pos[0] = hx*gsl_rng_uniform(rng);
+//        grp->particles[i].pos[1] = hy*gsl_rng_uniform(rng);
+//        grp->particles[i].pos[2] = hz*gsl_rng_uniform(rng);
+        
+        
+        
+        /* TODO: This works for pure micro, but we should set the correct voxel for the hybrid method. */
         grp->particles[i].voxel[0] = 0;
         grp->particles[i].voxel[1] = 0;
         grp->particles[i].voxel[2] = 0;
+        
+        
+        
         grp->particles[i].type = type;
         grp->particles[i].active = true;
         grp->particles[i].unique_id = i;
@@ -181,6 +215,39 @@ void generate_particles(group *grp,double *boundary,int N,int type,gsl_rng *rng)
         grp->particles[i].vec3[2] = 1.0;
     }
 }
+
+
+
+//void generate_particles(group *grp,double *boundary,int N,int type,gsl_rng *rng){
+//    
+//    int M = (int)(grp->particles.size());
+//    grp->particles.resize(M+N);
+//    
+//    double hx = boundary[1]-boundary[0];
+//    double hy = boundary[3]-boundary[2];
+//    double hz = boundary[5]-boundary[4];
+//    
+//    for(int i=M;i<M+N;i++){
+//        grp->particles[i].pos[0] = hx*gsl_rng_uniform(rng);
+//        grp->particles[i].pos[1] = hy*gsl_rng_uniform(rng);
+//        grp->particles[i].pos[2] = hz*gsl_rng_uniform(rng);
+//        grp->particles[i].voxel[0] = 0;
+//        grp->particles[i].voxel[1] = 0;
+//        grp->particles[i].voxel[2] = 0;
+//        grp->particles[i].type = type;
+//        grp->particles[i].active = true;
+//        grp->particles[i].unique_id = i;
+//        grp->particles[i].vec1[0] = 1.0;
+//        grp->particles[i].vec1[1] = 0.0;
+//        grp->particles[i].vec1[2] = 0.0;
+//        grp->particles[i].vec2[0] = 0.0;
+//        grp->particles[i].vec2[1] = 1.0;
+//        grp->particles[i].vec2[2] = 0.0;
+//        grp->particles[i].vec3[0] = 0.0;
+//        grp->particles[i].vec3[1] = 0.0;
+//        grp->particles[i].vec3[2] = 1.0;
+//    }
+//}
 
 
 double dot(double *p1,double *p2){
@@ -219,6 +286,15 @@ void rotation(double *v,double *z,double theta,double r)
 }
 
 
+void reflect_all(group *grp,vector <plane>& boundaries){
+    int M = (int)(grp->particles.size());
+    int P = (int)(boundaries.size());
+    for(int i=0;i<M;i++){
+        for(int j=0;j<P;j++){
+            
+        }
+    }
+}
 
 
 void reflect_cuboid(group *grp,double *boundary,int dimension){
@@ -265,16 +341,16 @@ void reflect_cuboid_p(particle *p,double *boundary){
     }
 }
 
-//void reflect_boundary(particle *p,vector <plane>& tet_b){
-//    for(int i=0;i<(int)(tet_b.size());i++){
-//        double dp = tet_b[i].n[0]*(p->pos[0]-tet_b[i].p[0])+tet_b[i].n[1]*(p->pos[1]-tet_b[i].p[1])+tet_b[i].n[2]*(p->pos[2]-tet_b[i].p[2]);
-//        if(dp<0){
-//            p->pos[0] = 2*fabs(dp)*tet_b[i].n[0];
-//            p->pos[0] = 2*fabs(dp)*tet_b[i].n[1];
-//            p->pos[0] = 2*fabs(dp)*tet_b[i].n[2];
-//        }
-//    }
-//}
+void reflect_boundary(particle *p,vector <plane>& tet_b){
+    for(int i=0;i<(int)(tet_b.size());i++){
+        double dp = tet_b[i].n[0]*(p->pos[0]-tet_b[i].p[0])+tet_b[i].n[1]*(p->pos[1]-tet_b[i].p[1])+tet_b[i].n[2]*(p->pos[2]-tet_b[i].p[2]);
+        if(dp<0){
+            p->pos[0] = 2*fabs(dp)*tet_b[i].n[0];
+            p->pos[0] = 2*fabs(dp)*tet_b[i].n[1];
+            p->pos[0] = 2*fabs(dp)*tet_b[i].n[2];
+        }
+    }
+}
 
 //int find_closest_node(particle *p,vector <node>& nodes,int space_or_boundary){
 //    double td = INFINITY;

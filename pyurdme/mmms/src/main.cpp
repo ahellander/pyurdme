@@ -56,7 +56,7 @@ using namespace std;
 
 /* TODO: In 2D: molecules at distance less than sigma. */
 
-void main_simulator(group *grp,vector <species>& specs,vector <association>& assocs,vector <dissociation>& dissocs,double *boundary,double T,gsl_rng *rng,int traj_num);
+void main_simulator(group *grp,vector <species>& specs,vector <association>& assocs,vector <dissociation>& dissocs,vector <plane>& boundaries,double T,gsl_rng *rng,int traj_num);
 
 bool compare_events (tent_event e1,tent_event e2) {
     return e1.t<e2.t;
@@ -218,7 +218,7 @@ void doAssociation(vector <particle>& particles,vector <species>& specs,tent_eve
     
 }
 
-void doDissociation(vector <particle>& particles,vector <species>& specs,tent_event *event,vector <dissociation>& dissocs,double *boundary,gsl_rng *rng){
+void doDissociation(vector <particle>& particles,vector <species>& specs,tent_event *event,vector <dissociation>& dissocs,vector <plane>& boundaries,gsl_rng *rng){
 
     int M = (int)(dissocs[event->index].products.size());
    
@@ -248,7 +248,7 @@ void doDissociation(vector <particle>& particles,vector <species>& specs,tent_ev
         particles[index_temp].pos[1] = pos[1];
         particles[index_temp].pos[2] = pos[2];
         
-        reflect_cuboid_p(&particles[index_temp],boundary);
+//        reflect_cuboid_p(&particles[index_temp],boundary);
 
         particles[index_temp].type = dissocs[index].products[0];
         particles[index_temp].active = true;
@@ -290,7 +290,7 @@ void doDissociation(vector <particle>& particles,vector <species>& specs,tent_ev
         particles[index_temp+i].pos[2] = vec1[2]*new_pos[0]+vec2[2]*new_pos[1]+vec3[2]*new_pos[2];
         
         /* This is to make sure that the new particles don't overlap after being reflected back into the domain. */
-        reflect_cuboid_p(&particles[index_temp+i],boundary);
+//        reflect_cuboid_p(&particles[index_temp+i],boundary);
         while(dist3(particles[index_temp].pos,particles[index_temp+i].pos)<0.9999*sigma || (index_temp>=1 && dist3(particles[0].pos,particles[index_temp+i].pos)<0.9999*sigma)){
             
             randomSphere(rng,sigma,new_pos,dimension);
@@ -304,7 +304,7 @@ void doDissociation(vector <particle>& particles,vector <species>& specs,tent_ev
             particles[index_temp+i].pos[1] = vec1[1]*new_pos[0]+vec2[1]*new_pos[1]+vec3[1]*new_pos[2];
             particles[index_temp+i].pos[2] = vec1[2]*new_pos[0]+vec2[2]*new_pos[1]+vec3[2]*new_pos[2];
             
-            reflect_cuboid_p(&particles[index_temp+i],boundary);
+//            reflect_cuboid_p(&particles[index_temp+i],boundary);
         }
         
         
@@ -330,7 +330,7 @@ void doDissociation(vector <particle>& particles,vector <species>& specs,tent_ev
 
 }
 
-void simulate_group(group *grp,vector <species>& specs,double T,vector <association>& assocs,vector <dissociation>& dissocs,double *boundary,gsl_rng *rng,int traj_num){
+void simulate_group(group *grp,vector <species>& specs,double T,vector <association>& assocs,vector <dissociation>& dissocs,vector <plane>& boundaries,gsl_rng *rng,int traj_num){
     
     
     
@@ -361,7 +361,7 @@ void simulate_group(group *grp,vector <species>& specs,double T,vector <associat
             if(t_reac<dt){
                 dt = t_reac;
                 diffuse(&(grp->particles[0]),specs,dt,rng);
-                doDissociation(grp->particles,specs,&t_events[0],dissocs,boundary,rng);
+                doDissociation(grp->particles,specs,&t_events[0],dissocs,boundaries,rng);
             }
             else{
                 diffuse(&(grp->particles[0]),specs,dt,rng);
@@ -379,8 +379,13 @@ void simulate_group(group *grp,vector <species>& specs,double T,vector <associat
             
             double cutoff = 1.1;
             
-            /* Time step is limited by the distance to the boundary. */
-            dt = get_boundary_dist_pair(dt,grp->particles,specs,boundary,dimension);
+            
+            
+            /* TODO: Time step should be limited by the distance to the boundary. */
+//            dt = get_boundary_dist_pair(dt,grp->particles,specs,boundary,dimension);
+            
+            
+            
             if(micro_param[0]<cutoff*micro_param[2]){
                 if(dimension==2){
                     double max_points = 1e4;
@@ -432,7 +437,7 @@ void simulate_group(group *grp,vector <species>& specs,double T,vector <associat
                         diffuse(&(grp->particles[0]),specs,dt,rng);
                         diffuse(&(grp->particles[1]),specs,dt,rng);
                         
-                        doDissociation(grp->particles,specs,&t_events[0],dissocs,boundary,rng);
+                        doDissociation(grp->particles,specs,&t_events[0],dissocs,boundaries,rng);
 
                         /* :::::::::::::::::::::::::::::::::::::::::::::::: */
                         /* :::::::::::::::::::::::::::::::::::::::::::::::: */
@@ -577,7 +582,7 @@ void simulate_group(group *grp,vector <species>& specs,double T,vector <associat
                         //                        print_tent_events(t_events);
                         diffuse(&(grp->particles[0]),specs,dt,rng);
                         diffuse(&(grp->particles[1]),specs,dt,rng);
-                        doDissociation(grp->particles,specs,&t_events[0],dissocs,boundary,rng);
+                        doDissociation(grp->particles,specs,&t_events[0],dissocs,boundaries,rng);
 
                         /* :::::::::::::::::::::::::::::::::::::::::::::::: */
                         /* :::::::::::::::::::::::::::::::::::::::::::::::: */
@@ -597,12 +602,12 @@ void simulate_group(group *grp,vector <species>& specs,double T,vector <associat
         }
         /* Maximum of two molecules in a group. */
         else if(M>2){
-            main_simulator(grp,specs,assocs,dissocs,boundary,dt,rng,traj_num);
+            main_simulator(grp,specs,assocs,dissocs,boundaries,dt,rng,traj_num);
         }
         
 
         
-        reflect_cuboid(grp,boundary,dimension);
+//        reflect_cuboid(grp,boundary,dimension);
 
         t_loc += dt;
     }
@@ -612,7 +617,7 @@ void simulate_group(group *grp,vector <species>& specs,double T,vector <associat
 }
 
 
-void main_simulator(group *grp,vector <species>& specs,vector <association>& assocs,vector <dissociation>& dissocs,double *boundary,double T,gsl_rng *rng,int traj_num){
+void main_simulator(group *grp,vector <species>& specs,vector <association>& assocs,vector <dissociation>& dissocs,vector <plane>& boundaries,double T,gsl_rng *rng,int traj_num){
    
     /*TODO: Re-run the reversible reaction test with Nx=Ny=Nz=1. */
     
@@ -632,9 +637,26 @@ void main_simulator(group *grp,vector <species>& specs,vector <association>& ass
     
     while(t<T){
         dt = T-t;
-        grps.resize(0);
+        
+        
+        /* Does not work with general geometries. */
+        //        divide_into_cubes(grp,grps,Nx,Ny,Nz,boundary);
+        /* All molecules in grps[0]. */
+        
+        
+        /* TODO: We should sort by voxel id instead. */
+        grps.resize(1);
+        for(int l=0;l<(int)(grp->particles.size());l++){
+            grps[0].particles.push_back(grp->particles[l]);
+        }
+        
+        
         grps_final.resize(0);
-        divide_into_cubes(grp,grps,Nx,Ny,Nz,boundary);
+        
+        
+        
+        
+        
         dt_temp = INFINITY;
         
         for(int i=0;i<Nx*Ny*Nz;i++){
@@ -675,7 +697,7 @@ void main_simulator(group *grp,vector <species>& specs,vector <association>& ass
         }
         int N_groups = (int)(grps_final.size());
         for(int i=0;i<N_groups;i++){
-            simulate_group(&grps_final[i],specs,dt,assocs,dissocs,boundary,rng,traj_num);
+            simulate_group(&grps_final[i],specs,dt,assocs,dissocs,boundaries,rng,traj_num);
             if(dimension==2){
                 for(int j=0;j<(int)(grps_final[i].particles.size());j++){
                     grps_final[i].particles[j].pos[2] = 0.0;
@@ -884,8 +906,10 @@ int main(int argc, char* argv[]) {
 
     /* Compute all the planes that approximates the boundaries */
     vector <plane> boundaries;
-    
     boundaries = voxel_boundaries(model, mesh);
+    
+    
+    
     string output_filename = argv[4];
 
     /* Create output directory. */
@@ -902,7 +926,8 @@ int main(int argc, char* argv[]) {
         /* Initialize molecules. */
         group grp;
         for(int i=0;i<(int)(specs.size());i++){
-            generate_particles(&grp,sim.boundary,specs[i].initial_value,i,rng);
+//            generate_particles(&grp,sim.boundary,mesh,specs[i].initial_value,i,rng);
+            generate_particles(&grp,mesh,specs[i].initial_value,i,rng);
         }
         
         double T = sim.T;
@@ -931,7 +956,7 @@ int main(int argc, char* argv[]) {
         while(t<T){
 
             /* TODO: We should check for birth processes here. */
-            main_simulator(&grp,specs,assocs,dissocs,sim.boundary,dt,rng,l);
+            main_simulator(&grp,specs,assocs,dissocs,boundaries,dt,rng,l);
             t += dt;
             time_index++;
             // Write solution to file.

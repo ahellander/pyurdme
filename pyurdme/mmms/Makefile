@@ -1,9 +1,9 @@
-CC=g++
+CC=clang++
 SRC=src/main.cpp mesh.o
 EXECUTABLE=bin/mmms
-FLAGS=-Wall -pedantic -I$(PWD)/include -g -O3 -c
+FLAGS=-Wall -pedantic -I$(PWD)/include -g -O3 -c `gsl-config --cflags`
 CURR_DIR = $(shell pwd)
-LFLAGS=-lhdf5 -lhdf5_hl -lhdf5_cpp `gsl-config --cflags --libs`
+LFLAGS=-lhdf5 -lhdf5_hl -lhdf5_cpp `gsl-config --libs`
 
 all: mmms
 

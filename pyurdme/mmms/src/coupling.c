@@ -22,16 +22,14 @@ static inline double distance(double *x,double *y)
   return (x[0]-y[0])*(x[0]-y[0])+(x[1]-y[1])*(x[1]-y[1])+(x[2]-y[2])*(x[2]-y[2]); 
 }
 
+
 vector <plane> voxel_boundaries(urdme_model *model, fem_mesh *mesh)
 {
-   	
-	
+   		
 	int Ncells   = mesh->Ncells;
 	int Mspecies = model->Mspecies;
 	int Ndofs = Ncells*Mspecies;
-	
-	cout << Ncells << Mspecies;
- 
+	 
 	/* Boundary triangles */
 	double *p = mesh->p;
 	int *sd = model->sd;
@@ -150,7 +148,7 @@ vector <plane> voxel_boundaries(urdme_model *model, fem_mesh *mesh)
 				
 			}
 		
-			/* If the edge in D with the larges component in the normals direction
+			/* If the edge in D with the largest component in the normals direction
 			   points in the opposite direction, we flip the normal. */
 			if (amax < 0.0) {
 				alpha = -1.0;

@@ -25,6 +25,7 @@ void generate_particles(group *grp,fem_mesh *mesh,int N,int type,gsl_rng *rng);
 double dot(double *p1,double *p2);
 void vec_diff(double *p1,double *p2,double *outv);
 void rotation(double *v,double *z,double theta,double r);
+void reflect_boundary(vector <particle>& mols,vector <plane>& tet_b);
 //void reflect_cuboid(group *grp,double *boundary,int dimension);
 //void reflect_cuboid_p(particle *p,double *boundary);
 void copy_pos(double *v,double *src);

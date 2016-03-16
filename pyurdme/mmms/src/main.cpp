@@ -606,7 +606,7 @@ void simulate_group(group *grp,vector <species>& specs,double T,vector <associat
         }
         
 
-        
+        reflect_boundary(grp->particles,boundaries);
 //        reflect_cuboid(grp,boundary,dimension);
 
         t_loc += dt;
@@ -725,7 +725,7 @@ void main_simulator(group *grp,vector <species>& specs,vector <association>& ass
                 }
             }
         }
-//        int Psize = (int)(grp->particles.size());
+        int Psize = (int)(grp->particles.size());
 //        printf("[");
 //        for(int q=0;q<Psize;q++){
 //            printf("%g %g %g;\n",grp->particles[q].pos[0],grp->particles[q].pos[1],grp->particles[q].pos[2]);
@@ -924,6 +924,16 @@ int main(int argc, char* argv[]) {
     string output_filename = argv[4];
 
     /* Create output directory. */
+    
+    
+    printf("[");
+    for(int q=0;q<(int)(boundaries.size());q++){
+        if(boundaries[q].isbnd==1){
+            //printf("%g %g %g;\n",boundaries[q].p[0],boundaries[q].p[1],boundaries[q].p[2]);
+//            print_plane(&boundaries[q]);
+        }
+    }
+    printf("];\n");
     
     /* Do simulations. */
     for(int l=0;l<sim.ntraj;++l){

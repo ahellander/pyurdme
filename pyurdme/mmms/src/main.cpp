@@ -916,6 +916,7 @@ int main(int argc, char* argv[]) {
     mesh_primal2dual(mesh);
 
     /* Compute all the planes that approximates the boundaries */
+
     vector <plane> boundaries;
     boundaries = voxel_boundaries(model, mesh);
     
@@ -928,8 +929,8 @@ int main(int argc, char* argv[]) {
     printf("[");
     for(int q=0;q<(int)(boundaries.size());q++){
         if(boundaries[q].isbnd==1){
-            //printf("%g %g %g;\n",boundaries[q].p[0],boundaries[q].p[1],boundaries[q].p[2]);
-//            print_plane(&boundaries[q]);
+        //printf("%g %g %g;\n",boundaries[q].p[0],boundaries[q].p[1],boundaries[q].p[2]);
+         //  print_plane(&boundaries[q]);
         }
     }
     printf("];\n");

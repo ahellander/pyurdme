@@ -192,6 +192,7 @@ vector <plane> voxel_boundaries(urdme_model *model, fem_mesh *mesh)
 			}
 			
 //			printf("n3=[%g %g %g];\n",alpha*n[0],alpha*n[1],alpha*n[2]);
+
 			boundaries[dof].n[0]+=alpha*n[0];
 			boundaries[dof].n[1]+=alpha*n[1];
 			boundaries[dof].n[2]+=alpha*n[2];
@@ -253,7 +254,6 @@ vector <plane> voxel_boundaries(urdme_model *model, fem_mesh *mesh)
 		
 	}
 
-	
 	/* Get vectors in the tangent plane */
 	for (i=0; i<Ncells;i++) {
 		
@@ -272,61 +272,13 @@ vector <plane> voxel_boundaries(urdme_model *model, fem_mesh *mesh)
 			}
 		}	
 		
-		/* OBS!! HERE WE HAVE SOME HARD CODED STUFF!! */
-		
-		/* membrane_absorbtion */
-		for (j=0; j<Mspecies; j++) {
-			if (sd[i]==3) 
-				boundaries[i*Mspecies+j].type[2]=1;
-		}
-		
-		/* diffusiononsphere */
-	/*	for (j=0; j<Mspecies; j++) {
-			if (sd[i]==1) 
-				boundaries[i*Mspecies+j].type[0]=1;
-		}
-		*/
-		/* adsorption */
-		/*for (j=0; j<Mspecies; j++) {
-			if (sd[i]==3) 
-				boundaries[i*Mspecies+j].type[0]=1;
-		}*/
-		
 	}
-	
-	/* Let's keep this error-checking here for now... */
-	/*for (i=0; i<Ncells; i++) {
-		
-		for (j=0; j<Mspecies; j++) {
-			
-			dof = i*Mspecies+j;
-			tmp = &boundaries[dof];
-			radius = norm(tmp->point);
-			
-			vec[0]=tmp->point[0];
-			vec[1]=tmp->point[1];
-			vec[2]=tmp->point[2];
-			
-			normalize(vec);
-			a = dot(tmp->n,vec);
-			
-			if (fabs((fabs(a))-1.0)>0.02 && onboundary[i*Mspecies+j] && (j==0||j==1||j==2)) {
-				printf("Not an accurate surface normal: %.2f %i %i\n ",a,j,sd[i]);
-			
-			}
-		}
-	
-		
-	}*/
 		
 	free(onboundary);
-	
-		
-	return boundaries;
-	
+
+	return boundaries;	
+
 }
-
-
 
 /* Normalized surface normal to the plane defined by the triangle tri. */
 static inline double *tri_surfnormal(int *tri,double *p)

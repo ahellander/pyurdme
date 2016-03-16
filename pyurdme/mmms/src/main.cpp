@@ -919,8 +919,7 @@ int main(int argc, char* argv[]) {
     vector <plane> boundaries;
     boundaries = voxel_boundaries(model, mesh);
     
-    
-    
+    // File where the output will be stored
     string output_filename = argv[4];
 
     /* Create output directory. */
@@ -935,6 +934,7 @@ int main(int argc, char* argv[]) {
     }
     printf("];\n");
     
+
     /* Do simulations. */
     for(int l=0;l<sim.ntraj;++l){
 
@@ -943,11 +943,9 @@ int main(int argc, char* argv[]) {
         long int seed_loc = lrand48();
         gsl_rng_set(rng,seed_loc);
         
-        
         /* Initialize molecules. */
         group grp;
         for(int i=0;i<(int)(specs.size());i++){
-//            generate_particles(&grp,sim.boundary,mesh,specs[i].initial_value,i,rng);
             generate_particles(&grp,mesh,specs[i].initial_value,i,rng);
             
         }

@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <errno.h>   /* errno */
-extern int errno;
+//extern int errno;
 #include <string.h>  /* strerror */
 #include <sys/types.h>
 #include <sys/stat.h>

@@ -925,7 +925,6 @@ int main(int argc, char* argv[]) {
 
     /* Create output directory. */
     
-    
     /* Do simulations. */
     for(int l=0;l<sim.ntraj;++l){
 
@@ -946,7 +945,6 @@ int main(int argc, char* argv[]) {
         double t = 0.0;
     
         int num_specs = (int)(specs.size());
-    
     
         H5File file = H5File(output_filename, H5F_ACC_TRUNC );
 

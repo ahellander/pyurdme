@@ -645,6 +645,7 @@ void main_simulator(group *grp,vector <species>& specs,vector <association>& ass
         
         
         /* TODO: We should sort by voxel id instead. */
+        grps.resize(0);
         grps.resize(1);
         for(int l=0;l<(int)(grp->particles.size());l++){
             grps[0].particles.push_back(grp->particles[l]);
@@ -672,6 +673,8 @@ void main_simulator(group *grp,vector <species>& specs,vector <association>& ass
         if(dt_temp<dt){
             dt = dt_temp;
         }
+//        printf("dt=%g\n",dt);
+        
         if(dt<1e-12){
             /* ::::::::::::::::::::::::::::::::::::::::::::::::: */
             /* ::::::::::::::::::::::::::::::::::::::::::::::::: */
@@ -697,6 +700,8 @@ void main_simulator(group *grp,vector <species>& specs,vector <association>& ass
         }
         int N_groups = (int)(grps_final.size());
         for(int i=0;i<N_groups;i++){
+//            printf("t= %g\n",t);
+            
             simulate_group(&grps_final[i],specs,dt,assocs,dissocs,boundaries,rng,traj_num);
             if(dimension==2){
                 for(int j=0;j<(int)(grps_final[i].particles.size());j++){
@@ -720,7 +725,13 @@ void main_simulator(group *grp,vector <species>& specs,vector <association>& ass
                 }
             }
         }
-        
+//        int Psize = (int)(grp->particles.size());
+//        printf("[");
+//        for(int q=0;q<Psize;q++){
+//            printf("%g %g %g;\n",grp->particles[q].pos[0],grp->particles[q].pos[1],grp->particles[q].pos[2]);
+//        }
+//        printf("];");
+//        printf("num_particles=%d\n",Psize);
         t += dt;
     }
 
@@ -923,6 +934,7 @@ int main(int argc, char* argv[]) {
         group grp;
         for(int i=0;i<(int)(specs.size());i++){
             generate_particles(&grp,mesh,specs[i].initial_value,i,rng);
+            
         }
         
         double T = sim.T;

@@ -43,10 +43,6 @@ class MMMSSolver(pyurdme.URDMESolver):
                 print "Could not delete '{0}'".format(self.infile_name)
     #shutil.rmtree(self.outfolder_name)
     
-    def serialize(self, filename=None, report_level=0,sopts=None):
-        """ Write the mesh and derived datastructures needed by the 
-            hybrid solver to file. """
-
 
     def _write_mesh_file(self, filename=None):
         """ Write the mesh data to a HDF5 file that the mmmms solver understands. """

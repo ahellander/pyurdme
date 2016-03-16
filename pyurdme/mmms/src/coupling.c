@@ -30,6 +30,8 @@ vector <plane> voxel_boundaries(urdme_model *model, fem_mesh *mesh)
 	int Mspecies = model->Mspecies;
 	int Ndofs = Ncells*Mspecies;
 	
+	cout << Ncells << Mspecies;
+ 
 	/* Boundary triangles */
 	double *p = mesh->p;
 	int *sd = model->sd;
@@ -40,6 +42,7 @@ vector <plane> voxel_boundaries(urdme_model *model, fem_mesh *mesh)
 	int i,j;
 	
 	double a;
+
 	/* Initialize all normals and vectors */
 	plane temp;
 	
@@ -57,10 +60,11 @@ vector <plane> voxel_boundaries(urdme_model *model, fem_mesh *mesh)
 	temp.p[2]=0.0;
 	temp.isbnd = 0;
 	
-	for (i=0; i<Ncells; i++) {
+	for (i=0; i<Ndofs; i++) {
 		/* Point in plane, the vertex itself. */ 
-		for (j=0; j<Mspecies; j++) 
-			boundaries.push_back(temp);
+		//for (j=0; j<Mspecies; j++) 
+		temp.id = i;
+		boundaries.push_back(temp);
 	}
 	
 	/* Compute the point in the plane as the mean value of the vertex iteself and the 
@@ -88,14 +92,13 @@ vector <plane> voxel_boundaries(urdme_model *model, fem_mesh *mesh)
 	size_t k;
 	double y[3];
 	double alpha;
-	/* We will need to be able determine whether a dof is on the boundary or not. */
+
+	/* We will need to be able determine whether a dof is on the boundary/surface or not. */
 	int *onboundary;
 	onboundary = (int *)calloc(Ndofs,sizeof(int));
 	
 	for (i=0; i<ntri; i++) {
-		
 	    tri = mesh->bnd[i];
-		
 		for (j=0; j<Mspecies; j++) {
 			onboundary[tri->v1p*Mspecies+j]=1;
 			onboundary[tri->v2p*Mspecies+j]=1;
@@ -111,7 +114,6 @@ vector <plane> voxel_boundaries(urdme_model *model, fem_mesh *mesh)
 		
 		/* Compute the unit normal of that triangle.*/
 		trinormal(tri,n);
-		
 		/* Need to check that all normals that we assemble point in a direction that
 		   the species may move. */
 		 
@@ -535,7 +537,7 @@ void project(double *p,triangle *tri) {
 	vec2[1] = v3[1]-v2[1];
 	vec2[2] = v3[2]-v2[2];
 	double *normal = (double *)malloc(3*sizeof(double));
-	cross(normal,vec1,vec2);
+	cross_mesh(normal,vec1,vec2);
 	normalize(normal);
 	double dist = normal[0]*(p[0]-v3[0])+normal[1]*(p[1]-v3[1])+normal[2]*(p[2]-v3[2]);
 	p[0] -= dist*normal[0];
@@ -881,7 +883,7 @@ inline void trinormal(triangle *tri,double *n)
 	v2[2]=tri->v3[2]-tri->v2[2];
 	
 	/* Normal: cross product of v1 and v2. */
-	cross(n,v1,v2);
+	cross_mesh(n,v1,v2);
 	
 	/* normalize */
 	a = sqrt(n[0]*n[0]+n[1]*n[1]+n[2]*n[2]);
@@ -894,8 +896,8 @@ inline void trinormal(triangle *tri,double *n)
 static inline void vec_in_plane(double *normal, double *v1, double *v2)
 {
 	double r_dir[] = {normal[0]+1,2*normal[1]+2,3*normal[2]+3};
-	cross(v1,normal,r_dir);
-	cross(v2,normal,v1);
+	cross_mesh(v1,normal,r_dir);
+	cross_mesh(v2,normal,v1);
 	double norm_n = 1.0/norm(normal);
 	double norm_v1 = 1.0/norm(v1);
 	double norm_v2 = 1.0/norm(v2);

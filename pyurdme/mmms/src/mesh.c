@@ -178,6 +178,9 @@ void print_tet(tetrahedron *tet)
   printf("v3 = [%.3e %.3e %.3e]; v3p = %i ;\n",tet->v3[0],tet->v3[1],tet->v3[2],tet->v3p);
   printf("v4 = [%.3e %.3e %.3e]; v4p = %i ;\n",tet->v4[0],tet->v4[1],tet->v4[2],tet->v4p);
   printf("center = [%.3e %.3e %.3e];\n",tet->c[0],tet->c[1],tet->c[2]);
+  printf("volume = [%.3e];\n",tet->vol);
+  printf("barycenter = [%.3e %.3e %.3e]; \n",tet->c[0],tet->c[1],tet->c[2]);
+
   printf("n12 = [%.3e %.3e %.3e]; \n",tet->n12[0],tet->n12[1],tet->n12[2]);
   printf("n13 = [%.3e %.3e %.3e]; \n",tet->n13[0],tet->n13[1],tet->n13[2]);
   printf("n14 = [%.3e %.3e %.3e]; \n",tet->n14[0],tet->n14[1],tet->n14[2]);
@@ -186,6 +189,18 @@ void print_tet(tetrahedron *tet)
   printf("n34 = [%.3e %.3e %.3e]; \n",tet->n34[0],tet->n34[1],tet->n34[2]);
   //tet_initialize_T(tet);
   //print_T(tet);
+}
+
+void print_tri(triangle *tet)
+{
+  printf("v1 = [%.3e %.3e %.3e]; v1p = %i ;\n",tet->v1[0],tet->v1[1],tet->v1[2],tet->v1p);	
+  printf("v2 = [%.3e %.3e %.3e]; v2p = %i ;\n",tet->v2[0],tet->v2[1],tet->v2[2],tet->v2p);
+  printf("v3 = [%.3e %.3e %.3e]; v3p = %i ;\n",tet->v3[0],tet->v3[1],tet->v3[2],tet->v3p);
+  printf("center = [%.3e %.3e %.3e];\n",tet->c[0],tet->c[1],tet->c[2]);
+  printf("n12 = [%.3e %.3e %.3e]; \n",tet->n12[0],tet->n12[1],tet->n12[2]);
+  printf("n13 = [%.3e %.3e %.3e]; \n",tet->n13[0],tet->n13[1],tet->n13[2]);
+  printf("n23 = [%.3e %.3e %.3e]; \n",tet->n23[0],tet->n23[1],tet->n23[2]);
+  
 }
 
 /* Scalar product */
@@ -675,14 +690,14 @@ void tetrahedron_randunif(tetrahedron *tet,double *ru)
 }
 
 /* Cross product between vectors x,y. Result stored in v. */
-/*void cross(double *v,double *x, double *y)
+void cross_mesh(double *v,double *x, double *y)
 {
 	
 	v[0]=x[1]*y[2]-y[1]*x[2];
 	v[1]=-x[0]*y[2]+y[0]*x[2];
 	v[2]=x[0]*y[1]-y[0]*x[1];
 	
-}*/
+}
 
 /* Returns the surface area of a quadilateral specified by points v1,v2,v3,v4. 
    The surface normal is computed and stored in n */
@@ -700,7 +715,7 @@ double quadarea(double *v1,double *v2,double *v3, double *v4,double *n)
 	d2[1]=v4[1]-v2[1];
 	d2[2]=v4[2]-v2[2];
 	
-	cross(n,d1,d2);
+	cross_mesh(n,d1,d2);
 	
 	/* Normalize n */
 	a = sqrt(n[0]*n[0]+n[1]*n[1]+n[2]*n[2]);
@@ -745,14 +760,14 @@ void primal2dualtri(triangle *tri)
 	v2[1]=tri->v2[1]-tri->v1[1];
 	v2[2]=tri->v2[2]-tri->v1[2];
 	
-	cross(t,v2,v1);
+	cross_mesh(t,v2,v1);
 	
 	/* Edge 12 */
 	bary2tripoint(mid12b,tri,v1);
 	e[0]=v1[0]-c[0];
 	e[1]=v1[1]-c[1];
 	e[2]=v1[2]-c[2];
-	cross(tri->n12,e,t);
+	cross_mesh(tri->n12,e,t);
 	normalize(tri->n12);
 	/* Check if normal is pointing in the right direction. */
 	v1[0]=tri->v2[0]-tri->v1[0];
@@ -769,7 +784,7 @@ void primal2dualtri(triangle *tri)
 	e[0]=v1[0]-c[0];
 	e[1]=v1[1]-c[1];
 	e[2]=v1[2]-c[2];
-	cross(tri->n13,e,t);
+	cross_mesh(tri->n13,e,t);
 	normalize(tri->n13);
 	
 	/* Check if normal is pointing in the right direction. */
@@ -787,7 +802,7 @@ void primal2dualtri(triangle *tri)
 	e[0]=v1[0]-c[0];
 	e[1]=v1[1]-c[1];
 	e[2]=v1[2]-c[2];
-	cross(tri->n23,e,t);
+	cross_mesh(tri->n23,e,t);
 	normalize(tri->n23);
 	
 	/* Check if normal is pointing in the right direction. */
@@ -843,6 +858,7 @@ void primal2dualtet(tetrahedron *tet)
 	bary2tetpoint(c124b,tet,v3);
 	
 	a = quadarea(v1,v2,c,v3,tet->n12);	
+
    	
 	tet->a12 = a;
 	

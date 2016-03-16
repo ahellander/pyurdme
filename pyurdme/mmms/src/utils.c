@@ -359,9 +359,9 @@ void reflect_boundary(vector <particle>& mols,vector <plane>& tet_b){
             if(tet_b[i].isbnd){
                 double dp = tet_b[i].n[0]*(mols[j].pos[0]-tet_b[i].p[0])+tet_b[i].n[1]*(mols[j].pos[1]-tet_b[i].p[1])+tet_b[i].n[2]*(mols[j].pos[2]-tet_b[i].p[2]);
                 if(dp<0){
-                    mols[j].pos[0] = 2*fabs(dp)*tet_b[i].n[0];
-                    mols[j].pos[0] = 2*fabs(dp)*tet_b[i].n[1];
-                    mols[j].pos[0] = 2*fabs(dp)*tet_b[i].n[2];
+                    mols[j].pos[0] += 2*fabs(dp)*tet_b[i].n[0];
+                    mols[j].pos[1] += 2*fabs(dp)*tet_b[i].n[1];
+//                    mols[j].pos[2] += 2*fabs(dp)*tet_b[i].n[2];
                 }
             }
         }

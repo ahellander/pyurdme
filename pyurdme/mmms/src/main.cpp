@@ -925,11 +925,6 @@ int main(int argc, char* argv[]) {
 
     /* Create output directory. */
     
-    /* for(int q=0;q<(int)(boundaries.size());q++){
-        if(boundaries[q].isbnd==1){
-         print_plane(&boundaries[q]);
-        }
-    }*/
     
     /* Do simulations. */
     for(int l=0;l<sim.ntraj;++l){

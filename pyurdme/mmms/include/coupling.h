@@ -28,6 +28,7 @@ vector <plane> voxel_boundaries(urdme_model *model, fem_mesh *mesh);
 inline void trinormal(triangle *tri,double *n);
 static inline void vec_in_plane(double *normal, double *v1, double *v2);
 static inline int nn(size_t *jcK,size_t *irK, double *p, double *pos, int pv,int spec,int Mspecies);
+void check_inside_surrounding_cells(particle *p, vertex *vtx, fem_mesh *mesh, int *out);
 
 
 

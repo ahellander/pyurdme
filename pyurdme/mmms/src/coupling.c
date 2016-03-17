@@ -423,42 +423,19 @@ int micro2meso2(particle *particle, fem_mesh *mesh, int Mspecies)
 
 }
 
-
-
-/* "Exact" version of micro2meso. */
-int micro2meso(particle *particle, fem_mesh *mesh)
+void check_inside_surrounding_cells(particle *particle, vertex *vtx, fem_mesh *mesh, int *out)
 {
+		
+	    tetrahedron **tets = mesh->tets;
+		double minbary[1];
+		int wn = -1;
+		tetrahedron *tet;
+		double mindist=-INFINITY;
+		int closest_tet;
 
-	size_t *jcK = mesh->jcK;
-	size_t *irK = mesh->irK;
-	
-	double *p = mesh->p;
-	
-	tetrahedron **tets = mesh->tets;
-	vertex **vertices = mesh->vertices;
-	
-	/* If a 3D species, start looking in the tetrahedra that
-       covers the macroelement associated with the vertex the particle
-	   belonged to in the previous timestep.  */
-	
-	int j,k,voxel;
-	int wn = -1;
-	tetrahedron *tet;
-	int closest_tet;
-	double mindist=-INFINITY;
-	double minbary[1];
-	int spec=particle->type;
-	
-	int i;
-	vertex *vtx;
-	//if (particle->dim==3 || particle->dim==1) {
-	if (particle->dim==3){
+ 
 
-		voxel = particle->voxel;
-		vtx = vertices[voxel];
-
-		// Check if particle is inside one of the tetrahedra surrounding the previous voxel.  
-		for (k=0; k<vtx->cells.size(); k++) {
+		for (int k=0; k<vtx->cells.size(); k++) {
 			
 			tet = tets[vtx->cells[k]];
 			// We need to check if there is a non-zero edge in the connectivity matrix
@@ -467,7 +444,7 @@ int micro2meso(particle *particle, fem_mesh *mesh)
 			
 			if (tet_inside(tet,particle->pos,minbary)) {
 				wn=tet_which_macro_element(tet,particle->pos);
-				return wn;
+				break;
 			}
 			else {
 				if (*minbary > mindist) {
@@ -478,10 +455,55 @@ int micro2meso(particle *particle, fem_mesh *mesh)
 
 		}
 
-		// If it is not inside one of those, we search to find the closest vertex, 
+		out[0] = wn; 
+		out[1] = closest_tet;
+
+}
+
+/* "Exact" version of micro2meso. */
+int micro2meso(particle *particle, fem_mesh *mesh)
+{
+
+	
+	double *p = mesh->p;
+	
+	//tetrahedron **tets = mesh->tets;
+	vertex **vertices = mesh->vertices;
+	
+	/* If a 3D species, start looking in the tetrahedra that
+       covers the macroelement associated with the vertex the particle
+	   belonged to in the previous timestep.  */
+	
+	//int j,k,voxel;
+    int voxel;
+	int wn = -1;
+	//tetrahedron *tet;
+	//int closest_tet;
+	double mindist=INFINITY;
+	double dist;
+
+	//double minbary[1];
+	//int spec=particle->type;
+	
+	//int i;
+	vertex *vtx;
+	int out[2];
+	//if (particle->dim==3 || particle->dim==1) {
+	if (particle->dim==3){
+
+		voxel = particle->voxel;
+		vtx = vertices[voxel];
+
+		// Check if particle is inside one of the tetrahedra surrounding the previous voxel.  
+		check_inside_surrounding_cells(particle, vtx, mesh, out);
+
+		if (out[0] > 0){
+			particle->voxel=out[0];
+			return particle->voxel;
+		}
+
+		// If it is not inside one of those, we search to find the closest vertex in the mesh, 
 		// TODO: THIS IS JUST TEMPORARY, WE NEED TO RE-INTEGRATE THE STRATEGY WITH SLIDING FORM MICRO2MESO2
-		double mindist = 1e9;
-		double dist;
 		for (int i=0; i<mesh->Ncells; i++){
 			dist = dist3(&p[i*3],particle->pos);
 			if (dist<mindist){
@@ -490,8 +512,23 @@ int micro2meso(particle *particle, fem_mesh *mesh)
 			}
 		}
 
+		// 
+		particle->voxel = wn;
+		// Now we check again if the point is contained in one of the tetrahedra surrounding the closest vertex. 
+		vtx=vertices[wn];
+
+		check_inside_surrounding_cells(particle, vtx, mesh, out);
+
+		if (out[0] > 0){
+			particle->voxel = out[0];
+			return out[0];
+		}
+
+		cout << "Warning, did not find exact voxel for particle.\n";
+		// If not, we are in trouble. Here we need to implement a global serach to be guaranteed to 
+		// always find the voxel, even if it is very slow. 
 		
-		return wn;
+		return particle->voxel;
 		
 	}
 

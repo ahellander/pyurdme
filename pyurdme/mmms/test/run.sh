@@ -1,5 +1,5 @@
 #!/bin/bash
 
-../bin/mmms Example2.txt urdmeinputsphere.mat sphere_mesh.h5 result.h5
+../bin/mmms test.txt urdmeinput.mat test_mesh.h5 result.h5
 
 

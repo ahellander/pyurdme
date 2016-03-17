@@ -52,6 +52,7 @@ typedef struct particle{
     bool active;
     int unique_id;
     int voxel;
+    int dim;
 }particle;
 
 typedef struct group{

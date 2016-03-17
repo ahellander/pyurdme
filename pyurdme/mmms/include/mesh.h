@@ -4,7 +4,7 @@
 #define MESH__H
 
 #include <stdlib.h>
-
+using namespace std;
 /* The following structures represent (extented) triangles and tetrahedra. 
    It contains information about the primal mesh as well as the dual
    cells. */

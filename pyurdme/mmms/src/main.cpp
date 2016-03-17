@@ -791,6 +791,17 @@ void read_p(fem_mesh *mesh, H5File mesh_file){
 
     mesh->Ncells=dims_out[0];
     mesh->p=p;     
+
+    // initialize vertices
+    /*int nvox = dims_out[0];
+    mesh->vertices = (vertex **)malloc(nvox*sizeof(vertex *));
+    vertex *vtx;
+
+    for (int i; i<nvox; i++){
+        mesh->vertices[i] = (vertex *)malloc(sizeof(vertex));
+        vtx = mesh->vertices[i];
+        vtx->id = i;
+    }  */ 
     
 }
 
@@ -841,6 +852,36 @@ void read_bnd(fem_mesh *mesh, H5File mesh_file){
         cout << "\n";
     }*/
     mesh->ntri = dims_out[0];
+    mesh->e=t;     
+    
+}
+
+void read_vertex_to_cell(fem_mesh *mesh, H5File mesh_file){
+
+    DataSet dataset = mesh_file.openDataSet("/mesh/vertex2cells");
+    DataSpace dataspace = dataset.getSpace();
+    /*
+    * Get the number of dimensions in the dataspace.
+    */
+    int rank = dataspace.getSimpleExtentNdims();
+    hsize_t dims_out[2];
+    int ndims = dataspace.getSimpleExtentDims( dims_out, NULL);
+    cout << "rank " << rank << ", dimensions " <<
+          (unsigned long)(dims_out[0]) << " x " <<
+          (unsigned long)(dims_out[1]) << endl;
+
+    int *t;
+    t=(int *)malloc(dims_out[0]*dims_out[1]*sizeof(int));
+    dataset.read(t,PredType::NATIVE_INT);
+
+    /*for (int i=0;i<dims_out[0];i++){
+        for (int j=0;j<dims_out[1];j++)
+            cout << p[i+j*dims_out[0]] << " ";
+        cout << "\n";
+    }*/
+    mesh->ntri = dims_out[0];
+
+
     mesh->e=t;     
     
 }
@@ -909,10 +950,15 @@ int main(int argc, char* argv[]) {
     mesh_primal2dual(mesh);
 
     /* Compute all the planes that approximates the boundaries */
+    
+    for (int i=0;i<mesh->ntet;i++){
+        print_tet(mesh->tets[i]);
+    }   
 
     vector <plane> boundaries;
     boundaries = voxel_boundaries(model, mesh);
-    
+
+
     // File where the output will be stored
     string output_filename = argv[4];
 

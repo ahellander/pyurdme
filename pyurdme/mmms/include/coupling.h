@@ -26,6 +26,7 @@ void meso2micro1(particle *out,int voxel, int species, double rr, double d,int d
 vector <plane> voxel_boundaries(urdme_model *model, fem_mesh *mesh);
 inline void trinormal(triangle *tri,double *n);
 static inline void vec_in_plane(double *normal, double *v1, double *v2);
+static inline int nn(size_t *jcK,size_t *irK, double *p, double *pos, int pv,int spec,int Mspecies);
 
 
 

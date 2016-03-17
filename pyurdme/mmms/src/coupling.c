@@ -424,6 +424,7 @@ int micro2meso2(particle *particle, fem_mesh *mesh, int Mspecies)
 }
 
 
+
 /* "Exact" version of micro2meso. */
 int micro2meso(particle *particle, fem_mesh *mesh)
 {
@@ -477,8 +478,8 @@ int micro2meso(particle *particle, fem_mesh *mesh)
 
 		}
 
-		// If it is not inside one of those, we serach to find the closest vertex, 
-		// TODO: THIS IS JUST TEMPORARY, WE NEED TO RE-INTEGRATE THE STRATEGY FORM MICRO2MESO2
+		// If it is not inside one of those, we search to find the closest vertex, 
+		// TODO: THIS IS JUST TEMPORARY, WE NEED TO RE-INTEGRATE THE STRATEGY WITH SLIDING FORM MICRO2MESO2
 		double mindist = 1e9;
 		double dist;
 		for (int i=0; i<mesh->Ncells; i++){
@@ -487,63 +488,8 @@ int micro2meso(particle *particle, fem_mesh *mesh)
 				mindist = dist;
 				wn = i;
 			}
-
 		}
 
-
-		
-		// If we don't find it in the layer around the starting vertex,we find the closes vertex in 
-		//   the mesh and look at its surrounding tetrahedra. // 
-		
-	    //nv = micro2meso2(particle,mesh,Mspecies);
-		//int nv = micro2meso1(particle,mesh);
-		
-	    //int nv2 = micro2meso1(particle,mesh);
-		//if (nv!=nv2) {
-		//	printf("ERROR! Not the same nv. micro2meso2: %i micro2meso1: %i\n",nv,nv2);
-		//	//printf("%.2e %.2e\n",distance(particle->p,&mesh->p[3*nv]),distance(particle->p,&mesh->p[3*nv2]));
-	//		//exit(-1);
-	//	}//
-		
-		/*for (k=jcv2t[nv]; k<jcv2t[nv+1]; k++) {
-			
-			tet = tets[(int)prv2t[k]-1];
-			
-			if (tet_inside(tet,particle->pos,minbary)){
-				wn=tet_which_macro_element(tet,particle->pos);
-				return wn;
-			}
-			else {
-				if (*minbary > mindist) {
-					mindist = *minbary;
-					closest_tet = (int)prv2t[k]-1;
-				}
-				
-			}
-			
-		}*/
-		
-		// If this too failed, look in the tetrahedra around the neighbouring vertices.  
-		/*int spec = particle->type;
-		int dof = Mspecies*nv+spec;
-		for (j=jcK[dof]; j<jcK[dof+1]; j++) {
-		  
-			for (k=jcv2t[(irK[j]-spec)/Mspecies]; k<jcv2t[(irK[j]-spec)/Mspecies+1]; k++) {
-				
-				tet = tets[(int)prv2t[k]-1];
-				
-				if (tet_inside(tet,particle->pos,minbary)){
-					wn=tet_which_macro_element(tet,particle->pos);
-					return wn;
-				}
-				
-			}
-			
-		}*/
-					
-		// If this failed, expand the search to look in all tetrahedra in the mesh. 
-		//tet = tets[closest_tet];
-		//wn = tet_which_macro_element(tet,particle->pos);
 		
 		return wn;
 		

@@ -987,7 +987,7 @@ int main(int argc, char* argv[]) {
             part = &(grp.particles[i]);
             part->dim=3;
             vx =micro2meso(part, mesh);
-            cout << vx << "\n";
+          //  cout << vx << "\n";
             part->voxel=vx;
         }
 

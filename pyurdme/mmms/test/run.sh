@@ -1,5 +1,5 @@
 #!/bin/bash
 
-../bin/mmms test.txt urdmeinput.mat test_mesh.h5 result.h5
+../bin/mmms cube/test.txt cube/urdmeinput.mat cube/test_mesh.h5 cube/result.h5
 
 

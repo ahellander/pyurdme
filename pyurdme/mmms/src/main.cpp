@@ -178,9 +178,7 @@ void doAssociation(vector <particle>& particles,vector <species>& specs,tent_eve
         
         particles[0].type = assocs[event->index].products[0];
         particles[0].active = true;
-        particles[0].voxel[0] = 0;
-        particles[0].voxel[1] = 0;
-        particles[0].voxel[2] = 0;
+        
         
         particles[0].vec1[0] = vec1[0];
         particles[0].vec1[1] = vec1[1];
@@ -211,9 +209,7 @@ void doAssociation(vector <particle>& particles,vector <species>& specs,tent_eve
         particles[i].pos[2] = new_pos[2];
         particles[i].type = assocs[event->index].products[i];
         particles[i].active = true;
-        particles[i].voxel[0] = 0;
-        particles[i].voxel[1] = 0;
-        particles[i].voxel[2] = 0;
+      
     }
     
 }
@@ -252,9 +248,7 @@ void doDissociation(vector <particle>& particles,vector <species>& specs,tent_ev
 
         particles[index_temp].type = dissocs[index].products[0];
         particles[index_temp].active = true;
-        particles[index_temp].voxel[0] = 0;
-        particles[index_temp].voxel[1] = 0;
-        particles[index_temp].voxel[2] = 0;
+        
         
         particles[index_temp].vec1[0] = vec1[0];
         particles[index_temp].vec1[1] = vec1[1];
@@ -310,9 +304,7 @@ void doDissociation(vector <particle>& particles,vector <species>& specs,tent_ev
         
         particles[index_temp+i].type = dissocs[event->index].products[i];
         particles[index_temp+i].active = true;
-        particles[index_temp+i].voxel[0] = 0;
-        particles[index_temp+i].voxel[1] = 0;
-        particles[index_temp+i].voxel[2] = 0;
+        
         
         particles[index_temp+i].vec1[0] = vec1[0];
         particles[index_temp+i].vec1[1] = vec1[1];

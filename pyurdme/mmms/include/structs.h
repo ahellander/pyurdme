@@ -47,7 +47,6 @@ typedef struct species{
 
 typedef struct particle{
     int type;
-    int voxel[3];
     double pos[3];
     double vec1[3],vec2[3],vec3[3];
     bool active;

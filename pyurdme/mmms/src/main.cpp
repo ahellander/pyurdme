@@ -981,15 +981,12 @@ int main(int argc, char* argv[]) {
 
         /* initialize the positions. TODO: Move inside generate particles/create particles */
         particle *part;
-        int vx;
         for (int i=0;i<grp.particles.size();i++)
         {
             part = &(grp.particles[i]);
             part->dim=3;
-            vx =micro2meso(part, mesh);
-          //  cout << vx << "\n";
-            part->voxel=vx;
-        }
+            micro2meso(part, mesh);
+         }
 
         
         double T = sim.T;

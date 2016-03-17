@@ -467,7 +467,7 @@ int micro2meso(particle *particle, fem_mesh *mesh)
 	
 	double *p = mesh->p;
 	
-	//tetrahedron **tets = mesh->tets;
+	tetrahedron **tets = mesh->tets;
 	vertex **vertices = mesh->vertices;
 	
 	/* If a 3D species, start looking in the tetrahedra that
@@ -477,12 +477,12 @@ int micro2meso(particle *particle, fem_mesh *mesh)
 	//int j,k,voxel;
     int voxel;
 	int wn = -1;
-	//tetrahedron *tet;
+	tetrahedron *tet;
 	//int closest_tet;
 	double mindist=INFINITY;
 	double dist;
 
-	//double minbary[1];
+	double minbary[1];
 	//int spec=particle->type;
 	
 	//int i;
@@ -518,15 +518,24 @@ int micro2meso(particle *particle, fem_mesh *mesh)
 		vtx=vertices[wn];
 
 		check_inside_surrounding_cells(particle, vtx, mesh, out);
-
 		if (out[0] > 0){
 			particle->voxel = out[0];
 			return out[0];
 		}
 
-		cout << "Warning, did not find exact voxel for particle.\n";
-		// If not, we are in trouble. Here we need to implement a global serach to be guaranteed to 
-		// always find the voxel, even if it is very slow. 
+		// If not, we are in trouble. We now resort to looking in every tetrahedron in the mesh. 
+		// This is very expensive, so the timestep of the micro sovler should be chosen so that this only happens rarely.  
+		for (int i=0; i<mesh->ntet;i++){
+			tet = tets[i];
+			if (tet_inside(tet,particle->pos,minbary)) {
+				wn=tet_which_macro_element(tet,particle->pos);
+				break;
+			}
+		}
+		particle->voxel=wn;
+		// At this point, this should not happen. 
+		if (wn == -1)
+			cout << "Warning, did not find exact voxel for particle.\n";
 		
 		return particle->voxel;
 		

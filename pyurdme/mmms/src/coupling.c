@@ -219,15 +219,12 @@ vector <plane> voxel_boundaries(urdme_model *model, fem_mesh *mesh)
 		if (amax < 0.0) {
 			alpha = -1.0;
 		}
-//		
 		boundaries[sv].n[0]+=alpha*n[0];
 		boundaries[sv].n[1]+=alpha*n[1];
 		boundaries[sv].n[2]+=alpha*n[2];
 		boundaries[sv].isbnd=1;
 
 
-      //  if(boundaries[sv].isbnd==1)
-	  //		printf("n=[%g %g %g];\n",boundaries[Mspecies*sv+j].n[0],boundaries[Mspecies*sv+j].n[1],boundaries[Mspecies*sv+j].n[2]);
 	}
 	
 	/* Normalize the mean normals */
@@ -250,9 +247,7 @@ vector <plane> voxel_boundaries(urdme_model *model, fem_mesh *mesh)
 		if (boundaries[i].isbnd){ 
 			vec_in_plane(boundaries[i].n,boundaries[i].v1,boundaries[i].v2);
 		}
-		
 		boundaries[i].type.push_back(0);
-		
 	}
 		
 	free(onboundary);

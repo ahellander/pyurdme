@@ -52,6 +52,7 @@ typedef struct particle{
     double vec1[3],vec2[3],vec3[3];
     bool active;
     int unique_id;
+    int in_voxel;
 }particle;
 
 typedef struct group{

@@ -204,13 +204,10 @@ void generate_particles(group *grp,fem_mesh *mesh,int N,int type,gsl_rng *rng){
 //        grp->particles[i].pos[1] = hy*gsl_rng_uniform(rng);
 //        grp->particles[i].pos[2] = hz*gsl_rng_uniform(rng);
         
-        
-        
         /* TODO: This works for pure micro, but we should set the correct voxel for the hybrid method. */
         grp->particles[i].voxel[0] = 0;
         grp->particles[i].voxel[1] = 0;
         grp->particles[i].voxel[2] = 0;
-        
         
         
         grp->particles[i].type = type;
@@ -354,7 +351,9 @@ void reflect_cuboid_p(particle *p,double *boundary){
 }
 
 void reflect_boundary(vector <particle>& mols,vector <plane>& tet_b){
+
     for(int j=0;j<(int)(mols.size());j++){
+
         for(int i=0;i<(int)(tet_b.size());i++){
             if(tet_b[i].isbnd){
                 double dp = tet_b[i].n[0]*(mols[j].pos[0]-tet_b[i].p[0])+tet_b[i].n[1]*(mols[j].pos[1]-tet_b[i].p[1])+tet_b[i].n[2]*(mols[j].pos[2]-tet_b[i].p[2]);

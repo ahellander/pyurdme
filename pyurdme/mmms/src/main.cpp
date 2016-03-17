@@ -626,8 +626,6 @@ void main_simulator(group *grp,vector <species>& specs,vector <association>& ass
     
     double t = 0.0;
     
-    
-    
     vector <group> grps_final,grps;
     
     double dt;// = T;
@@ -937,7 +935,6 @@ int main(int argc, char* argv[]) {
         group grp;
         for(int i=0;i<(int)(specs.size());i++){
             generate_particles(&grp,mesh,specs[i].initial_value,i,rng);
-            
         }
         
         double T = sim.T;
@@ -967,6 +964,7 @@ int main(int argc, char* argv[]) {
             main_simulator(&grp,specs,assocs,dissocs,boundaries,dt,rng,l);
             t += dt;
             time_index++;
+            cout << "Timestep complete, t=" << t << "\n";
             // Write solution to file.
             add_time_point_to_file(file,grp,num_specs,l,time_index);
 

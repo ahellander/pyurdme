@@ -107,11 +107,9 @@ vector <plane> voxel_boundaries(urdme_model *model, fem_mesh *mesh)
 		
 		/* Compute the unit normal of that triangle.*/
 		trinormal(tri,n);
-//        printf("n1=[%g %g %g];\n",alpha*n[0],alpha*n[1],alpha*n[2]);
 
 		/* TODO: Need to check that all normals that we assemble point in a direction that
-		   the species may move. */
-		 
+		   the species may move. */		 
 		radius = norm(tri->v1);
 		a = dot(vec,n);
 		
@@ -291,156 +289,6 @@ static inline double *tri_surfnormal(int *tri,double *p)
 }
 
 
-/* Map microscopic particle to mesoscopic dof. This first, simple implementation is horrible. 
-   It computes the particle's distance to all mesh vertices and finds the minimum.*/
-/*int micro2meso1(micro_particle *particle, fem_mesh *mesh)
-
-{
-	int Ncells = mesh->Ncells;
-	int i;
-	
-	double *mesh_p;
-	mesh_p = mesh->p;
-	
-	double d;
-		
-	int dof = 0;
-	double mindist = INFINITY;
-	for (i=0;i<Ncells;i++){
-		d=distance(particle->p, &mesh_p[3*i]); //distance squared. 
-		if (d < mindist){
-			dof = i;
-			mindist = d;
-		}
-	}
-	return dof;
-	
-}*/
-
-/* Fail proof version. Looks in every tetrahedron in the mesh */
-/*int micro2meso_fp(micro_particle *particle, fem_mesh *mesh)
-{
-	tetrahedron **tets = mesh->tets;
-	size_t *jcv2t = mesh->jcv2t;
-	double *prv2t = mesh->prv2t;
-	
-	int ntet = mesh->ntet;
-	int i,wn;
-	double minbary[1];
-	tetrahedron *tet;
-	
-	
-	for (i=0; i<ntet; i++) {
-		
-		tet = tets[i];
-		if (tet_inside(tet,particle->p,minbary)) {
-			wn=tet_which_macro_element(tet,particle->p);
-			return wn;
-		}
-	}
-	
-	double r = norm(particle->p);
-	if (r<2.58e-6) {
-		//printf("Warning. Particle not inside any tetrahedron in the mesh and not outside domain. r = %.2e\n",r);
-	}
-	return -1;
-	
-} */
-
-/* static inline int nn(size_t *jcK,size_t *irK, double *p, double *pos, int pv,int spec,int Mspecies){
-	
-	int node,node2,nv;
-	size_t j,k;
-	double d,dn;
-	double *x;
-		
-	//nv=pv*Mspecies+spec;
-	//d = INFINITY;
-	
-	int dof = pv*Mspecies + spec;
-	nv = dof;
-     
-	x = &p[3*pv];
-	d = distance(x,pos);
-	//printf("d: %.2e\n",d);
-	//printf("x: (%.2e %.2e %.2e)\n",x[0],x[1],x[2]);
-	//printf("pos: (%.2e %.2e %.2e)\n",pos[0],pos[1],pos[2]);
-
-	for (j=jcK[dof]; j<jcK[dof+1]; j++) {
-		
-		node = irK[j];
-		
-		x  = &p[3*(node-spec)/Mspecies];
-		dn = distance(x,pos);
-		
-		//printf("dn: %.2e\n",dn);
-		
-		if (dn < d) {
-			nv = node;
-			d = dn;
-		}
-		
-		for (k=jcK[node]; k<jcK[node+1]; k++) {
-			
-			node2 = irK[k];
-			
-			// Check distance to all neighbours to node 
-			x = &p[3*(node2-spec)/Mspecies];
-			dn = distance(x,pos);
-			//printf("dn: %.2e\n",dn);
-
-			if (dn < d) {
-				nv = node2;
-				d = dn;
-			}
-		}
-		
-		
-	}
-	return (nv-spec)/Mspecies;
-} 
-*/
-	
-/* A new, faster micro2meso. */
-/*int micro2meso2(micro_particle *particle, fem_mesh *mesh, int Mspecies)
-{
-	
-	// The connectivity matrix 
-	size_t *irK,*jcK;
-	irK = mesh->irK;
-	jcK = mesh->jcK;
-	
-	// mesh vetrices 
-	double *p;
-	p = mesh->p;
-	
-	// The particles current position 
-	double *pos = particle->p;
-	
-	// Check which vertex the particle was nearest in the previus step.
-	int pv = particle->voxel;
-	
-	// Find the nearest neighbour among pv's nearest neighbours in the mesh. 
-	int nv;
-	int spec = particle->type;
-
-	nv = nn(jcK,irK,p,pos,pv,spec,Mspecies);
-    
-	//printf("pv %i nv %i\n",pv,nv);
-	
-	// Slide towards the nearest voxel. 
-	while (nv != pv) {
-		pv = nv;
-		nv = nn(jcK,irK,p,pos,pv,spec,Mspecies);
-	//	printf("pv %i nv %i\n",pv,nv);
-
-	}
-	
-	return nv;
-
-}
-*/
-
 
 static inline int cmp_point(double *v1,double *v2)
 {
@@ -478,8 +326,49 @@ void project(double *p,triangle *tri) {
 	free(vec2);
 }
 
+
+/* A new, faster micro2meso. */
+int micro2meso2(particle *particle, fem_mesh *mesh, int Mspecies)
+{
+	
+	// The connectivity matrix 
+	size_t *irK,*jcK;
+	irK = mesh->irK;
+	jcK = mesh->jcK;
+	
+	// mesh vetrices 
+	double *p;
+	p = mesh->p;
+	
+	// The particles current position 
+	double *pos = particle->p;
+	
+	// Check which vertex the particle was nearest in the previus step.
+	int pv = particle->voxel;
+	
+	// Find the nearest neighbour among pv's nearest neighbours in the mesh. 
+	int nv;
+	int spec = particle->type;
+
+	nv = nn(jcK,irK,p,pos,pv,spec,Mspecies);
+    
+	//printf("pv %i nv %i\n",pv,nv);
+	
+	// Slide towards the nearest voxel. 
+	while (nv != pv) {
+		pv = nv;
+		nv = nn(jcK,irK,p,pos,pv,spec,Mspecies);
+	//	printf("pv %i nv %i\n",pv,nv);
+
+	}
+	
+	return nv;
+
+}
+
+
 /* "Exact" version of micro2meso. */
-/*int micro2meso3(micro_particle *particle, fem_mesh *mesh, int Mspecies)
+int micro2meso3(particle *particle, fem_mesh *mesh, int Mspecies)
 {
 	size_t *jcv2t = mesh->jcv2t;
 	double *prv2t = mesh->prv2t;
@@ -492,9 +381,9 @@ void project(double *p,triangle *tri) {
 	
 	tetrahedron **tets = mesh->tets;
 	
-	// If a 3D species, start looking in the tetrahedra that
-	//   covers the macroelement associated with the vertex the particle
-	 //  belonged to in the previous timestep. 
+	/* If a 3D species, start looking in the tetrahedra that
+       covers the macroelement associated with the vertex the particle
+	   belonged to in the previous timestep.  */
 	
 	int j,k,voxel,dof,wn,nv;
 	tetrahedron *tet;
@@ -531,7 +420,7 @@ void project(double *p,triangle *tri) {
 		}
 		
 		// If we don't find it in the layer around the starting vertex,we find the closes vertex in 
-		   the mesh and look at its surrounding tetrahedra. // 
+		//   the mesh and look at its surrounding tetrahedra. // 
 		
 	    nv = micro2meso2(particle,mesh,Mspecies);
 		//int nv = micro2meso1(particle,mesh);
@@ -539,7 +428,7 @@ void project(double *p,triangle *tri) {
 	    //int nv2 = micro2meso1(particle,mesh);
 		if (nv!=nv2) {
 			printf("ERROR! Not the same nv. micro2meso2: %i micro2meso1: %i\n",nv,nv2);
-			printf("%.2e %.2e\n",distance(particle->p,&mesh->p[3*nv]),distance(particle->p,&mesh->p[3*nv2]));
+			//printf("%.2e %.2e\n",distance(particle->p,&mesh->p[3*nv]),distance(particle->p,&mesh->p[3*nv2]));
 			//exit(-1);
 		}//
 		
@@ -560,7 +449,6 @@ void project(double *p,triangle *tri) {
 			}
 			
 		}
-
 		
 		// If this too failed, look in the tetrahedra around the neighbouring vertices.  
 		int spec = particle->type;
@@ -579,21 +467,16 @@ void project(double *p,triangle *tri) {
 			}
 			
 		}
-			
-		
+					
 		// If this failed, expand the search to look in all tetrahedra in the mesh. 
-		//wn=micro2meso_fp(particle,mesh);
-
-		
-		//printf("Warning, using failback in micro2meso3. Tet: %i\n",closest_tet);
 		tet = tets[closest_tet];
-		
 		wn = tet_which_macro_element(tet,particle->p);
 		
 		return wn;
 		
 	}
-	else if (particle->dim==2) {
+
+	/*else if (particle->dim==2) {
 	
 		triangle **tris = mesh->bnd;
 		voxel = particle->voxel;
@@ -685,15 +568,17 @@ void project(double *p,triangle *tri) {
 		return wn;
 		
 	}
+ 	*/
 	else {
-		printf("1D species not yet supported.\n");
+		printf("Only 3D species are supported in micro2meso.\n");
 	}
 	
 	return -1;
 
 	   
 }
-*/
+
+
 static inline double *tet_randunif(int *tet,double *p)
 {
 	double *ru,*x;

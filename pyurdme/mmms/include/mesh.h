@@ -10,6 +10,11 @@
    cells. */
 
 typedef struct{
+    int id;
+    vector <int> cells;
+}vertex;
+
+typedef struct{
 	
 	/* Points in xx order. */
 	int v1p;
@@ -114,9 +119,12 @@ typedef struct{
 	int ntet;
 	int *t;
 	
-	/* Tetrahedra (internal format) */
-	tetrahedron **tets;
+    
+	/* Internal mesh format */
+    vertex **vertices;
+    tetrahedron **tets;
 	triangle **bnd;
+    
 	
 	/* Connectivity matrix (needed by micro2meso). */
 	size_t *jcK;

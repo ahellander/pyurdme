@@ -76,6 +76,26 @@ class MMMSSolver(pyurdme.URDMESolver):
 
         grp.create_dataset("boundaryfacets",data=numpy.array(bndtri))
 
+        # Datastructure, vertex->tetrahedron
+        mesh.init(0,0)
+        f = dolfin.MeshEntity(mesh, 0,0)
+        v2t = []
+        for v in dolfin.vertices(mesh):
+            #for c in dolfin.cells(v):
+            v2t.append([ci.index() for ci in dolfin.cells(v)])
+                #print v.index(), c.index()
+        v2t = numpy.array(v2t)        
+        lmax = 0;
+        for l in numpy.array(v2t):
+            if len(l) > lmax:
+                lmax = len(l)
+        temp = -1*numpy.ones((len(v2t),lmax))
+
+        for i,l in enumerate(v2t):
+            for j,v in enumerate(l):
+                temp[i,j] = v;
+
+        grp.create_dataset("vertex2cells",data=temp)       
 
         #for cell in dolfin.cells(mesh):
         #    for face in dolfin.faces(cell):

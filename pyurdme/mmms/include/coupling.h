@@ -13,10 +13,11 @@
 #define micro2meso micro2meso3
 #define meso2micro meso2micro2
 
-int micro2meso1(particle *, fem_mesh *);
-int micro2meso2(particle *, fem_mesh *, int Mspecies);
-int micro2meso3(particle *particle, fem_mesh *mesh, int Mspecies);
-int micro2meso_fp(particle *particle, fem_mesh *mesh);
+//int micro2meso1(particle *, fem_mesh *);
+//int micro2meso2(particle *, fem_mesh *, int Mspecies);
+//int micro2meso3(particle *particle, fem_mesh *mesh, int Mspecies);
+//int micro2meso_fp(particle *particle, fem_mesh *mesh);
+int micro2meso(particle *particle, fem_mesh *mesh);
 
 
 void meso2micro(particle *,int voxel, int species, double rr, double d, int dim,fem_mesh* mesh);

@@ -425,24 +425,23 @@ int micro2meso2(particle *particle, fem_mesh *mesh, int Mspecies)
 
 
 /* "Exact" version of micro2meso. */
-int micro2meso3(particle *particle, fem_mesh *mesh, int Mspecies)
+int micro2meso(particle *particle, fem_mesh *mesh)
 {
-	size_t *jcv2t = mesh->jcv2t;
-	double *prv2t = mesh->prv2t;
-	size_t *jcv2e = mesh->jcv2e;
-	double *prv2e = mesh->prv2e;
+
 	size_t *jcK = mesh->jcK;
 	size_t *irK = mesh->irK;
 	
-	double *mesh_p = mesh->p;
+	double *p = mesh->p;
 	
 	tetrahedron **tets = mesh->tets;
+	vertex **vertices = mesh->vertices;
 	
 	/* If a 3D species, start looking in the tetrahedra that
        covers the macroelement associated with the vertex the particle
 	   belonged to in the previous timestep.  */
 	
-	int j,k,voxel,dof,wn,nv;
+	int j,k,voxel;
+	int wn = -1;
 	tetrahedron *tet;
 	int closest_tet;
 	double mindist=-INFINITY;
@@ -450,15 +449,17 @@ int micro2meso3(particle *particle, fem_mesh *mesh, int Mspecies)
 	int spec=particle->type;
 	
 	int i;
-	
-	if (particle->dim==3 || particle->dim==1) {
-		
+	vertex *vtx;
+	//if (particle->dim==3 || particle->dim==1) {
+	if (particle->dim==3){
+
 		voxel = particle->voxel;
-		// Check if particle is inside one of the surrounding tetrahedra. 
-		for (k=jcv2t[voxel]; k<jcv2t[voxel+1]; k++) {
+		vtx = vertices[voxel];
+
+		// Check if particle is inside one of the tetrahedra surrounding the previous voxel.  
+		for (k=0; k<vtx->cells.size(); k++) {
 			
-			tet = tets[(int)prv2t[k]-1];
-			
+			tet = tets[vtx->cells[k]];
 			// We need to check if there is a non-zero edge in the connectivity matrix
 			// between our vertex and the others in that tetrahedron,
 			// otherwise the particle should be restricted from moving there (Not yet implemented).
@@ -470,16 +471,31 @@ int micro2meso3(particle *particle, fem_mesh *mesh, int Mspecies)
 			else {
 				if (*minbary > mindist) {
 					mindist = *minbary;
-					closest_tet = (int)prv2t[k]-1;
+					closest_tet = vtx->cells[k];
 				}
 			}
 
 		}
+
+		// If it is not inside one of those, we serach to find the closest vertex, 
+		// TODO: THIS IS JUST TEMPORARY, WE NEED TO RE-INTEGRATE THE STRATEGY FORM MICRO2MESO2
+		double mindist = 1e9;
+		double dist;
+		for (int i=0; i<mesh->Ncells; i++){
+			dist = dist3(&p[i*3],particle->pos);
+			if (dist<mindist){
+				mindist = dist;
+				wn = i;
+			}
+
+		}
+
+
 		
 		// If we don't find it in the layer around the starting vertex,we find the closes vertex in 
 		//   the mesh and look at its surrounding tetrahedra. // 
 		
-	    nv = micro2meso2(particle,mesh,Mspecies);
+	    //nv = micro2meso2(particle,mesh,Mspecies);
 		//int nv = micro2meso1(particle,mesh);
 		
 	    //int nv2 = micro2meso1(particle,mesh);
@@ -489,7 +505,7 @@ int micro2meso3(particle *particle, fem_mesh *mesh, int Mspecies)
 	//		//exit(-1);
 	//	}//
 		
-		for (k=jcv2t[nv]; k<jcv2t[nv+1]; k++) {
+		/*for (k=jcv2t[nv]; k<jcv2t[nv+1]; k++) {
 			
 			tet = tets[(int)prv2t[k]-1];
 			
@@ -505,10 +521,10 @@ int micro2meso3(particle *particle, fem_mesh *mesh, int Mspecies)
 				
 			}
 			
-		}
+		}*/
 		
 		// If this too failed, look in the tetrahedra around the neighbouring vertices.  
-		int spec = particle->type;
+		/*int spec = particle->type;
 		int dof = Mspecies*nv+spec;
 		for (j=jcK[dof]; j<jcK[dof+1]; j++) {
 		  
@@ -523,11 +539,11 @@ int micro2meso3(particle *particle, fem_mesh *mesh, int Mspecies)
 				
 			}
 			
-		}
+		}*/
 					
 		// If this failed, expand the search to look in all tetrahedra in the mesh. 
-		tet = tets[closest_tet];
-		wn = tet_which_macro_element(tet,particle->pos);
+		//tet = tets[closest_tet];
+		//wn = tet_which_macro_element(tet,particle->pos);
 		
 		return wn;
 		

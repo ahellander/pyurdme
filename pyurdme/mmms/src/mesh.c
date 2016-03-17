@@ -171,6 +171,15 @@ void print_T(tetrahedron *tet)
 	printf("]\n");
 }
 
+void print_vertex(vertex *vtx){
+	printf("vertex, id: %i", vtx->id);
+	printf("\tcells:\n\t");
+
+	for (int i=0;i<vtx->cells.size();i++)
+		cout << vtx->cells[i] << " ";
+	cout << "\n";
+}
+
 void print_tet(tetrahedron *tet)
 {
   printf("v1 = [%.3e %.3e %.3e]; v1p = %i ;\n",tet->v1[0],tet->v1[1],tet->v1[2],tet->v1p);	

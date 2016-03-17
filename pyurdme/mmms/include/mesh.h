@@ -4,6 +4,7 @@
 #define MESH__H
 
 #include <stdlib.h>
+#include <vector>
 using namespace std;
 /* The following structures represent (extented) triangles and tetrahedra. 
    It contains information about the primal mesh as well as the dual
@@ -11,7 +12,7 @@ using namespace std;
 
 typedef struct{
     int id;
-    vector <int> cells;
+    vector<int> cells;
 }vertex;
 
 typedef struct{
@@ -148,7 +149,7 @@ typedef struct{
 
 void print_tet(tetrahedron *tet);
 void print_tri(triangle *tri);
-
+void print_vertex(vertex *vtx);
 
 /* Simple geometry */
 //double dot(double *x,double *y);

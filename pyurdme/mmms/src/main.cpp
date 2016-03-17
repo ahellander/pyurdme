@@ -780,7 +780,7 @@ void read_p(fem_mesh *mesh, H5File mesh_file){
     */
     int rank = dataspace.getSimpleExtentNdims();
     hsize_t dims_out[2];
-    int ndims = dataspace.getSimpleExtentDims( dims_out, NULL);
+    dataspace.getSimpleExtentDims( dims_out, NULL);
     cout << "rank " << rank << ", dimensions " <<
           (unsigned long)(dims_out[0]) << " x " <<
           (unsigned long)(dims_out[1]) << endl;
@@ -793,15 +793,16 @@ void read_p(fem_mesh *mesh, H5File mesh_file){
     mesh->p=p;     
 
     // initialize vertices
-    /*int nvox = dims_out[0];
-    mesh->vertices = (vertex **)malloc(nvox*sizeof(vertex *));
+    int nvox = dims_out[0];
+    vertex **vertices = (vertex **)malloc(nvox*sizeof(vertex *));
     vertex *vtx;
-
-    for (int i; i<nvox; i++){
-        mesh->vertices[i] = (vertex *)malloc(sizeof(vertex));
-        vtx = mesh->vertices[i];
+    for (int i=0; i<nvox; i++){
+    
+        vertices[i] = (vertex *)malloc(sizeof(vertex));
+        vtx = vertices[i];
         vtx->id = i;
-    }  */ 
+    }  
+    mesh->vertices = vertices;
     
 }
 
@@ -814,7 +815,7 @@ void read_t(fem_mesh *mesh, H5File mesh_file){
     */
     int rank = dataspace.getSimpleExtentNdims();
     hsize_t dims_out[2];
-    int ndims = dataspace.getSimpleExtentDims( dims_out, NULL);
+    dataspace.getSimpleExtentDims( dims_out, NULL);
     cout << "rank " << rank << ", dimensions " <<
           (unsigned long)(dims_out[0]) << " x " <<
           (unsigned long)(dims_out[1]) << endl;
@@ -837,7 +838,7 @@ void read_bnd(fem_mesh *mesh, H5File mesh_file){
     */
     int rank = dataspace.getSimpleExtentNdims();
     hsize_t dims_out[2];
-    int ndims = dataspace.getSimpleExtentDims( dims_out, NULL);
+    dataspace.getSimpleExtentDims( dims_out, NULL);
     cout << "rank " << rank << ", dimensions " <<
           (unsigned long)(dims_out[0]) << " x " <<
           (unsigned long)(dims_out[1]) << endl;
@@ -865,24 +866,23 @@ void read_vertex_to_cell(fem_mesh *mesh, H5File mesh_file){
     */
     int rank = dataspace.getSimpleExtentNdims();
     hsize_t dims_out[2];
-    int ndims = dataspace.getSimpleExtentDims( dims_out, NULL);
+    dataspace.getSimpleExtentDims( dims_out, NULL);
     cout << "rank " << rank << ", dimensions " <<
           (unsigned long)(dims_out[0]) << " x " <<
           (unsigned long)(dims_out[1]) << endl;
 
-    int *t;
-    t=(int *)malloc(dims_out[0]*dims_out[1]*sizeof(int));
+    int t[dims_out[0]][dims_out[1]];
+    //t=(int *)malloc(dims_out[0]*dims_out[1]*sizeof(int));
     dataset.read(t,PredType::NATIVE_INT);
-
-    /*for (int i=0;i<dims_out[0];i++){
-        for (int j=0;j<dims_out[1];j++)
-            cout << p[i+j*dims_out[0]] << " ";
-        cout << "\n";
-    }*/
-    mesh->ntri = dims_out[0];
-
-
-    mesh->e=t;     
+    vertex *vtx;
+    for (int i=0; i<dims_out[0];i++){
+        vtx = mesh->vertices[i];
+        for (int j=0;j<dims_out[1];j++){
+            if(t[i][j] >= 0)
+                 vtx->cells.push_back(t[i][j]);
+        }
+    }
+    
     
 }
 
@@ -945,43 +945,27 @@ int main(int argc, char* argv[]) {
     read_p(mesh, mesh_file);
     read_t(mesh, mesh_file);
     read_bnd(mesh, mesh_file);
+    read_vertex_to_cell(mesh, mesh_file);
+
 
     /* Initialize the primal/dual mesh format. Do we need this for pure micro?? */
     mesh_primal2dual(mesh);
 
     /* Compute all the planes that approximates the boundaries */
-    
-    for (int i=0;i<mesh->ntet;i++){
-        print_tet(mesh->tets[i]);
-    }   
+
+    /*for (int i=0;i<mesh->Ncells;i++){
+        print_vertex(mesh->vertices[i]);
+    } */  
 
     vector <plane> boundaries;
     boundaries = voxel_boundaries(model, mesh);
-
 
     // File where the output will be stored
     string output_filename = argv[4];
 
     /* Create output directory. */
-    
-    
-//    printf("[");
-//    for(int q=0;q<(int)(boundaries.size());q++){
-//        if(boundaries[q].isbnd==1){
-//        printf("%g %g %g;\n",boundaries[q].p[0],boundaries[q].p[1],boundaries[q].p[2]);
-//            printf("%g %g %g;\n",boundaries[q].n[0],boundaries[q].n[1],boundaries[q].n[2]);
-////           print_plane(&boundaries[q]);
-//        }
-//    }
-//    printf("];\n");
-    
-    
-    
-   
-
-    
-
-    /* Do simulations. */
+  
+   /* Do simulations. */
     for(int l=0;l<sim.ntraj;++l){
 
         /* Initialize random number generator. */
@@ -994,9 +978,19 @@ int main(int argc, char* argv[]) {
         for(int i=0;i<(int)(specs.size());i++){
             generate_particles(&grp,mesh,specs[i].initial_value,i,rng);
         }
-        
 
-        
+        /* initialize the positions. TODO: Move inside generate particles/create particles */
+        particle *part;
+        int vx;
+        for (int i=0;i<grp.particles.size();i++)
+        {
+            part = &(grp.particles[i]);
+            part->dim=3;
+            vx =micro2meso(part, mesh);
+            cout << vx << "\n";
+            part->voxel=vx;
+        }
+
         
         double T = sim.T;
         double dt = sim.T/sim.num_intervals;

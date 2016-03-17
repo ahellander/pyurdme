@@ -606,7 +606,7 @@ void simulate_group(group *grp,vector <species>& specs,double T,vector <associat
         }
         
 
-        reflect_boundary(grp->particles,boundaries);
+        
 //        reflect_cuboid(grp,boundary,dimension);
 
         t_loc += dt;
@@ -723,13 +723,16 @@ void main_simulator(group *grp,vector <species>& specs,vector <association>& ass
                 }
             }
         }
-        int Psize = (int)(grp->particles.size());
+        
+        reflect_boundary(grp->particles,boundaries);
+        
+//        int Psize = (int)(grp->particles.size());
 //        printf("[");
 //        for(int q=0;q<Psize;q++){
 //            printf("%g %g %g;\n",grp->particles[q].pos[0],grp->particles[q].pos[1],grp->particles[q].pos[2]);
 //        }
 //        printf("];");
-//        printf("num_particles=%d\n",Psize);
+//        printf("num_particles=%d, t=%g\n",Psize,t+dt);
         t += dt;
     }
 
@@ -910,7 +913,7 @@ int main(int argc, char* argv[]) {
     read_t(mesh, mesh_file);
     read_bnd(mesh, mesh_file);
 
-    /* Initialize the primal/dual mesh format. */
+    /* Initialize the primal/dual mesh format. Do we need this for pure micro?? */
     mesh_primal2dual(mesh);
 
     /* Compute all the planes that approximates the boundaries */
@@ -923,6 +926,23 @@ int main(int argc, char* argv[]) {
 
     /* Create output directory. */
     
+    
+//    printf("[");
+//    for(int q=0;q<(int)(boundaries.size());q++){
+//        if(boundaries[q].isbnd==1){
+//        printf("%g %g %g;\n",boundaries[q].p[0],boundaries[q].p[1],boundaries[q].p[2]);
+//            printf("%g %g %g;\n",boundaries[q].n[0],boundaries[q].n[1],boundaries[q].n[2]);
+////           print_plane(&boundaries[q]);
+//        }
+//    }
+//    printf("];\n");
+    
+    
+    
+   
+
+    
+
     /* Do simulations. */
     for(int l=0;l<sim.ntraj;++l){
 
@@ -937,11 +957,15 @@ int main(int argc, char* argv[]) {
             generate_particles(&grp,mesh,specs[i].initial_value,i,rng);
         }
         
+
+        
+        
         double T = sim.T;
         double dt = sim.T/sim.num_intervals;
         double t = 0.0;
     
         int num_specs = (int)(specs.size());
+    
     
         H5File file = H5File(output_filename, H5F_ACC_TRUNC );
 
@@ -955,6 +979,7 @@ int main(int argc, char* argv[]) {
             Group trajectory_0 = file.createGroup( prefix +"/Type_"+ to_string(spec));
         }
 
+
         int time_index = 0;
         add_time_point_to_file(file,grp,num_specs,l,time_index);
 
@@ -962,15 +987,29 @@ int main(int argc, char* argv[]) {
 
             /* TODO: We should check for birth processes here. */
             main_simulator(&grp,specs,assocs,dissocs,boundaries,dt,rng,l);
+            reflect_boundary(grp.particles,boundaries);
+//                    int Psize = (int)(grp.particles.size());
+//                    printf("[");
+//                    for(int q=0;q<Psize;q++){
+//                        printf("%g %g %g;\n",grp.particles[q].pos[0],grp.particles[q].pos[1],grp.particles[q].pos[2]);
+//                    }
+//                    printf("];");
+            
             t += dt;
+//            printf("t=%g\n",t);
             time_index++;
             cout << "Timestep complete, t=" << t << "\n";
             // Write solution to file.
             add_time_point_to_file(file,grp,num_specs,l,time_index);
 
         }
+
         gsl_rng_free(rng);
     }
+    
+
+    //print_model(specs,assocs,dissocs,births,&sim);
+
     
     gettimeofday(&end, NULL);
     printf("Run time: %.5g\n",(end.tv_sec+1e-6*end.tv_usec)-(start.tv_sec+1e-6*start.tv_usec));

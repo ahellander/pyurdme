@@ -876,11 +876,11 @@ cout << "rank " << rank << ", dimensions " <<
           (unsigned long)(dims_out[0]) << " x " <<
           (unsigned long)(dims_out[1]) << endl;
 printf("7\n");
- //   int t[dims_out[0]][dims_out[1]];
-    int **t=(int **)malloc((int)dims_out[0]*sizeof(int*));
-	for(int i=0;i<(int)dims_out[0];i++){
-		t[i] = (int *)malloc((int)dims_out[1]*sizeof(int));
-	}
+    int t[216][25];
+//    int **t=(int **)malloc((int)dims_out[0]*sizeof(int*));
+//	for(int i=0;i<(int)dims_out[0];i++){
+//		t[i] = (int *)malloc((int)dims_out[1]*sizeof(int));
+//	}
 
 	
 /*	for(int i=0;i<(int)dims_out[0];i++)
@@ -920,7 +920,7 @@ vtx = mesh->vertices[i];
 	}
     }
 
-	free(t);
+//	free(t);
     
     
 }

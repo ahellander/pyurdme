@@ -10,8 +10,8 @@
 #include "urdmemodel.h"
 #include "structs.h"
 
-#define micro2meso micro2meso3
-#define meso2micro meso2micro2
+//define micro2meso micro2meso3
+//define meso2micro meso2micro2
 
 //int micro2meso1(particle *, fem_mesh *);
 //int micro2meso2(particle *, fem_mesh *, int Mspecies);

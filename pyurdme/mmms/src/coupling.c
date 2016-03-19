@@ -433,10 +433,10 @@ void check_inside_surrounding_cells(particle *particle, vertex *vtx, fem_mesh *m
 		double mindist=-INFINITY;
 		int closest_tet;
 
- 
+		printf("Number of cells: %d\n",(int)(vtx->cells.size())); 
 
 		for (int k=0; k<vtx->cells.size(); k++) {
-			
+			printf("numtets=%d, k=%d\n",mesh->ntet,k);			
 			tet = tets[vtx->cells[k]];
 			// We need to check if there is a non-zero edge in the connectivity matrix
 			// between our vertex and the others in that tetrahedron,

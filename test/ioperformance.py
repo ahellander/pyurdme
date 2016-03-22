@@ -40,8 +40,8 @@ class simple_diffusion2(URDMEModel):
 
         # A circle
         #c1 = dolfin.Circle(0,0,1)
-        c1 = dolfin.Circle(0,0,1)
-        self.mesh = URDMEMesh(mesh=dolfin.Mesh(c1,20))
+        c1 = mshr.Circle(dolfin.Point(0,0),1)
+        self.mesh = URDMEMesh(mesh=mshr.generate_mesh(c1,20))
         
         # A mesh function for the cells
         cell_function = dolfin.CellFunction("size_t",self.mesh)

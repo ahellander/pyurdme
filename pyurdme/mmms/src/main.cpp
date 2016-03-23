@@ -876,11 +876,11 @@ cout << "rank " << rank << ", dimensions " <<
           (unsigned long)(dims_out[0]) << " x " <<
           (unsigned long)(dims_out[1]) << endl;
 printf("7\n");
-    int t[216][25];
-//    int **t=(int **)malloc((int)dims_out[0]*sizeof(int*));
-//	for(int i=0;i<(int)dims_out[0];i++){
-//		t[i] = (int *)malloc((int)dims_out[1]*sizeof(int));
-//	}
+//    double t[216][24];
+    int **t=(int **)malloc((int)dims_out[0]*sizeof(int*));
+	for(int i=0;i<(int)dims_out[0];i++){
+		t[i] = (int *)malloc((int)dims_out[1]*sizeof(int));
+	}
 
 	
 /*	for(int i=0;i<(int)dims_out[0];i++)
@@ -893,13 +893,13 @@ printf("7\n");
 */
 
 printf("8\n");  
-  dataset.read(t,PredType::NATIVE_INT);
+  dataset.read(t,PredType::NATIVE_DOUBLE);
   
 for(int i=0;i<(int)dims_out[0];i++)
         {
                 for(int j=0;j<(int)dims_out[1];j++)
                 {
-                        printf("i=%d,j=%d,t_ij=%d\n",i,j,t[i][j]);
+                        printf("i=%d,j=%d,t_ij=%d\n",i,j,(int)t[i][j]);
                 }
         }
 
@@ -914,7 +914,7 @@ vtx = mesh->vertices[i];
         for (int j=0;j<(int)dims_out[1];j++){
 		printf("%d,  %d\n",(int)dims_out[0],(int)dims_out[1]);
             if(t[i][j] >= 0)
-                 vtx->cells.push_back(t[i][j]);
+                 vtx->cells.push_back((int)t[i][j]);
 	printf("i=%d, j=%d\n",i,j);
         printf("12\n");
 	}

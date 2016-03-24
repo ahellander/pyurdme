@@ -332,14 +332,14 @@ int destroy_model(urdme_model *model)
 int dump_results(urdme_model* model, char *filename, char *type){
     /* IN PYURDME, THIS IS NEVER CALLED. IT IS ALWAYS USING HDF5. */
     
-    int Ndofs,tlen,nsol;
+    int Ndofs,tlen;//,nsol;
     int *U;
     U = model->U[0];
     
     
     Ndofs = model->Ncells*model->Mspecies;
     tlen = model->tlen;
-    nsol = model->nsol;
+//    nsol = model->nsol;
     
     
 #ifdef OUTPUT_MAT
@@ -458,7 +458,7 @@ int dump_results(urdme_model* model, char *filename, char *type){
     hid_t h5_output_file;
     herr_t status;
     h5_output_file = H5Fcreate(filename,H5F_ACC_TRUNC, H5P_DEFAULT,H5P_DEFAULT);
-    if (h5_output_file == NULL){
+    if (h5_output_file<0){
         printf("Failed to write U matrix HDF5 file.");
         exit(-1);
     }
@@ -508,7 +508,7 @@ void debug_print_model(urdme_model* model){
     int Ndofs = model->Ncells * model->Mspecies;
     
     for (i=0; i<Ndofs; i++) {
-        for (j=model->jcD[i]; j<model->jcD[i+1]; j++){
+        for (j=model->jcD[i]; j<(int)model->jcD[i+1]; j++){
             printf("D: %i\t%i\t%f\n",j,(int)model->irD[j],model->prD[j]);
         }
     }
@@ -523,14 +523,14 @@ void debug_print_model(urdme_model* model){
 
     
     for(i=0;i<model->Mspecies;i++){
-        for (j=model->jcN[i]; j<model->jcN[i+1]; j++){
+        for (j=model->jcN[i]; j<(int)model->jcN[i+1]; j++){
             printf("N: %i\t%lu - %lu\t%lu\t%i\n",j,(long unsigned)model->jcN[i],(long unsigned)model->jcN[i+1],(long unsigned)model->irN[j],model->prN[j]);
         }
     }
     printf("end N\n");
 
     for(i=0;i<model->Mreactions;i++){
-        for (j=model->jcG[i]; j<model->jcG[i+1]; j++){
+        for (j=model->jcG[i]; j<(int)model->jcG[i+1]; j++){
             printf("G %i\t%lu\n",j,(long unsigned)model->irG[j]);
         }
     }

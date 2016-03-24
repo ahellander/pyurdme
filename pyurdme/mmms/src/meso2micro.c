@@ -398,6 +398,7 @@ void meso2micro2(micro_particle *out,int voxel, int species, double rr, double d
 		
 		/* Rejection sampling */
 		while (wm!=voxel) {
+//			printf("tet=%d\n",tet);
 			tetrahedron_randunif(tets[tet],ru);
 			if (!tet_inside(tets[tet],ru,minbary)) {
 			  printf("Sampled point not inside tetrahedron. This is bad.\n");

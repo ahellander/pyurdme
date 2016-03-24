@@ -795,12 +795,13 @@ void read_p(fem_mesh *mesh, H5File mesh_file){
     // initialize vertices
     int nvox = dims_out[0];
     vertex **vertices = (vertex **)malloc(nvox*sizeof(vertex *));
-    vertex *vtx;
+//    vertex *vtx;
     for (int i=0; i<nvox; i++){
     
         vertices[i] = (vertex *)malloc(sizeof(vertex));
-        vtx = vertices[i];
-        vtx->id = i;
+  //      vtx = vertices[i];
+        //vtx->id = i;
+	vertices[i]->id = i;
     }  
     mesh->vertices = vertices;
     
@@ -858,69 +859,45 @@ void read_bnd(fem_mesh *mesh, H5File mesh_file){
 }
 
 void read_vertex_to_cell(fem_mesh *mesh, H5File mesh_file){
-printf("1\n");
     DataSet dataset = mesh_file.openDataSet("/mesh/vertex2cells");
-printf("2\n");    
-DataSpace dataspace = dataset.getSpace();
+    DataSpace dataspace = dataset.getSpace();
     /*
     * Get the number of dimensions in the dataspace.
     */
-printf("3\n");
     int rank = dataspace.getSimpleExtentNdims();
-printf("4\n");    
-hsize_t dims_out[2];
-printf("5\n");    
-dataspace.getSimpleExtentDims( dims_out, NULL);
-printf("6\n");    
-cout << "rank " << rank << ", dimensions " <<
+    hsize_t dims_out[2];
+    dataspace.getSimpleExtentDims( dims_out, NULL);
+    cout << "rank " << rank << ", dimensions " <<
           (unsigned long)(dims_out[0]) << " x " <<
           (unsigned long)(dims_out[1]) << endl;
-printf("7\n");
-//    double t[216][24];
-    int **t=(int **)malloc((int)dims_out[0]*sizeof(int*));
-	for(int i=0;i<(int)dims_out[0];i++){
-		t[i] = (int *)malloc((int)dims_out[1]*sizeof(int));
-	}
 
+
+
+     int ttemp[(int)dims_out[0]][(int)dims_out[1]];
 	
-/*	for(int i=0;i<(int)dims_out[0];i++)
+	for(int i=0;i<(int)dims_out[0];i++)
 	{
 		for(int j=0;j<(int)dims_out[1];j++)
 		{
-			printf("i=%d,j=%d,t_ij=%d\n",i,j,t[i][j]);
+			ttemp[i][j] = 0.0;
 		}
 	}
-*/
 
-printf("8\n");  
-  dataset.read(t,PredType::NATIVE_DOUBLE);
+
+     dataset.read(ttemp,PredType::NATIVE_INT);
   
-for(int i=0;i<(int)dims_out[0];i++)
-        {
-                for(int j=0;j<(int)dims_out[1];j++)
-                {
-                        printf("i=%d,j=%d,t_ij=%d\n",i,j,(int)t[i][j]);
-                }
-        }
-
-  printf("1\n");
-    vertex *vtx;
-printf("9\n");
+//    vertex *vtx;
     for (int i=0; i<(int)dims_out[0];i++){
-printf("10\n");	
-mesh->vertices[i]->cells.resize(0);
-printf("11\n");        
-vtx = mesh->vertices[i];
+//	mesh->vertices[i]->cells.resize(0);
+//	vtx = mesh->vertices[i];
         for (int j=0;j<(int)dims_out[1];j++){
-		printf("%d,  %d\n",(int)dims_out[0],(int)dims_out[1]);
-            if(t[i][j] >= 0)
-                 vtx->cells.push_back((int)t[i][j]);
-	printf("i=%d, j=%d\n",i,j);
-        printf("12\n");
+            if(ttemp[i][j] >= 0)
+                 mesh->vertices[i]->cells.push_back(ttemp[i][j]);
 	}
     }
+	
 
-//	free(t);
+    printf("12\n");
     
     
 }
@@ -984,8 +961,9 @@ int main(int argc, char* argv[]) {
     read_p(mesh, mesh_file);
     read_t(mesh, mesh_file);
     read_bnd(mesh, mesh_file);
+    printf("read_vertex_to_cell\n");
     read_vertex_to_cell(mesh, mesh_file);
-
+    printf("read_vertex_to_cell, done\n");
 
     /* Initialize the primal/dual mesh format. Do we need this for pure micro?? */
     mesh_primal2dual(mesh);

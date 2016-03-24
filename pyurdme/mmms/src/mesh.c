@@ -175,7 +175,7 @@ void print_vertex(vertex *vtx){
 	printf("vertex, id: %i", vtx->id);
 	printf("\tcells:\n\t");
 
-	for (int i=0;i<vtx->cells.size();i++)
+	for (int i=0;i<(int)vtx->cells.size();i++)
 		cout << vtx->cells[i] << " ";
 	cout << "\n";
 }
@@ -302,7 +302,12 @@ void tetpoint2bary(tetrahedron *tet,double *x, double *xb)
 {
 	
 	double b[3];
+/*	printf("in tetpoint2bary 1\n");
+	for(int i=0;i<3;i++){
+		printf("b_%d=%g\n",i,tet->v4[i]);
+	}*/
 	b[0]=x[0]-tet->v4[0];
+ //printf("in tetpoint2bary 2\n");
 	b[1]=x[1]-tet->v4[1];
 	b[2]=x[2]-tet->v4[2];
 	

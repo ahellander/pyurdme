@@ -218,8 +218,8 @@ int matGetNextVariable_int32_array(int*outsz,size_t**out,int dsz,unsigned char*d
     //printf("print_int32_array(): %i values\n",nvals);
     *out = (size_t*)malloc(nvals*sizeof(size_t));
     out2=*out;
-    if(nvals>dsz){fprintf(stderr,"Error: array size mis-match. dsz=%i\n",dsz);exit(0);}
-    for(i=0;i<nvals;i++){
+    if((int)nvals>dsz){fprintf(stderr,"Error: array size mis-match. dsz=%i\n",dsz);exit(0);}
+    for(i=0;i<(int)nvals;i++){
         utmp=0;
         memcpy(&utmp,&data_ptr[offset+4*i],4*sizeof(char));
         out2[i]=(size_t)utmp;    
@@ -247,7 +247,7 @@ int matGetNextVariable_int_array_w_sz(int*outsz,int**out,int dsz,unsigned char*d
         tsize = dsize/nvals;
         *out = (int*)malloc(nvals*sizeof(int));
         out2=*out;
-        for(i=0;i<nvals;i++){
+        for(i=0;i<(int)nvals;i++){
             memcpy(&dtmp,&data_ptr[offset+i*tsize],tsize*sizeof(char));
             out2[i] =(int)dtmp;
         }
@@ -258,7 +258,7 @@ int matGetNextVariable_int_array_w_sz(int*outsz,int**out,int dsz,unsigned char*d
         printf("dtype=%i tsize=%i nvals=%i\n",dtype,tsize,nvals);
         *out = (int*)malloc(nvals*sizeof(int));
         out2=*out;
-        for(i=0;i<nvals;i++){
+        for(i=0;i<(int)nvals;i++){
             itmp=0;
             memcpy(&itmp,&data_ptr[offset+i*tsize],tsize*sizeof(char));
             out2[i]=itmp;
@@ -294,7 +294,7 @@ int matGetNextVariable_int_array(int*outsz,int**out,int dsz,unsigned char*data_p
         nvals = dsize/tsize;
         *out = (int*)malloc(nvals*sizeof(int));
         out2=*out;
-        for(i=0;i<nvals;i++){
+        for(i=0;i<(int)nvals;i++){
             memcpy(&dtmp,&data_ptr[offset+i*tsize],tsize*sizeof(char));
             out2[i] =(int)dtmp;
         }
@@ -306,7 +306,7 @@ int matGetNextVariable_int_array(int*outsz,int**out,int dsz,unsigned char*data_p
         printf("dtype=%i tsize=%i nvals=%i\n",dtype,tsize,nvals);
         *out = (int*)malloc(nvals*sizeof(int));
         out2=*out;
-        for(i=0;i<nvals;i++){
+        for(i=0;i<(int)nvals;i++){
             itmp=0;
             memcpy(&itmp,&data_ptr[offset+i*tsize],4*sizeof(char));
             out2[i]=(int)itmp;
@@ -324,7 +324,7 @@ int matGetNextVariable_int_array(int*outsz,int**out,int dsz,unsigned char*data_p
     nvals = dsize/tsize;
     *out = (int*)malloc(nvals*sizeof(int));
     out2=*out;
-    for(i=0;i<nvals;i++){
+    for(i=0;i<(int)nvals;i++){
         out2[i]=(int)data_ptr[offset+i*tsize];
     }
     *outsz=nvals;
@@ -364,25 +364,25 @@ int matGetNextVariable_double_array(int*outsz,double**out,int dsz,unsigned char*
         *out = (double*)malloc(nvals*sizeof(double));
         go_out=*out;
         if(dtype==1||dtype==3||dtype==5){
-            for(i=0;i<nvals;i++){
+            for(i=0;i<(int)nvals;i++){
                 itmp=0;
                 memcpy(&itmp,&data_ptr[offset+i*tsize],tsize*sizeof(char));
                 go_out[i]=(double)itmp;
             }
         }else if(dtype==2||dtype==4||dtype==6){
-            for(i=0;i<nvals;i++){
+            for(i=0;i<(int)nvals;i++){
                 utmp=0;
                 memcpy(&utmp,&data_ptr[offset+i*tsize],tsize*sizeof(char));
                 go_out[i]=(double)utmp;
             }
 		}else if(dtype==12){
-            for(i=0;i<nvals;i++){
+            for(i=0;i<(int)nvals;i++){
                 itmp64=0;
                 memcpy(&itmp64,&data_ptr[offset+i*tsize],tsize*sizeof(char));
                 go_out[i]=(double)itmp64;
             }
 		}else if(dtype==13){
-            for(i=0;i<nvals;i++){
+            for(i=0;i<(int)nvals;i++){
                 utmp64=0;
                 memcpy(&utmp64,&data_ptr[offset+i*tsize],tsize*sizeof(char));
                 go_out[i]=(double)utmp64;
@@ -445,7 +445,7 @@ mxArray* matGetNextVariable(MATFile*matfile){
     ( read(matfile->fd,&dsize,sizeof(unsigned int)) != sizeof(unsigned int) ) )
     { return NULL; }
     data_ptr=(unsigned char *)malloc(dsize*sizeof(unsigned char));
-    if( read(matfile->fd,data_ptr,dsize*sizeof(unsigned char)) != dsize*sizeof(unsigned char) ){
+    if( read(matfile->fd,data_ptr,dsize*sizeof(unsigned char)) != (int)dsize*(int)sizeof(unsigned char) ){
         free(data_ptr);
         return NULL;
     }
@@ -478,7 +478,7 @@ mxArray* matGetNextVariable(MATFile*matfile){
     mat_var->dims = (int *)malloc(mat_var->ndims*sizeof(int));
     cnt=0;
     //printf("\tdims: ");
-    for(i=0;i<dim_size;i+=4){
+    for(i=0;i<(int)dim_size;i+=4){
         memcpy(&dim_tmp,&data_ptr[offset+8+i],4*sizeof(char));
         mat_var->dims[cnt]=dim_tmp;
         //printf(" %i",mat_var->dims[cnt]);

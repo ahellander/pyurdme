@@ -536,11 +536,13 @@ void tet_index_to_internal(fem_mesh *mesh)
 	
 	double *x;
 	ntet = mesh->ntet;
-		
+//    printf("here\n");
 	tetrahedron **tets =(tetrahedron **)malloc(ntet*sizeof(tetrahedron*));
 	for (i=0; i<ntet; i++) {
 		tets[i]=(tetrahedron *)malloc(sizeof(tetrahedron));
 	}
+//    printf("allocated\n");
+    
 	tetrahedron *temp;
 	
 	for (i=0; i<ntet; i++) {

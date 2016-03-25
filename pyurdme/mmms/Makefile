@@ -1,10 +1,9 @@
-CC=mpic++
+CC=clang++
 SRC=src/main.cpp mesh.o
 EXECUTABLE=bin/mmms
-FLAGS=-Wall -pedantic -I$(PWD)/include -g  -c `gsl-config --cflags` --std=c++11 -I/home/fenics/pyurdme/pyurdme/mmms/hdf5-1.8.16/hdf5/include/
-CURR_DIR = $(shell pwd)
-LFLAGS=`gsl-config --libs`
-HDF5FLAGS=-D_LARGEFILE64_SOURCE -D_LARGEFILE_SOURCE -L/home/fenics/pyurdme/pyurdme/mmms/hdf5-1.8.16/hdf5/lib /home/fenics/pyurdme/pyurdme/mmms/hdf5-1.8.16/hdf5/lib/libhdf5_hl_cpp.a /home/fenics/pyurdme/pyurdme/mmms/hdf5-1.8.16/hdf5/lib/libhdf5_cpp.a /home/fenics/pyurdme/pyurdme/mmms/hdf5-1.8.16/hdf5/lib/libhdf5_hl.a /home/fenics/pyurdme/pyurdme/mmms/hdf5-1.8.16/hdf5/lib/libhdf5.a -lz -ldl -lm -Wl,-rpath -Wl,/home/fenics/pyurdme/pyurdme/mmms/hdf5-1.8.16/hdf5/lib
+FLAGS=-Wall -pedantic -I$(PWD)/include -g  -c `gsl-config --cflags` --std=c++11 
+LFLAGS=`gsl-config --libs` -lhdf5 -lhdf5_cpp -lhdf5_hl
+HDF5FLAGS= 
 all: mmms
 
 DEPS=main.o mesh.o utils.o urdmemodel.o read_matfile.o coupling.o
@@ -12,7 +11,7 @@ DEPS=main.o mesh.o utils.o urdmemodel.o read_matfile.o coupling.o
 mmms: bin/mmms
 
 bin/mmms: $(DEPS)
-	$(CC) $(DEPS) $(LFLAGS) $(HDF5FLAGS) -o $(EXECUTABLE)    
+	$(CC) $(DEPS) $(LFLAGS) -o $(EXECUTABLE)    
 
 main.o: src/main.cpp
 	$(CC) src/main.cpp $(FLAGS) $(HDF5FLAGS)

@@ -36,7 +36,8 @@
 #include <iostream>
 #endif
 #include <string>
-#include "../hdf5-1.8.16/c++/src/H5Cpp.h"
+//#include "../hdf5-1.8.16/c++/src/H5Cpp.h"
+#include "H5Cpp.h"
 #ifndef H5_NO_NAMESPACE
     using namespace H5;
 #endif
@@ -858,70 +859,32 @@ void read_bnd(fem_mesh *mesh, H5File mesh_file){
 }
 
 void read_vertex_to_cell(fem_mesh *mesh, H5File mesh_file){
-printf("1\n");
     DataSet dataset = mesh_file.openDataSet("/mesh/vertex2cells");
-printf("2\n");    
-DataSpace dataspace = dataset.getSpace();
+    DataSpace dataspace = dataset.getSpace();
     /*
     * Get the number of dimensions in the dataspace.
     */
-printf("3\n");
     int rank = dataspace.getSimpleExtentNdims();
-printf("4\n");    
-hsize_t dims_out[2];
-printf("5\n");    
-dataspace.getSimpleExtentDims( dims_out, NULL);
-printf("6\n");    
-cout << "rank " << rank << ", dimensions " <<
+    hsize_t dims_out[2];
+    dataspace.getSimpleExtentDims( dims_out, NULL);
+    cout << "rank " << rank << ", dimensions " <<
           (unsigned long)(dims_out[0]) << " x " <<
           (unsigned long)(dims_out[1]) << endl;
-printf("7\n");
-    int t[216][25];
-//    int **t=(int **)malloc((int)dims_out[0]*sizeof(int*));
-//	for(int i=0;i<(int)dims_out[0];i++){
-//		t[i] = (int *)malloc((int)dims_out[1]*sizeof(int));
-//	}
-
-	
-/*	for(int i=0;i<(int)dims_out[0];i++)
-	{
-		for(int j=0;j<(int)dims_out[1];j++)
-		{
-			printf("i=%d,j=%d,t_ij=%d\n",i,j,t[i][j]);
-		}
-	}
-*/
-
-printf("8\n");  
-  dataset.read(t,PredType::NATIVE_INT);
+    
+    float t[dims_out[0]][dims_out[1]];
+    dataset.read(t,PredType::NATIVE_FLOAT);
   
-for(int i=0;i<(int)dims_out[0];i++)
-        {
-                for(int j=0;j<(int)dims_out[1];j++)
-                {
-                        printf("i=%d,j=%d,t_ij=%d\n",i,j,t[i][j]);
-                }
-        }
-
-  printf("1\n");
     vertex *vtx;
-printf("9\n");
     for (int i=0; i<(int)dims_out[0];i++){
-printf("10\n");	
-mesh->vertices[i]->cells.resize(0);
-printf("11\n");        
-vtx = mesh->vertices[i];
+        mesh->vertices[i]->cells.resize(0);
+        vtx = mesh->vertices[i];
         for (int j=0;j<(int)dims_out[1];j++){
-		printf("%d,  %d\n",(int)dims_out[0],(int)dims_out[1]);
             if(t[i][j] >= 0)
                  vtx->cells.push_back(t[i][j]);
-	printf("i=%d, j=%d\n",i,j);
-        printf("12\n");
-	}
+        }
     }
 
-//	free(t);
-    
+   // free(t);
     
 }
 

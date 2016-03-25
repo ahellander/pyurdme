@@ -329,11 +329,12 @@ class MICROResult():
         return template
 
 
-    def display_particles(self,species, time_index):
+    def display_particles(self,species, time_index, width=500):
         hstr = self._export_to_particle_js(species, time_index)
         displayareaid=str(uuid.uuid4())
         hstr = hstr.replace('###DISPLAYAREAID###',displayareaid)
-        
+	hstr = hstr.replace('###WIDTH###',str(width))
+        height = int(width*0.75)        
         html = '<div id="'+displayareaid+'" class="cell"></div>'
         IPython.display.display(IPython.display.HTML(html+hstr))
 

@@ -36,8 +36,7 @@
 #include <iostream>
 #endif
 #include <string>
-//#include "../hdf5-1.8.16/c++/src/H5Cpp.h"
-#include "H5Cpp.h"
+#include "../hdf5-1.8.16/c++/src/H5Cpp.h"
 #ifndef H5_NO_NAMESPACE
     using namespace H5;
 #endif
@@ -785,24 +784,32 @@ void read_p(fem_mesh *mesh, H5File mesh_file){
     cout << "rank " << rank << ", dimensions " <<
           (unsigned long)(dims_out[0]) << " x " <<
           (unsigned long)(dims_out[1]) << endl;
-
+    
+//    printf("ALLOC P\n");
     double *p;
     p=(double *)malloc(dims_out[0]*dims_out[1]*sizeof(double));
+//    double ptemp[dims_out[0]][dims_out[1]];
+    
     dataset.read(p,PredType::NATIVE_DOUBLE);
 
+
+    
     mesh->Ncells=dims_out[0];
     mesh->p=p;     
 
     // initialize vertices
     int nvox = dims_out[0];
     vertex **vertices = (vertex **)malloc(nvox*sizeof(vertex *));
+    printf("number of voxels: %d\n",nvox);
     vertex *vtx;
     for (int i=0; i<nvox; i++){
     
-        vertices[i] = (vertex *)malloc(sizeof(vertex));
+        vertices[i] = (vertex *)calloc(1,sizeof(vertex));
         vtx = vertices[i];
         vtx->id = i;
-    }  
+        vtx->cells.resize(0);
+//	vertices[i]->id = i;
+    }
     mesh->vertices = vertices;
     
 }
@@ -858,9 +865,9 @@ void read_bnd(fem_mesh *mesh, H5File mesh_file){
     
 }
 
-void read_vertex_to_cell(fem_mesh *mesh, H5File mesh_file){
-    DataSet dataset = mesh_file.openDataSet("/mesh/vertex2cells");
-    DataSpace dataspace = dataset.getSpace();
+void read_vertex_to_cell(fem_mesh *mesh, H5File *mesh_file,DataSet *dataset){
+    *dataset = mesh_file->openDataSet("/mesh/vertex2cells");
+    DataSpace dataspace = dataset->getSpace();
     /*
     * Get the number of dimensions in the dataspace.
     */
@@ -870,21 +877,40 @@ void read_vertex_to_cell(fem_mesh *mesh, H5File mesh_file){
     cout << "rank " << rank << ", dimensions " <<
           (unsigned long)(dims_out[0]) << " x " <<
           (unsigned long)(dims_out[1]) << endl;
-    
-    float t[dims_out[0]][dims_out[1]];
-    dataset.read(t,PredType::NATIVE_FLOAT);
+
+
+
+     int ttemp[(int)dims_out[0]][(int)dims_out[1]];
+	
+	for(int i=0;i<(int)dims_out[0];i++)
+	{
+		for(int j=0;j<(int)dims_out[1];j++)
+		{
+			ttemp[i][j] = 0.0;
+		}
+	}
+
+
+     dataset->read(ttemp,PredType::NATIVE_INT);
   
     vertex *vtx;
     for (int i=0; i<(int)dims_out[0];i++){
-        mesh->vertices[i]->cells.resize(0);
+	
         vtx = mesh->vertices[i];
         for (int j=0;j<(int)dims_out[1];j++){
-            if(t[i][j] >= 0)
-                 vtx->cells.push_back(t[i][j]);
+//            printf("i=%d,j=%d,t_ij=%d\n",i,j,ttemp[i][j]);
+            if(ttemp[i][j] >= 0){
+                 mesh->vertices[i]->cells.push_back(ttemp[i][j]);
+                int endp = (int)(mesh->vertices[i]->cells.size())-1;
+//                printf("just pushed back: %d\n",mesh->vertices[i]->cells[endp]);
+            }
         }
     }
+    dataspace.close();
+//    dataset.close();
 
-   // free(t);
+//    printf("12\n");
+    
     
 }
 
@@ -943,12 +969,14 @@ int main(int argc, char* argv[]) {
     mesh = (fem_mesh *)malloc(sizeof(fem_mesh));
 
     string mesh_file_name = argv[3];
+    std::cout << "Mesh file: " << mesh_file_name << "\n";
     H5File mesh_file = H5File(mesh_file_name, H5F_ACC_RDONLY );
+    printf("Opened mesh file.\n");
     read_p(mesh, mesh_file);
     read_t(mesh, mesh_file);
     read_bnd(mesh, mesh_file);
-    read_vertex_to_cell(mesh, mesh_file);
-
+    DataSet dataset;
+    read_vertex_to_cell(mesh, &mesh_file,&dataset);
 
     /* Initialize the primal/dual mesh format. Do we need this for pure micro?? */
     mesh_primal2dual(mesh);
@@ -964,7 +992,7 @@ int main(int argc, char* argv[]) {
 
     // File where the output will be stored
     string output_filename = argv[4];
-
+    std::cout << "Output filefd: " << output_filename << std::endl;
     /* Create output directory. */
   
    /* Do simulations. */
@@ -997,9 +1025,9 @@ int main(int argc, char* argv[]) {
     
         int num_specs = (int)(specs.size());
     
-    
+        
         H5File file = H5File(output_filename, H5F_ACC_TRUNC );
-
+        printf("Opened output file.\n");
         /*
         * Create the base group in the file
         */
@@ -1019,12 +1047,11 @@ int main(int argc, char* argv[]) {
             /* TODO: We should check for birth processes here. */
             main_simulator(&grp,specs,assocs,dissocs,boundaries,dt,rng,l);
             reflect_boundary(grp.particles,boundaries);
-//                    int Psize = (int)(grp.particles.size());
-//                    printf("[");
-//                    for(int q=0;q<Psize;q++){
-//                        printf("%g %g %g;\n",grp.particles[q].pos[0],grp.particles[q].pos[1],grp.particles[q].pos[2]);
-//                    }
-//                    printf("];");
+//                    int Psize = (int)(grp.particles.size());                    printf("[");
+  //                  for(int q=0;q<Psize;q++){
+      //                  printf("%g %g %g;\n",grp.particles[q].pos[0],grp.particles[q].pos[1],grp.particles[q].pos[2]);
+    //                }
+        //            printf("];");
             
             t += dt;
 //            printf("t=%g\n",t);

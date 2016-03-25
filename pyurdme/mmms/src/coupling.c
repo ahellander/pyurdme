@@ -27,16 +27,16 @@ vector <plane> voxel_boundaries(urdme_model *model, fem_mesh *mesh)
 {
    		
 	int Ncells   = mesh->Ncells;
-	int Mspecies = model->Mspecies;
+//	int Mspecies = model->Mspecies;
 	 
 	/* Boundary triangles */
 	double *p = mesh->p;
-	int *sd = model->sd;
+//	int *sd = model->sd;
 	
 	vector <plane> boundaries;
 	
 	int ntri=mesh->ntri; 
-	int i,j;
+	int i;//,j;
 	
 	double a;
 
@@ -78,7 +78,7 @@ vector <plane> voxel_boundaries(urdme_model *model, fem_mesh *mesh)
 	double vec[3];
 
 	int sv;
-    double radius;	
+//   double radius=0;	
 	
 	size_t *jcD = model->jcD;
 	size_t *irD = model->irD;
@@ -110,7 +110,7 @@ vector <plane> voxel_boundaries(urdme_model *model, fem_mesh *mesh)
 
 		/* TODO: Need to check that all normals that we assemble point in a direction that
 		   the species may move. */		 
-		radius = norm(tri->v1);
+//		radius = norm(tri->v1);
 		a = dot(vec,n);
 		
 		/* Add that normal to accumulated mean normals of the vertices of the triangle.*/
@@ -431,13 +431,15 @@ void check_inside_surrounding_cells(particle *particle, vertex *vtx, fem_mesh *m
 		int wn = -1;
 		tetrahedron *tet;
 		double mindist=-INFINITY;
-		int closest_tet;
+		int closest_tet=-1;
 
-		//printf("Number of cells: %d\n",(int)(vtx->cells.size()));
+//		printf("Number of cells: %d\n",(int)(vtx->cells.size())); 
 
-		for (int k=0; k<vtx->cells.size(); k++) {
-			//printf("numtets=%d, k=%d vtx=%i\n",mesh->ntet,k,vtx->cells[k]);
+		for (int k=0; k<(int)(vtx->cells.size()); k++) {
+//			printf("numtets=%d, k=%d\n",mesh->ntet,k);			
+//			printf("index=%d\n",vtx->cells[k]);
 			tet = tets[vtx->cells[k]];
+//			printf("tet=%d\n",tet);
 			// We need to check if there is a non-zero edge in the connectivity matrix
 			// between our vertex and the others in that tetrahedron,
 			// otherwise the particle should be restricted from moving there (Not yet implemented).
@@ -773,7 +775,7 @@ inline void trinormal(triangle *tri,double *n)
 	
 }
 
-static inline void vec_in_plane(double *normal, double *v1, double *v2)
+inline void vec_in_plane(double *normal, double *v1, double *v2)
 {
 	double r_dir[] = {normal[0]+1,2*normal[1]+2,3*normal[2]+3};
 	cross_mesh(v1,normal,r_dir);

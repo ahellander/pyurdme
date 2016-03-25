@@ -1836,11 +1836,11 @@ class URDMEResult(dict):
                     x.append((coordinates[i,0]+random.uniform(-1,1)*hix))
                     y.append((coordinates[i,1]+random.uniform(-1,1)*hiy))
                     z.append((coordinates[i,2]+random.uniform(-1,1)*hiz))
-                    if self.model.listOfSpecies[spec].reaction_radius:
-                        radius.append(factor*self.model.listOfSpecies[spec].reaction_radius)
-                    else:
-                        radius.append(0.01)
-
+#                    if self.model.listOfSpecies[spec].reaction_radius:
+#                        radius.append(factor*self.model.listOfSpecies[spec].reaction_radius)
+#                    else:
+#                        radius.append(0.01)
+		    radius.append(0.01)
                     c.append(colors[j])
 
         template = template.replace("__X__",str(x))

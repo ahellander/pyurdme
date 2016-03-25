@@ -96,7 +96,7 @@ class MMMSSolver(pyurdme.URDMESolver):
                 temp[i,j] = v;
 
         grp.create_dataset("vertex2cells",data=temp)       
-
+        meshfile.close()
         #for cell in dolfin.cells(mesh):
         #    for face in dolfin.faces(cell):
         #        print [v for v in face.entities(0)] 
@@ -221,9 +221,9 @@ class MMMSSolver(pyurdme.URDMESolver):
             result_list = []
 
         solver_str=os.path.dirname(__file__)+"/mmms/bin/mmms"
-        #solver_str="/Users/andreash/bitbucket/hybrid/bin/hybrid"
 
         solver_cmd = [solver_str,self.infile_name, self.urdme_infile_name,self.mesh_infile_name, outfile.name]
+    
         handle = subprocess.Popen(solver_cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         handle.wait()
         
@@ -245,7 +245,7 @@ class MICROResult():
         """ Return a dict with the unique ids and positions of all particles of type species
             at time point time. """
 
-        file = h5py.File(self.filename)
+        file = h5py.File(self.filename,'r')
         return {
                 'unique_ids':numpy.array(file.get("Trajectories/0/Type_{0}/unique_ids_{1}".format(species, time_index))),
                 'positions':numpy.array(file.get("Trajectories/0/Type_{0}/positions_{1}".format(species,time_index)))
@@ -329,11 +329,12 @@ class MICROResult():
         return template
 
 
-    def display_particles(self,species, time_index):
+    def display_particles(self,species, time_index, width=500):
         hstr = self._export_to_particle_js(species, time_index)
         displayareaid=str(uuid.uuid4())
         hstr = hstr.replace('###DISPLAYAREAID###',displayareaid)
-        
+	hstr = hstr.replace('###WIDTH###',str(width))
+        height = int(width*0.75)        
         html = '<div id="'+displayareaid+'" class="cell"></div>'
         IPython.display.display(IPython.display.HTML(html+hstr))
 

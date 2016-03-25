@@ -971,6 +971,7 @@ int main(int argc, char* argv[]) {
     string mesh_file_name = argv[3];
     std::cout << "Mesh file: " << mesh_file_name << "\n";
     H5File mesh_file = H5File(mesh_file_name, H5F_ACC_RDONLY );
+    printf("Opened mesh file.\n");
     read_p(mesh, mesh_file);
     read_t(mesh, mesh_file);
     read_bnd(mesh, mesh_file);
@@ -991,7 +992,7 @@ int main(int argc, char* argv[]) {
 
     // File where the output will be stored
     string output_filename = argv[4];
-
+    std::cout << "Output filefd: " << output_filename << std::endl;
     /* Create output directory. */
   
    /* Do simulations. */
@@ -1024,9 +1025,9 @@ int main(int argc, char* argv[]) {
     
         int num_specs = (int)(specs.size());
     
-    
+        
         H5File file = H5File(output_filename, H5F_ACC_TRUNC );
-
+        printf("Opened output file.\n");
         /*
         * Create the base group in the file
         */

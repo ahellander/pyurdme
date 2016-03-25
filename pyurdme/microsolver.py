@@ -96,7 +96,7 @@ class MMMSSolver(pyurdme.URDMESolver):
                 temp[i,j] = v;
 
         grp.create_dataset("vertex2cells",data=temp)       
-
+        meshfile.close()
         #for cell in dolfin.cells(mesh):
         #    for face in dolfin.faces(cell):
         #        print [v for v in face.entities(0)] 
@@ -223,8 +223,8 @@ class MMMSSolver(pyurdme.URDMESolver):
         solver_str=os.path.dirname(__file__)+"/mmms/bin/mmms"
 
         solver_cmd = [solver_str,self.infile_name, self.urdme_infile_name,self.mesh_infile_name, outfile.name]
-	print solver_cmd
-        handle = subprocess.Popen(solver_cmd)#, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    
+        handle = subprocess.Popen(solver_cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         handle.wait()
         
         

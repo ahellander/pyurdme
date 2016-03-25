@@ -349,9 +349,12 @@ void reflect_cuboid_p(particle *p,double *boundary){
 
 void reflect_boundary(vector <particle>& mols,vector <plane>& tet_b){
 
+    int i = -1;
     for(int j=0;j<(int)(mols.size());j++){
-
-        for(int i=0;i<(int)(tet_b.size());i++){
+        
+        i = mols[j].voxel;
+        
+//        for(int i=0;i<(int)(tet_b.size());i++){
             if(tet_b[i].isbnd){
                 double dp = tet_b[i].n[0]*(mols[j].pos[0]-tet_b[i].p[0])+tet_b[i].n[1]*(mols[j].pos[1]-tet_b[i].p[1])+tet_b[i].n[2]*(mols[j].pos[2]-tet_b[i].p[2]);
                 if(dp<0){
@@ -360,7 +363,7 @@ void reflect_boundary(vector <particle>& mols,vector <plane>& tet_b){
                     mols[j].pos[2] += 2*fabs(dp)*tet_b[i].n[2];
                 }
             }
-        }
+//        }
     }
 }
 
@@ -439,6 +442,28 @@ void diffuse(particle *p,vector <species>& specs,double dt,gsl_rng *rng){
 //    for(int i=0;i<3;i++){
 //        p->pos[i] += sd*gsl_ran_gaussian_ziggurat(rng,1.0);
 //    }
+}
+
+void divide_into_voxels(group *grp,vector <group>& grps){
+    group temp;
+    int voxel = -1;
+    while((int)(grp->particles.size())>0){
+        temp.particles.resize(0);
+        temp.particles.push_back(grp->particles[0]);
+        voxel = grp->particles[0].voxel;
+        grp->particles.erase(grp->particles.begin());
+        
+        for(int j=0;j<(int)(grp->particles.size());){
+            if(grp->particles[j].voxel==voxel){
+                temp.particles.push_back(grp->particles[j]);
+                grp->particles.erase(grp->particles.begin()+j);
+            }
+            else{
+                ++j;
+            }
+        }
+        grps.push_back(temp);
+    }
 }
 
 void divide_into_cubes(group *grp,vector <group>& grps,int Nx,int Ny,int Nz,double *boundary){

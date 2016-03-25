@@ -224,7 +224,7 @@ class MMMSSolver(pyurdme.URDMESolver):
 
         solver_cmd = [solver_str,self.infile_name, self.urdme_infile_name,self.mesh_infile_name, outfile.name]
     
-        handle = subprocess.Popen(solver_cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        handle = subprocess.Popen(solver_cmd)#, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         handle.wait()
         
         

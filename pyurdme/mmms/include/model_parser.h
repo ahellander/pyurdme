@@ -13,6 +13,7 @@ void print_model(vector <species>& specs,vector <association>& associations,vect
         printf("Species %s:\n",specs[i].name);
         printf("D=%.5g\n",specs[i].D);
         printf("sigma=%.5g\n",specs[i].sigma);
+        printf("Dimension=%d\n",specs[i].dim);
         printf("Initial value: %d\n",specs[i].initial_value);
     }
     printf("********************\n");

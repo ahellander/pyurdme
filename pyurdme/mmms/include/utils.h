@@ -33,6 +33,7 @@ void copy_vecs(double *vec1,double *vec2,double *vec3,particle *p);
 void diffuse_vec(double *pos,double *vec1,double *vec2, double *vec3,double D,double sigma,double dt,gsl_rng *rng);
 void diffuse(particle *p,vector <species>& specs,double dt,gsl_rng *rng);
 //void divide_into_cubes(group *grp,vector <group>& grps,int Nx,int Ny,int Nz,double *boundary);
+void divide_into_voxels(group *grp,vector <group>& grps);
 void sort_molecules(group *grp,vector <group>& grps,vector <species>& specs);
 int cp(const char *to, const char *from);
 void print_plane(plane *pl);

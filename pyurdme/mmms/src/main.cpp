@@ -969,6 +969,7 @@ int main(int argc, char* argv[]) {
     mesh = (fem_mesh *)malloc(sizeof(fem_mesh));
 
     string mesh_file_name = argv[3];
+    std::cout << "Mesh file: " << mesh_file_name << "\n";
     H5File mesh_file = H5File(mesh_file_name, H5F_ACC_RDONLY );
     read_p(mesh, mesh_file);
     read_t(mesh, mesh_file);
@@ -1045,12 +1046,11 @@ int main(int argc, char* argv[]) {
             /* TODO: We should check for birth processes here. */
             main_simulator(&grp,specs,assocs,dissocs,boundaries,dt,rng,l);
             reflect_boundary(grp.particles,boundaries);
-//                    int Psize = (int)(grp.particles.size());
-//                    printf("[");
-//                    for(int q=0;q<Psize;q++){
-//                        printf("%g %g %g;\n",grp.particles[q].pos[0],grp.particles[q].pos[1],grp.particles[q].pos[2]);
-//                    }
-//                    printf("];");
+//                    int Psize = (int)(grp.particles.size());                    printf("[");
+  //                  for(int q=0;q<Psize;q++){
+      //                  printf("%g %g %g;\n",grp.particles[q].pos[0],grp.particles[q].pos[1],grp.particles[q].pos[2]);
+    //                }
+        //            printf("];");
             
             t += dt;
 //            printf("t=%g\n",t);

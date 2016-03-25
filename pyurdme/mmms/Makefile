@@ -1,7 +1,7 @@
 CC=hdf5-1.8.16/c++/src/h5c++
 SRC=src/main.cpp mesh.o
 EXECUTABLE=bin/mmms
-FLAGS=-Wall -pedantic -I$(PWD)/include -g -c  `gsl-config --cflags` --std=c++11 -I/home/fenics/pyurdme/pyurdme/mmms/hdf5-1.8.16/hdf5/include/
+FLAGS=-Wall -pedantic -I$(PWD)/include -g -c -O3 `gsl-config --cflags` --std=c++11 -I/home/fenics/pyurdme/pyurdme/mmms/hdf5-1.8.16/hdf5/include/
 CURR_DIR = $(shell pwd)
 LFLAGS=`gsl-config --libs`
 HDF5FLAGS=-D_LARGEFILE64_SOURCE -D_LARGEFILE_SOURCE -L/home/fenics/pyurdme/pyurdme/mmms/hdf5-1.8.16/hdf5/lib /home/fenics/pyurdme/pyurdme/mmms/hdf5-1.8.16/hdf5/lib/libhdf5_hl_cpp.a /home/fenics/pyurdme/pyurdme/mmms/hdf5-1.8.16/hdf5/lib/libhdf5_cpp.a /home/fenics/pyurdme/pyurdme/mmms/hdf5-1.8.16/hdf5/lib/libhdf5_hl.a /home/fenics/pyurdme/pyurdme/mmms/hdf5-1.8.16/hdf5/lib/libhdf5.a -lz -ldl -lm -Wl,-rpath -Wl,/home/fenics/pyurdme/pyurdme/mmms/hdf5-1.8.16/hdf5/lib

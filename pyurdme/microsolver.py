@@ -221,10 +221,10 @@ class MMMSSolver(pyurdme.URDMESolver):
             result_list = []
 
         solver_str=os.path.dirname(__file__)+"/mmms/bin/mmms"
-        #solver_str="/Users/andreash/bitbucket/hybrid/bin/hybrid"
 
         solver_cmd = [solver_str,self.infile_name, self.urdme_infile_name,self.mesh_infile_name, outfile.name]
-        handle = subprocess.Popen(solver_cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+	print solver_cmd
+        handle = subprocess.Popen(solver_cmd)#, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         handle.wait()
         
         
@@ -245,7 +245,7 @@ class MICROResult():
         """ Return a dict with the unique ids and positions of all particles of type species
             at time point time. """
 
-        file = h5py.File(self.filename)
+        file = h5py.File(self.filename,'r')
         return {
                 'unique_ids':numpy.array(file.get("Trajectories/0/Type_{0}/unique_ids_{1}".format(species, time_index))),
                 'positions':numpy.array(file.get("Trajectories/0/Type_{0}/positions_{1}".format(species,time_index)))

@@ -634,15 +634,15 @@ void main_simulator(group *grp,vector <species>& specs,vector <association>& ass
         /* All molecules in grps[0]. */
         
         
-        /*grps.resize(0);
+        grps.resize(0);
         grps.resize(1);
         for(int l=0;l<(int)(grp->particles.size());l++){
             grps[0].particles.push_back(grp->particles[l]);
-        }*/
+        }
         /* Sort molecules by voxel. */
-        grps.resize(0);
-        divide_into_voxels(grp,grps);
-        
+//        grps.resize(0);
+//        divide_into_voxels(grp,grps);
+//        
         grps_final.resize(0);
         
         

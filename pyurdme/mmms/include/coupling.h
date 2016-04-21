@@ -17,7 +17,7 @@
 //int micro2meso2(particle *, fem_mesh *, int Mspecies);
 //int micro2meso3(particle *particle, fem_mesh *mesh, int Mspecies);
 //int micro2meso_fp(particle *particle, fem_mesh *mesh);
-int micro2meso(particle *particle, fem_mesh *mesh);
+int micro2meso(particle *particle,vector <species>& specs, fem_mesh *mesh);
 
 
 void meso2micro(particle *,int voxel, int species, double rr, double d, int dim,fem_mesh* mesh);

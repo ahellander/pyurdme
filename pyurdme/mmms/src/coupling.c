@@ -463,7 +463,7 @@ void check_inside_surrounding_cells(particle *particle, vertex *vtx, fem_mesh *m
 }
 
 /* "Exact" version of micro2meso. */
-int micro2meso(particle *particle, fem_mesh *mesh)
+int micro2meso(particle *particle, vector <species>&specs, fem_mesh *mesh)
 {
 
 	
@@ -491,7 +491,10 @@ int micro2meso(particle *particle, fem_mesh *mesh)
 	vertex *vtx;
 	int out[2];
 	//if (particle->dim==3 || particle->dim==1) {
-	if (particle->dim==3){
+    
+    /* TODO: All particles are 3D at the moment. Update this when we introduce membrane-bound particles. */
+    
+    if (1==1){//specs[particle->type].dim==3){
 
 		voxel = particle->voxel;
 		vtx = vertices[voxel];
@@ -638,6 +641,7 @@ int micro2meso(particle *particle, fem_mesh *mesh)
  	*/
 	else {
 		printf("Only 3D species are supported in micro2meso.\n");
+        printf("Dimension is: %d. Particle type is: %d\n",specs[particle->type].dim,particle->type);
 	}
 	
 	return -1;

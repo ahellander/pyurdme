@@ -252,7 +252,7 @@ class URDMEModel(Model):
         with open(os.path.dirname(os.path.abspath(__file__))+"/data/three.js_templates/mesh.html", 'r') as fd:
             hstr = fd.read()
         if hstr is None:
-            raise Exception("could note open template mesh.html")
+            raise Exception("could not open template mesh.html")
         hstr = hstr.replace('###PYURDME_MESH_JSON###', jstr)
         # Create a random id for the display div. This is to avioid multiple plots ending up in the same
         # div in Ipython notebook

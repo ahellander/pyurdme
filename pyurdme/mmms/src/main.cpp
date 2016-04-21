@@ -56,7 +56,7 @@ using namespace std;
 
 /* TODO: In 2D: molecules at distance less than sigma. */
 
-void main_simulator(group *grp,vector <species>& specs,vector <association>& assocs,vector <dissociation>& dissocs,vector <plane>& boundaries,double T,gsl_rng *rng,int traj_num);
+void main_simulator(group *grp,vector <species>& specs,vector <association>& assocs,vector <dissociation>& dissocs,vector <plane>& boundaries,fem_mesh *mesh,double T,gsl_rng *rng,int traj_num);
 
 bool compare_events (tent_event e1,tent_event e2) {
     return e1.t<e2.t;
@@ -322,7 +322,7 @@ void doDissociation(vector <particle>& particles,vector <species>& specs,tent_ev
 
 }
 
-void simulate_group(group *grp,vector <species>& specs,double T,vector <association>& assocs,vector <dissociation>& dissocs,vector <plane>& boundaries,gsl_rng *rng,int traj_num){
+void simulate_group(group *grp,vector <species>& specs,double T,vector <association>& assocs,vector <dissociation>& dissocs,vector <plane>& boundaries,fem_mesh *mesh,gsl_rng *rng,int traj_num){
     
     
     
@@ -594,7 +594,7 @@ void simulate_group(group *grp,vector <species>& specs,double T,vector <associat
         }
         /* Maximum of two molecules in a group. */
         else if(M>2){
-            main_simulator(grp,specs,assocs,dissocs,boundaries,dt,rng,traj_num);
+            main_simulator(grp,specs,assocs,dissocs,boundaries,mesh,dt,rng,traj_num);
         }
         
 
@@ -609,11 +609,11 @@ void simulate_group(group *grp,vector <species>& specs,double T,vector <associat
 }
 
 
-void main_simulator(group *grp,vector <species>& specs,vector <association>& assocs,vector <dissociation>& dissocs,vector <plane>& boundaries,double T,gsl_rng *rng,int traj_num){
+void main_simulator(group *grp,vector <species>& specs,vector <association>& assocs,vector <dissociation>& dissocs,vector <plane>& boundaries,fem_mesh *mesh,double T,gsl_rng *rng,int traj_num){
    
     /*TODO: Re-run the reversible reaction test with Nx=Ny=Nz=1. */
     
-    int Nx=1,Ny=1,Nz=1;
+    //int Nx=1,Ny=1,Nz=1;
     
     
     double t = 0.0;
@@ -634,14 +634,15 @@ void main_simulator(group *grp,vector <species>& specs,vector <association>& ass
         /* All molecules in grps[0]. */
         
         
-        /* TODO: We should sort by voxel id instead. */
         grps.resize(0);
         grps.resize(1);
         for(int l=0;l<(int)(grp->particles.size());l++){
             grps[0].particles.push_back(grp->particles[l]);
         }
-        
-        
+        /* Sort molecules by voxel. */
+//        grps.resize(0);
+//        divide_into_voxels(grp,grps);
+//        
         grps_final.resize(0);
         
         
@@ -650,7 +651,7 @@ void main_simulator(group *grp,vector <species>& specs,vector <association>& ass
         
         dt_temp = INFINITY;
         
-        for(int i=0;i<Nx*Ny*Nz;i++){
+        for(int i=0;i<(int)(grps.size());i++){
             sort_molecules(&grps[i],grps_final,specs);
         }
         
@@ -692,7 +693,7 @@ void main_simulator(group *grp,vector <species>& specs,vector <association>& ass
         for(int i=0;i<N_groups;i++){
 //            printf("t= %g\n",t);
             
-            simulate_group(&grps_final[i],specs,dt,assocs,dissocs,boundaries,rng,traj_num);
+            simulate_group(&grps_final[i],specs,dt,assocs,dissocs,boundaries,mesh,rng,traj_num);
             if(dimension==2){
                 for(int j=0;j<(int)(grps_final[i].particles.size());j++){
                     grps_final[i].particles[j].pos[2] = 0.0;
@@ -715,7 +716,10 @@ void main_simulator(group *grp,vector <species>& specs,vector <association>& ass
                 }
             }
         }
-        
+        int Psize = (int)(grp->particles.size());
+        for(int q=0;q<Psize;q++){
+            micro2meso(&(grp->particles[q]),specs, mesh);
+        }
         reflect_boundary(grp->particles,boundaries);
         
 //        int Psize = (int)(grp->particles.size());
@@ -1015,7 +1019,7 @@ int main(int argc, char* argv[]) {
         {
             part = &(grp.particles[i]);
             part->dim=3;
-            micro2meso(part, mesh);
+            micro2meso(part, specs,mesh);
          }
 
         
@@ -1045,13 +1049,12 @@ int main(int argc, char* argv[]) {
         while(t<T){
 
             /* TODO: We should check for birth processes here. */
-            main_simulator(&grp,specs,assocs,dissocs,boundaries,dt,rng,l);
-            reflect_boundary(grp.particles,boundaries);
-//                    int Psize = (int)(grp.particles.size());                    printf("[");
-  //                  for(int q=0;q<Psize;q++){
-      //                  printf("%g %g %g;\n",grp.particles[q].pos[0],grp.particles[q].pos[1],grp.particles[q].pos[2]);
-    //                }
-        //            printf("];");
+            main_simulator(&grp,specs,assocs,dissocs,boundaries,mesh,dt,rng,l);
+//            reflect_boundary(grp.particles,boundaries);
+//            int Psize = (int)(grp.particles.size());
+//            for(int q=0;q<Psize;q++){
+//                micro2meso(&(grp.particles[q]),specs, mesh);
+//            }
             
             t += dt;
 //            printf("t=%g\n",t);

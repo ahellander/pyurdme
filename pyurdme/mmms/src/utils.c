@@ -1,7 +1,9 @@
 #include "utils.h"
 #include "structs.h"
+#include "coupling.h"
 
 using namespace std;
+
 
 double dist3(double *v1,double *v2){
     return sqrt(pow(v1[0]-v2[0],2)+pow(v1[1]-v2[1],2)+pow(v1[2]-v2[2],2));
@@ -180,14 +182,14 @@ void check_positions(group *grp){
 }
 
 
-void generate_particles(group *grp,fem_mesh *mesh,int N,int type,gsl_rng *rng){
+
+
+void generate_particles(group *grp,vector <species>& specs, fem_mesh *mesh,int N,int type,gsl_rng *rng){
     
     int M = (int)(grp->particles.size());
     grp->particles.resize(M+N);
     
-//    double hx = boundary[1]-boundary[0];
-//    double hy = boundary[3]-boundary[2];
-//    double hz = boundary[5]-boundary[4];
+
     
     int rtet;
     double pos[3];
@@ -200,11 +202,7 @@ void generate_particles(group *grp,fem_mesh *mesh,int N,int type,gsl_rng *rng){
         grp->particles[i].pos[0] = pos[0];
         grp->particles[i].pos[1] = pos[1];
         grp->particles[i].pos[2] = pos[2];
-//        grp->particles[i].pos[0] = hx*gsl_rng_uniform(rng);
-//        grp->particles[i].pos[1] = hy*gsl_rng_uniform(rng);
-//        grp->particles[i].pos[2] = hz*gsl_rng_uniform(rng);
         
-        /* TODO: This works for pure micro, but we should set the correct voxel for the hybrid method. */
         
         
         grp->particles[i].type = type;
@@ -219,6 +217,9 @@ void generate_particles(group *grp,fem_mesh *mesh,int N,int type,gsl_rng *rng){
         grp->particles[i].vec3[0] = 0.0;
         grp->particles[i].vec3[1] = 0.0;
         grp->particles[i].vec3[2] = 1.0;
+        
+        grp->particles[i].dim=3;
+        micro2meso(&(grp->particles[i]),specs,mesh);
     }
 }
 

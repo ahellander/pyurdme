@@ -21,7 +21,7 @@ void print_vecs(particle *p);
 void cross(double *v1,double *v2,double *out);
 double get_boundary_dist_pair(double dt,vector <particle>& particles,vector <species>& specs,double *boundary, int dimension);
 void check_positions(group *grp);
-void generate_particles(group *grp,fem_mesh *mesh,int N,int type,gsl_rng *rng);
+void generate_particles(group *grp,vector <species>& specs,fem_mesh *mesh,int N,int type,gsl_rng *rng);
 double dot(double *p1,double *p2);
 void vec_diff(double *p1,double *p2,double *outv);
 void rotation(double *v,double *z,double theta,double r);

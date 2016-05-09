@@ -714,7 +714,7 @@ class URDMEModel(Model):
         colsum = numpy.abs(urdme_solver_data['D'].sum(axis=0))
         colsum = colsum.flatten()
         maxcolsum = numpy.argmax(colsum)
-        if colsum[0, maxcolsum] > 1e-10:
+        if colsum[0, maxcolsum] > 1.0:
             D = urdme_solver_data["D"]
             raise InvalidSystemMatrixException("Invalid diffusion matrix. The sum of the columns does not sum to zero. " + str(maxcolsum) + ' ' + str(colsum[0,maxcolsum]) + "\nThis can be caused by a large difference between the largest and smallest diffusion coefficients.")
 

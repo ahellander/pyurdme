@@ -21,9 +21,10 @@ int micro2meso(particle *particle,vector <species>& specs, fem_mesh *mesh);
 
 
 void meso2micro(particle *,int voxel, int species, double rr, double d, int dim,fem_mesh* mesh);
-void meso2micro2(particle *out,int voxel, int species, double rr, double d,int dim,fem_mesh* mesh);
+void meso2micro2(particle *out,fem_mesh* mesh);
 void meso2micro1(particle *out,int voxel, int species, double rr, double d,int dim,fem_mesh* mesh);
 
+void set_meso_mesh(urdme_model *model,fem_mesh *mesh,vector <voxel>& voxels,vector <plane>& boundary,simulation *sys,vector <species>& specs);
 vector <plane> voxel_boundaries(urdme_model *model, fem_mesh *mesh);
 inline void trinormal(triangle *tri,double *n);
 inline void vec_in_plane(double *normal, double *v1, double *v2);

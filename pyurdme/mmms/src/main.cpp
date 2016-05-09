@@ -48,6 +48,11 @@
 //#include "read_model.h"
 #include "read_matfile.h"
 
+
+#include "../meso/src/meso/meso.h"
+
+
+
 int dimension;
 int nxsteps = 20;
 int ntsteps = 30;
@@ -953,9 +958,16 @@ int main(int argc, char* argv[]) {
     vector <birth> births;
     vector <parameter> parameters;
     
-    /* Read model. See documentation for full specification. */
     parse_model(argv[1],&sim,specs,assocs,dissocs,births,parameters);
     dimension = sim.dimension;
+    
+    
+    
+//    meso_simulator(vector <particle>& particles,vector <species>& specs,vector <association>& associations,vector <dissociation>& dissociations,vector <voxel>& voxels,double T,gsl_rng *rng,int *UNIQUE_ID)
+    
+    
+    
+    
 
     // Read in the legacy urdme_model datastructure. This is still needed for some of the routines.
     char *urdmeinputfile;
@@ -993,12 +1005,78 @@ int main(int argc, char* argv[]) {
 
     vector <plane> boundaries;
     boundaries = voxel_boundaries(model, mesh);
+    
+    printf("pnts=[");
+    for(int i=0;i<(int)(boundaries.size());i++){
+        if(boundaries[i].isbnd)
+        printf("%g %g %g\n",boundaries[i].p[0],boundaries[i].p[1],boundaries[i].p[2]);
+    }
+    printf("];");
+    
+    
+    
+    
+    
+    /* *********************************** */
+    /* Some stuff for the mesoscopic part. */
+    /* *********************************** */
+    RATES=1;
+    for(int i=0;i<(int)(specs.size());++i){
+        specs[i].mesoD = specs[i].D;
+        specs[i].dim = 3;
+    }
+    
+    set_meso_mesh(model,mesh,sim.voxels,boundaries,&sim,specs);
+    
+    
+    
+//    FILE *fmesh;
+//    fmesh = fopen(sim.mesh,"r");
+//    if(fmesh==NULL){
+//        printf("Failed to open mesh file %s: %s\n",sim.mesh,strerror(errno));
+//        exit(0);
+//    }
+//    read_mesh(fmesh,sim.voxels,&sim);
+    
+//    for(int i=0;i<(int)(sim.voxels.size());i++){
+//        printf("vol_%d=%g, D_%d=%g\n",i,sim.voxels[i].vol,i,sim.voxels[i].totalD);
+//        
+//    }
+//    printf("specsD = %g\n",specs[0].D);
+    
+    
+    for(int i=0;i<(int)(dissocs.size());++i){
+        int rev = reversible(&(dissocs[i]),assocs);
+        if(rev>=0){
+            dissocs[i].kmeso = -1;
+            dissocs[i].kmeso_u[0] = assocs[rev].kmeso_u[0];
+            dissocs[i].kmeso_u[1] = assocs[rev].kmeso_u[1];
+            dissocs[i].rev = rev;
+        }
+        else{
+            dissocs[i].kmeso = dissocs[i].k;
+        }
+    }
+    
+    
+    print_model(specs,assocs,dissocs,births,&sim);
+    
+    /* *********************************** */
+    /* *********************************** */
+    /* *********************************** */
+    
+    
+    
+    
+    
+    
+    
 
     // File where the output will be stored
     string output_filename = argv[4];
-    std::cout << "Output filefd: " << output_filename << std::endl;
+    std::cout << "Output file: " << output_filename << std::endl;
     /* Create output directory. */
-  
+    int UNIQUE_ID = 0;
    /* Do simulations. */
     for(int l=0;l<sim.ntraj;++l){
 
@@ -1009,18 +1087,26 @@ int main(int argc, char* argv[]) {
         
         /* Initialize molecules. */
         group grp;
+        
         for(int i=0;i<(int)(specs.size());i++){
-            generate_particles(&grp,mesh,specs[i].initial_value,i,rng);
+            generate_particles(&grp,specs,mesh,specs[i].initial_value,i,rng);
         }
+        /* Initialize particles to either mesoscopic or microscopic. */
+        for(int i=0;i<(int)(grp.particles.size());i++){
+            grp.particles[i].meso_micro = 0;
+        }
+        /* ************************************************** */
+        
+        
 
         /* initialize the positions. TODO: Move inside generate particles/create particles */
-        particle *part;
-        for (int i=0;i<(int)(grp.particles.size());i++)
-        {
-            part = &(grp.particles[i]);
-            part->dim=3;
-            micro2meso(part, specs,mesh);
-         }
+//        particle *part;
+//        for (int i=0;i<(int)(grp.particles.size());i++)
+//        {
+//            part = &(grp.particles[i]);
+//            part->dim=3;
+//            micro2meso(part, specs,mesh);
+//         }
 
         
         double T = sim.T;
@@ -1049,15 +1135,19 @@ int main(int argc, char* argv[]) {
         while(t<T){
 
             /* TODO: We should check for birth processes here. */
-            main_simulator(&grp,specs,assocs,dissocs,boundaries,mesh,dt,rng,l);
-//            reflect_boundary(grp.particles,boundaries);
-//            int Psize = (int)(grp.particles.size());
-//            for(int q=0;q<Psize;q++){
-//                micro2meso(&(grp.particles[q]),specs, mesh);
-//            }
+//            main_simulator(&grp,specs,assocs,dissocs,boundaries,mesh,dt,rng,l);
+            
+            
+            meso_simulator(grp.particles,specs,assocs,dissocs,sim.voxels,dt,rng,&UNIQUE_ID);
+
+            for(int k=0;k<(int)(grp.particles.size());k++){
+                grp.particles[k].pos[0] = boundaries[grp.particles[k].voxel].p[0];
+                grp.particles[k].pos[1] = boundaries[grp.particles[k].voxel].p[1];
+                grp.particles[k].pos[2] = boundaries[grp.particles[k].voxel].p[2];
+//                meso2micro2(&grp.particles[k],mesh);
+            }
             
             t += dt;
-//            printf("t=%g\n",t);
             time_index++;
             cout << "Timestep complete, t=" << t << "\n";
             // Write solution to file.

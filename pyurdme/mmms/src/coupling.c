@@ -22,6 +22,55 @@ static inline double distance(double *x,double *y)
   return (x[0]-y[0])*(x[0]-y[0])+(x[1]-y[1])*(x[1]-y[1])+(x[2]-y[2])*(x[2]-y[2]); 
 }
 
+void set_meso_mesh(urdme_model *model,fem_mesh *mesh,vector <voxel>& voxels,vector <plane>& boundary,simulation *sys,vector <species>& specs)
+{
+    int Ncells = mesh->Ncells;
+    int Mspecies = model->Mspecies;
+    double *p = mesh->p;
+    size_t *jcD = model->jcD;
+    size_t *irD = model->irD;
+    double *prD = model->prD;
+    
+    
+    voxel temp;
+    neighbor tn;
+    int to_dof;
+    for(int i=0;i<Ncells;i++){
+        temp.id = i;
+        temp.node[0] = boundary[i].p[0];
+        temp.node[1] = boundary[i].p[1];
+        temp.node[2] = boundary[i].p[2];
+        
+        
+        int dof = i*Mspecies;
+
+        temp.num_conn=0;
+        temp.vol = model->vol[i];
+        temp.sd = model->sd[i];
+        temp.totalD = 0.0;
+        temp.neighbors.resize(0);
+        temp.isbnd = boundary[i].isbnd;
+        
+        
+        for (int k=jcD[dof]; k<jcD[dof+1]; k++) {
+            
+            
+            to_dof=irD[k];
+            if(to_dof!=dof){
+                temp.num_conn++;
+                tn.vox = to_dof/Mspecies;
+                tn.D = prD[k]/specs[0].D;
+                temp.totalD += tn.D;
+                temp.neighbors.push_back(tn);
+            }
+            
+        }
+        voxels.push_back(temp);
+        
+//        printf("\n");
+//        printf("Ncells=%d,Mspecies=%d\n",Ncells,model->Mspecies);
+    }
+}
 
 vector <plane> voxel_boundaries(urdme_model *model, fem_mesh *mesh)
 {
@@ -212,7 +261,7 @@ vector <plane> voxel_boundaries(urdme_model *model, fem_mesh *mesh)
 				
 		}
 			
-		/* If the edge in D with the larges component in the normals direction
+		/* If the edge in D with the largest component in the normals direction
 			points in the opposite direction, we flip the normal. */
 		if (amax < 0.0) {
 			alpha = -1.0;
@@ -382,6 +431,126 @@ static inline int nn(size_t *jcK,size_t *irK, double *p, double *pos, int pv,int
 	}
 	return (nv-spec)/Mspecies;
 }
+
+
+
+/* Exact sampling of points on dual elements. */
+void meso2micro2(particle *out,fem_mesh* mesh)
+{
+    
+//    double *p = mesh->p;
+    
+    double *prv2t = mesh->prv2t;
+    size_t *jcv2t = mesh->jcv2t;
+    
+    double *prv2e = mesh->prv2e;
+    size_t *jcv2e = mesh->jcv2e;
+    
+    int voxel = out->voxel;
+//    printf("voxel=%d\n",voxel);
+    int dim = out->dim;
+//    out->type   = species;
+//    out->voxel  = voxel;
+//    out->status = 1;
+//    out->dim  = dim;
+//    
+//    out->sigma = sigma;
+//    out->D  = D;
+    
+    tetrahedron **tets = mesh->tets;
+    vertex **vertices = mesh->vertices;
+    vertex *vtx;
+    triangle    **tris = mesh->bnd;
+    
+    double ru[3];
+    int wm;
+    tetrahedron *temp;
+    double minbary[1];
+    
+    /* If the particle is a 3D species */
+    if (1==1){//dim == 3){
+//        printf("dim=%d\n",dim);
+        /* Number of tetrahedra around that vertex. */
+//        int ntet = jcv2t[voxel+1]-jcv2t[voxel];
+//        int ntet = (int)neighbors.size();
+        vtx = vertices[voxel];
+        int ntet = (int)(vtx->cells.size());
+        
+        
+//        printf("ntet=%d\n",ntet);
+        /* Pick a "random" tetrahedra. -1 to compensate for Matlab indexing starting at 1 instead of 0. */
+//        int tet  = (int) prv2t[jcv2t[voxel]+(int)(drand48()*ntet)]-1;
+        int tet = vtx->cells[(int)(drand48()*ntet)];
+        /* Randomly in that tetrahedron */
+        
+        tetrahedron_randunif(tets[tet],ru);
+        temp = tets[tet];
+        wm = tet_which_macro_element(tets[tet],ru);
+        if (wm==-1) {
+            printf("Problem in whichmacroelement.\n");
+        }
+        
+        
+        /* Rejection sampling */
+        while (wm!=voxel) {
+            //			printf("tet=%d\n",tet);
+            tetrahedron_randunif(tets[tet],ru);
+            if (!tet_inside(tets[tet],ru,minbary)) {
+                printf("Sampled point not inside tetrahedron. This is bad.\n");
+            }
+            wm = tet_which_macro_element(tets[tet],ru);
+            if (wm==-1) {
+                printf("Problem in whichmacroelement.\n");
+            }
+        }
+        
+        out->pos[0]=ru[0];
+        out->pos[1]=ru[1];
+        out->pos[2]=ru[2];
+        
+        
+        
+    }
+    /* If 2D species, place randomly on the surface mesh */
+    else if (dim == 2){
+        
+        int ntri = jcv2e[voxel+1]-jcv2e[voxel];
+        int tri  = (int) prv2e[jcv2e[voxel]+(int)(drand48()*ntri)]-1;
+        
+        triangle_randunif(tris[tri],ru);
+        
+        if (!tri_inside(tris[tri],ru,minbary)) {
+            printf("Sampled point not inside tetrahedron. This is bad.\n");
+        }
+        wm = tri_which_macro_element(tris[tri],ru);
+        if (wm==-1) {
+            printf("Problem in whichmacroelement.\n");
+        }
+        
+        while (wm!=voxel) {
+            triangle_randunif(tris[tri],ru);
+            if (!tri_inside(tris[tri],ru,minbary)) {
+                printf("Sampled point not inside tetrahedron. This is bad.\n");
+            }
+            wm = tri_which_macro_element(tris[tri],ru);
+            if (wm==-1) {
+                printf("Problem in whichmacroelement.\n");
+            }
+        }
+        
+        out->pos[0]=ru[0];
+        out->pos[1]=ru[1];
+        out->pos[2]=ru[2];
+        
+        
+    }
+    else {
+        printf("1D species are not yet supported. dim = %d\n",dim);
+        exit(-1);
+    }
+    
+}
+
 
 
 /* A new, faster micro2meso. */

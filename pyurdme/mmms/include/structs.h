@@ -21,6 +21,23 @@ using namespace std;
 
 //int grp_id,p_id=0;
 
+typedef struct neighbor{
+    int vox;
+    double D;
+}neighbor;
+
+typedef struct voxel {
+    int id;
+    double node[3];
+    int num_conn;
+    vector <neighbor> neighbors;
+    double vol;
+    int sd;
+    double totalD;
+    int isbnd;
+}voxel;
+
+
 typedef struct simulation{
     int ntraj;
     int ncores;
@@ -32,13 +49,18 @@ typedef struct simulation{
     double boundary[6];
     double volume;
     
+    vector <voxel> voxels;
+    
+    //    double h_x,h_y,h_z;
     int num_voxels;
     char name[MAX_CHARACTERS];
+    char mesh[MAX_CHARACTERS];
     
 }simulation;
 
 typedef struct species{
     double D;
+    double mesoD;
     double sigma;
     int dim;
     char name[MAX_CHARACTERS];
@@ -52,7 +74,10 @@ typedef struct particle{
     bool active;
     int unique_id;
     int voxel;
+    
     int dim;
+    int meso_micro;
+    double clock;
 }particle;
 
 typedef struct group{
@@ -64,14 +89,17 @@ typedef struct group{
 typedef struct dissociation{
     int reactant;
     vector <int> products;
-    double k;
+    double k,kmeso;
+    double kmeso_u[2];
+    int rev;
     double r;
 }dissociation;
 
 typedef struct association{
     int reactant1,reactant2;
     vector <int> products;
-    double k;
+    double k,kmeso;
+    double kmeso_u[2];
     double r;
 }association;
 
@@ -109,6 +137,8 @@ typedef struct plane{
     vector <int> type;
 
 }plane;
+
+
 
 
 #endif

@@ -1336,7 +1336,7 @@ class URDMEMesh(dolfin.Mesh):
     def _ipython_display_(self, filename=None, colors=None, width=500):
         self.display(filename=filename, colors=colors, width=width)
 
-    def display(self, filename=None, colors=None, width=500):
+    def display(self, filename=None, colors=None, width=500, camera=[0,0,1]):
         jstr = self.export_to_three_js(colors=colors)
         hstr = None
         with open(os.path.dirname(os.path.abspath(__file__))+"/data/three.js_templates/mesh.html",'r') as fd:
@@ -1350,6 +1350,10 @@ class URDMEMesh(dolfin.Mesh):
         # div in Ipython notebook
         displayareaid=str(uuid.uuid4())
         hstr = hstr.replace('###DISPLAYAREAID###',displayareaid)
+        # ###CAMERA_X###, ###CAMERA_Y###, ###CAMERA_Z###
+        hstr = hstr.replace('###CAMERA_X###',str(camera[0]))
+        hstr = hstr.replace('###CAMERA_Y###',str(camera[1]))
+        hstr = hstr.replace('###CAMERA_Z###',str(camera[2]))
         html = '<div style="width: {0}px; height: {1}px;" id="{2}" ></div>'.format(width, height, displayareaid)
 
         if filename is not None:

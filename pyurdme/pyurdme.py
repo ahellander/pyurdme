@@ -232,7 +232,7 @@ class URDMEModel(Model):
             for ndx, val in enumerate(sd):
                 fd.write("{0},{1}\n".format(ndx, val))
 
-    def display_mesh(self, subdomains, width=500, height=375):
+    def display_mesh(self, subdomains, width=500, height=375, camera=[0,0,1]):
         ''' WebGL display of the wireframe mesh.'''
         if isinstance(subdomains, int):
             jstr = self._subdomains_to_threejs(subdomains={1:'blue', subdomains:'red'})
@@ -253,6 +253,10 @@ class URDMEModel(Model):
         # div in Ipython notebook
         displayareaid = str(uuid.uuid4())
         hstr = hstr.replace('###DISPLAYAREAID###', displayareaid)
+        # ###CAMERA_X###, ###CAMERA_Y###, ###CAMERA_Z###
+        hstr = hstr.replace('###CAMERA_X###',str(camera[0]))
+        hstr = hstr.replace('###CAMERA_Y###',str(camera[1]))
+        hstr = hstr.replace('###CAMERA_Z###',str(camera[2]))
         html = '<div style="width: {0}px; height: {1}px;" id="{2}" ></div>'.format(width, height, displayareaid)
         IPython.display.display(IPython.display.HTML(html+hstr))
 

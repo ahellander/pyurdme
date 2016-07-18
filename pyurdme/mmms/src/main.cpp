@@ -995,6 +995,7 @@ int main(int argc, char* argv[]) {
     read_vertex_to_cell(mesh, &mesh_file,&dataset);
 
     /* Initialize the primal/dual mesh format. Do we need this for pure micro?? */
+    cout << "Initializing primal/dual mesh format.\n";
     mesh_primal2dual(mesh);
 
     /* Compute all the planes that approximates the boundaries */
@@ -1026,6 +1027,7 @@ int main(int argc, char* argv[]) {
         specs[i].dim = 3;
     }
     
+    cout << "Setting mesh mesh.\n";
     set_meso_mesh(model,mesh,sim.voxels,boundaries,&sim,specs);
     
     
@@ -1137,9 +1139,9 @@ int main(int argc, char* argv[]) {
             /* TODO: We should check for birth processes here. */
 //            main_simulator(&grp,specs,assocs,dissocs,boundaries,mesh,dt,rng,l);
             
-            
+            cout << "Entering simulator...\n";
             meso_simulator(grp.particles,specs,assocs,dissocs,sim.voxels,dt,rng,&UNIQUE_ID);
-
+            cout << "Done.\n";
             for(int k=0;k<(int)(grp.particles.size());k++){
                 grp.particles[k].pos[0] = boundaries[grp.particles[k].voxel].p[0];
                 grp.particles[k].pos[1] = boundaries[grp.particles[k].voxel].p[1];

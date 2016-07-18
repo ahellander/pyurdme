@@ -46,7 +46,7 @@ void update_diss(vector <voxel>& voxels,vector <association>& assocs,vector <par
     temp_event.type = 0;
     double k = 0.0,ktemp=0.0;
     for(int j = 0;j<M;j++){
-        if(dissociations[j].reactant==particles[i].type && voxels[particles[i].voxel].isbnd==1){
+        if(dissociations[j].reactant==particles[i].type){// && voxels[particles[i].voxel].isbnd==1){
             temp_event.index = j;
             if(MICRO==1){
                 k = dissociations[j].k;

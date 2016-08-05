@@ -136,7 +136,7 @@ typedef struct{
 	size_t *irv2t;
 	size_t *jcv2t;
 	
-	/* Which bundary elements does a vetrex belong to?*/
+	/* Which boundary elements does a vertex belong to?*/
 	double *prv2e;
 	size_t *irv2e;
 	size_t *jcv2e;

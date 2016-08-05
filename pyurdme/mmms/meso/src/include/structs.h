@@ -1,25 +1,9 @@
 #ifndef STRUCTS_H
 #define STRUCTS_H
 
-#include <vector>
-#include <iostream>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <sstream>
-
-/* Gnu scientific library */
-#include "gsl/gsl_rng.h"
-#include "gsl/gsl_randist.h"
-#include "gsl/gsl_errno.h"
-
-#include "global_params.h"
-#include "mesh.h"
-
 using namespace std;
 
-//int grp_id,p_id=0;
+int grp_id,p_id=0;
 
 typedef struct neighbor{
     int vox;
@@ -34,49 +18,54 @@ typedef struct voxel {
     double vol;
     int sd;
     double totalD;
-    int isbnd;
 }voxel;
-
 
 typedef struct simulation{
     int ntraj;
     int ncores;
-    
+
     int dimension;
-    
+
     double T;
     int num_intervals;
     double boundary[6];
     double volume;
-    
+
     vector <voxel> voxels;
-    
-    //    double h_x,h_y,h_z;
+
+//    double h_x,h_y,h_z;
     int num_voxels;
     char name[MAX_CHARACTERS];
     char mesh[MAX_CHARACTERS];
-    
+
 }simulation;
 
 typedef struct species{
-    double D;
-    double mesoD;
+    double D,mesoD;
     double sigma;
     int dim;
     char name[MAX_CHARACTERS];
     int initial_value;
+
+    /* 0 is meso, 1 is micro. */
+    int meso_micro;
+    /* Minimum time a newly created mesoscopic molecule stays microscopic before it becomes mesoscopic. */
+    double min_micro;
 }species;
 
 typedef struct particle{
     int type;
+    int voxel[3];
     double pos[3];
     double vec1[3],vec2[3],vec3[3];
     bool active;
     int unique_id;
-    int voxel;
     
-    int dim;
+    int vox_id;
+    
+    /* 0 is meso, 1 is micro. */
     int meso_micro;
+
     double clock;
 }particle;
 
@@ -113,7 +102,7 @@ typedef struct tent_event{
     int index;
     double t;
     vector <int> reactants;
-    
+
 }tent_event;
 
 typedef struct parameter{
@@ -123,22 +112,32 @@ typedef struct parameter{
 
 typedef struct node{
     double p[3];
-    
+
 }node;
 
+typedef struct tetrahedron{
+    int type;
+    int nodes[4];
+}tetrahedron;
+
 typedef struct plane{
-    int id;
     double p[3];
     double v1[3];
     double v2[3];
     double n[3];
     int cn;
-    int isbnd; 
-    vector <int> type;
-
 }plane;
 
+bool compare_events (tent_event e1,tent_event e2) {
+    return e1.t<e2.t;
+}
 
+bool compare_events2 (tent_event *e1,tent_event *e2) {
+    return e1->t<e2->t;
+}
 
+bool compare_events_meso (tent_event e1,tent_event e2) {
+    return e1.t>e2.t;
+}
 
 #endif

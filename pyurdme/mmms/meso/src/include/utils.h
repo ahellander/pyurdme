@@ -1,9 +1,5 @@
-#include "utils.h"
-#include "structs.h"
-#include "coupling.h"
-
-using namespace std;
-
+#ifndef UTILS_H
+#define UTILS_H
 
 double dist3(double *v1,double *v2){
     return sqrt(pow(v1[0]-v2[0],2)+pow(v1[1]-v2[1],2)+pow(v1[2]-v2[2],2));
@@ -20,14 +16,14 @@ void print_id(int ID){
 
 void print_group(group *grp){
     int M = (int)(grp->particles.size());
-    
+
     printf("___GROUP ID=%d___\n",grp->unique_id);
     for(int i=0;i<M;i++){
         print_pos(grp->particles[i].pos);
         printf(", ");
         print_id(grp->particles[i].unique_id);
         printf("\n");
-        
+
     }
     printf("_________________\n");
 }
@@ -59,8 +55,17 @@ void print_molecules(group *grp,double dt,FILE *f_out){
     int M = (int)(grp->particles.size());
     fprintf(f_out,"%d\n",M);
     for(int i=0;i<M;i++){
-    
-        fprintf(f_out,"%.5g %.5g %.5g %d %d %.5g\n",grp->particles[i].pos[0],grp->particles[i].pos[1],grp->particles[i].pos[2],grp->particles[i].type,grp->particles[i].unique_id,dt);
+
+        fprintf(f_out,"%.5g %.5g %.5g %d %d %d %.5g %.5g\n",grp->particles[i].pos[0],grp->particles[i].pos[1],grp->particles[i].pos[2],grp->particles[i].type,grp->particles[i].unique_id,grp->particles[i].meso_micro,grp->particles[i].clock,dt);
+    }
+}
+
+void print_molecules_voxel(group *grp,double dt,FILE *f_out){
+    int M = (int)(grp->particles.size());
+    fprintf(f_out,"%d\n",M);
+    for(int i=0;i<M;i++){
+
+        fprintf(f_out,"%d %d %d %.5g\n",grp->particles[i].vox_id,grp->particles[i].type,grp->particles[i].unique_id,dt);
     }
 }
 
@@ -98,18 +103,6 @@ void print_vecs(particle *p){
     printf("\n");
 }
 
-void print_plane(plane *pl)
-{
-
-  printf("plane, id = %i;\n",pl->id); 
-  printf("\tisbnd = %i;\n",pl->isbnd); 
-  printf("\tp = [%.3e %.3e %.3e];\n",pl->p[0],pl->p[1],pl->p[2]);   
-  printf("\tv1 = [%.3e %.3e %.3e];\n",pl->v1[0],pl->v1[1],pl->v1[2]);  
-  printf("\tv2 = [%.3e %.3e %.3e];\n",pl->v2[0],pl->v2[1],pl->v2[2]);
-  printf("\tn = [%.3e %.3e %.3e];\n",pl->n[0],pl->n[1],pl->n[2]);
-  
-}
-
 
 void cross(double *v1,double *v2,double *out){
     out[0] = v1[1]*v2[2]-v1[2]*v2[1];
@@ -117,61 +110,45 @@ void cross(double *v1,double *v2,double *out){
     out[2] = v1[0]*v2[1]-v1[1]*v2[0];
 }
 
-//double get_boundary_dist_pair(double dt,vector <particle>& particles,vector <species>& specs,vector <plane>& boundaries, int dimension){
-//    
-//    /* TODO: This can be made much more efficient if we know which voxel we are in, and if a plane is associated to that voxel. */
-//    
-//    double temp=INFINITY,temp2=INFINITY;
-//    
-//    int M = (int)(boundaries.size());
-//    for(int j=0;j<2;j++){
-//        for(int i=0;i<M;i++){
-//            temp2 = min(fabs(particles[j].pos[i]-boundary[2*i]),fabs(particles[j].pos[i]-boundary[2*i+1]));
-//            if(temp2<temp){
-//                temp = temp2;
-//            }
-//        }
-//    }
-//    
-//}
-
-
 /* Gets the time step for a pair of molecules, taking into account the distance to the boundary. */
-//double get_boundary_dist_pair(double dt,vector <particle>& particles,vector <species>& specs,double *boundary, int dimension){
-//    double temp = INFINITY,temp2 = INFINITY;
-//    
-//    for(int j=0;j<2;++j){
-//        for(int i=0;i<dimension;++i){
-//            temp2 = min(fabs(particles[j].pos[i]-boundary[2*i]),fabs(particles[j].pos[i]-boundary[2*i+1]));
-//            if(temp2<temp){
-//                temp = temp2;
-//            }
-//        }
-//    }
-//    double sigma = specs[particles[0].type].sigma+specs[particles[1].type].sigma;
-//    double D = specs[particles[0].type].D+specs[particles[1].type].D;
-//    temp = pow(temp,2)/(50*D);
-//    
-//    if(temp<dt){
-//        /* TODO: 20 should be defined in a parameter struct. */
-//        double dp = pow(dist3(particles[0].pos,particles[1].pos)-sigma,2)/(30*D);
-//        
-//        if(dp<dt){
-//            return max(temp,dp);
-//        }
-//        else{
-//            return dt;
-//        }
-//        
-//    }
-//    
-//    return dt;
-//}
+double get_boundary_dist_pair(double dt,vector <particle>& particles,vector <species>& specs,double *boundary, int dimension){
+//    double dt_in = dt;
+    double temp = INFINITY,temp2 = INFINITY;
+
+    for(int j=0;j<2;++j){
+        for(int i=0;i<dimension;++i){
+            temp2 = min(fabs(particles[j].pos[i]-boundary[2*i]),fabs(particles[j].pos[i]-boundary[2*i+1]));
+            if(temp2<temp){
+                temp = temp2;
+            }
+        }
+    }
+    double sigma = specs[particles[0].type].sigma+specs[particles[1].type].sigma;
+    double D = specs[particles[0].type].D+specs[particles[1].type].D;
+    temp = pow(temp,2)/(50*D);
+
+    if(temp<dt){
+//        printf("temp=%g, dt=%g\n",temp,dt);
+        /* TODO: 20 should be defined in a parameter struct. */
+        double dp = pow(dist3(particles[0].pos,particles[1].pos)-sigma,2)/(30*D);
+
+        if(dp<dt){
+//            printf("dt_in=%g, dt_out=%g\n",dt_in,max(temp,dp));
+            return max(temp,dp);
+        }
+        else{
+            return dt;
+        }
+
+    }
+
+    return dt;
+}
 
 void check_positions(group *grp){
     int M = (int)(grp->particles.size());
-    
-    
+
+
     for(int i=0;i<M;i++){
         if(grp->particles[i].pos[0] != grp->particles[i].pos[0] ||
            grp->particles[i].pos[1] != grp->particles[i].pos[1] ||
@@ -181,33 +158,27 @@ void check_positions(group *grp){
     }
 }
 
+void generate_particles(group *grp,double *boundary,int N,int type,gsl_rng *rng,int *unique_id){
 
-
-
-void generate_particles(group *grp,vector <species>& specs, fem_mesh *mesh,int N,int type,gsl_rng *rng){
-    
     int M = (int)(grp->particles.size());
     grp->particles.resize(M+N);
-    
 
-    
-    int rtet;
-    double pos[3];
-    
+    double hx = boundary[1]-boundary[0];
+    double hy = boundary[3]-boundary[2];
+    double hz = boundary[5]-boundary[4];
+
     for(int i=M;i<M+N;i++){
-        
-        rtet = floor(gsl_rng_uniform(rng)*mesh->ntet);
-        
-        tetrahedron_randunif(mesh->tets[rtet],pos);
-        grp->particles[i].pos[0] = pos[0];
-        grp->particles[i].pos[1] = pos[1];
-        grp->particles[i].pos[2] = pos[2];
-        
-        
-        
+        grp->particles[i].pos[0] = hx*gsl_rng_uniform(rng);
+        grp->particles[i].pos[1] = hy*gsl_rng_uniform(rng);
+        grp->particles[i].pos[2] = hz*gsl_rng_uniform(rng);
+        grp->particles[i].voxel[0] = 0;
+        grp->particles[i].voxel[1] = 0;
+        grp->particles[i].voxel[2] = 0;
         grp->particles[i].type = type;
         grp->particles[i].active = true;
-        grp->particles[i].unique_id = i;
+        grp->particles[i].unique_id = *unique_id;
+        *unique_id = *unique_id+1;
+        grp->particles[i].clock = 0.0;
         grp->particles[i].vec1[0] = 1.0;
         grp->particles[i].vec1[1] = 0.0;
         grp->particles[i].vec1[2] = 0.0;
@@ -217,44 +188,43 @@ void generate_particles(group *grp,vector <species>& specs, fem_mesh *mesh,int N
         grp->particles[i].vec3[0] = 0.0;
         grp->particles[i].vec3[1] = 0.0;
         grp->particles[i].vec3[2] = 1.0;
-        
-        grp->particles[i].dim=3;
-        micro2meso(&(grp->particles[i]),specs,mesh);
     }
 }
 
 
+void generate_particles_meso(group *grp,vector <voxel>& voxels,int N,int type,gsl_rng *rng,int *unique_id){
+    
+    int M = (int)(grp->particles.size());
+    grp->particles.resize(M+N);
+    
+    int Mvox = (int)(voxels.size());
+    
+    for(int i=M;i<M+N;i++){
+        grp->particles[i].pos[0] = 0.0;
+        grp->particles[i].pos[1] = 0.0;
+        grp->particles[i].pos[2] = 0.0;
+        
+        /*TODO: Sample according to volume of voxels. */
+        grp->particles[i].vox_id = floor(Mvox*gsl_rng_uniform(rng));
 
-//void generate_particles(group *grp,double *boundary,int N,int type,gsl_rng *rng){
-//    
-//    int M = (int)(grp->particles.size());
-//    grp->particles.resize(M+N);
-//    
-//    double hx = boundary[1]-boundary[0];
-//    double hy = boundary[3]-boundary[2];
-//    double hz = boundary[5]-boundary[4];
-//    
-//    for(int i=M;i<M+N;i++){
-//        grp->particles[i].pos[0] = hx*gsl_rng_uniform(rng);
-//        grp->particles[i].pos[1] = hy*gsl_rng_uniform(rng);
-//        grp->particles[i].pos[2] = hz*gsl_rng_uniform(rng);
-//        grp->particles[i].voxel[0] = 0;
-//        grp->particles[i].voxel[1] = 0;
-//        grp->particles[i].voxel[2] = 0;
-//        grp->particles[i].type = type;
-//        grp->particles[i].active = true;
-//        grp->particles[i].unique_id = i;
-//        grp->particles[i].vec1[0] = 1.0;
-//        grp->particles[i].vec1[1] = 0.0;
-//        grp->particles[i].vec1[2] = 0.0;
-//        grp->particles[i].vec2[0] = 0.0;
-//        grp->particles[i].vec2[1] = 1.0;
-//        grp->particles[i].vec2[2] = 0.0;
-//        grp->particles[i].vec3[0] = 0.0;
-//        grp->particles[i].vec3[1] = 0.0;
-//        grp->particles[i].vec3[2] = 1.0;
-//    }
-//}
+        
+        grp->particles[i].type = type;
+        grp->particles[i].active = true;
+        grp->particles[i].unique_id = *unique_id;
+        *unique_id = *unique_id+1;
+        grp->particles[i].clock = 0.0;
+        grp->particles[i].vec1[0] = 1.0;
+        grp->particles[i].vec1[1] = 0.0;
+        grp->particles[i].vec1[2] = 0.0;
+        grp->particles[i].vec2[0] = 0.0;
+        grp->particles[i].vec2[1] = 1.0;
+        grp->particles[i].vec2[2] = 0.0;
+        grp->particles[i].vec3[0] = 0.0;
+        grp->particles[i].vec3[1] = 0.0;
+        grp->particles[i].vec3[2] = 1.0;
+    }
+}
+
 
 
 double dot(double *p1,double *p2){
@@ -276,13 +246,13 @@ void rotation(double *v,double *z,double theta,double r)
 	double normz = sqrt(dot(z,z));
 	double vn[] = {v[0]/normv,v[1]/normv,v[2]/normv};
 	double zn[] = {z[0]/normz,z[1]/normz,z[2]/normz};
-	
+
 	double q[4];
 	q[0] = cos(theta/2.0);
 	q[1] = sin(theta/2.0)*zn[0];
 	q[2] = sin(theta/2.0)*zn[1];
 	q[3] = sin(theta/2.0)*zn[2];
-	
+
 	double v_rot[3];
 	v_rot[0] = (q[0]*q[0]+q[1]*q[1]-q[2]*q[2]-q[3]*q[3])*vn[0]+2*(q[1]*q[2]-q[0]*q[3])*vn[1]+2*(q[1]*q[3]+q[0]*q[2])*vn[2];
 	v_rot[1] = (q[0]*q[0]-q[1]*q[1]+q[2]*q[2]-q[3]*q[3])*vn[1]+2*(q[1]*q[2]+q[0]*q[3])*vn[0]+2*(q[2]*q[3]-q[0]*q[1])*vn[2];
@@ -293,15 +263,6 @@ void rotation(double *v,double *z,double theta,double r)
 }
 
 
-void reflect_all(group *grp,vector <plane>& boundaries){
-    int M = (int)(grp->particles.size());
-    int P = (int)(boundaries.size());
-    for(int i=0;i<M;i++){
-        for(int j=0;j<P;j++){
-            
-        }
-    }
-}
 
 
 void reflect_cuboid(group *grp,double *boundary,int dimension){
@@ -321,7 +282,7 @@ void reflect_cuboid(group *grp,double *boundary,int dimension){
                     printf("Error: Molecule outside of domain. Cannot recover.\n");
                     print_group(grp);
                     exit(EXIT_FAILURE);
-                    
+
                 }
             }
         }
@@ -342,42 +303,22 @@ void reflect_cuboid_p(particle *p,double *boundary){
             if(counter>50){
                 printf("Error: Molecule outside of domain. Cannot recover.\n");
                 exit(EXIT_FAILURE);
-                
+
             }
         }
     }
 }
 
-void reflect_boundary(vector <particle>& mols,vector <plane>& tet_b){
-
-    int i = -1;
-    for(int j=0;j<(int)(mols.size());j++){
-        
-        i = mols[j].voxel;
-        
-//        for(int i=0;i<(int)(tet_b.size());i++){
-            if(tet_b[i].isbnd){
-                double dp = tet_b[i].n[0]*(mols[j].pos[0]-tet_b[i].p[0])+tet_b[i].n[1]*(mols[j].pos[1]-tet_b[i].p[1])+tet_b[i].n[2]*(mols[j].pos[2]-tet_b[i].p[2]);
-                if(dp<0){
-                    mols[j].pos[0] += 2*fabs(dp)*tet_b[i].n[0];
-                    mols[j].pos[1] += 2*fabs(dp)*tet_b[i].n[1];
-                    mols[j].pos[2] += 2*fabs(dp)*tet_b[i].n[2];
-                }
-            }
+//void reflect_boundary(particle *p,vector <plane>& tet_b){
+//    for(int i=0;i<(int)(tet_b.size());i++){
+//        double dp = tet_b[i].n[0]*(p->pos[0]-tet_b[i].p[0])+tet_b[i].n[1]*(p->pos[1]-tet_b[i].p[1])+tet_b[i].n[2]*(p->pos[2]-tet_b[i].p[2]);
+//        if(dp<0){
+//            p->pos[0] = 2*fabs(dp)*tet_b[i].n[0];
+//            p->pos[0] = 2*fabs(dp)*tet_b[i].n[1];
+//            p->pos[0] = 2*fabs(dp)*tet_b[i].n[2];
 //        }
-    }
-}
-
-void reflect_boundary_p(particle *p,vector <plane>& tet_b){
-    for(int i=0;i<(int)(tet_b.size());i++){
-        double dp = tet_b[i].n[0]*(p->pos[0]-tet_b[i].p[0])+tet_b[i].n[1]*(p->pos[1]-tet_b[i].p[1])+tet_b[i].n[2]*(p->pos[2]-tet_b[i].p[2]);
-        if(dp<0){
-            p->pos[0] = 2*fabs(dp)*tet_b[i].n[0];
-            p->pos[0] = 2*fabs(dp)*tet_b[i].n[1];
-            p->pos[0] = 2*fabs(dp)*tet_b[i].n[2];
-        }
-    }
-}
+//    }
+//}
 
 //int find_closest_node(particle *p,vector <node>& nodes,int space_or_boundary){
 //    double td = INFINITY;
@@ -410,13 +351,13 @@ void copy_vecs(double *vec1,double *vec2,double *vec3,particle *p){
     vec2[0] = p->vec2[0];
     vec2[1] = p->vec2[1];
     vec2[2] = p->vec2[2];
-    
+
     vec3[0] = p->vec3[0];
     vec3[1] = p->vec3[1];
     vec3[2] = p->vec3[2];
 }
 
-void diffuse_vec(double *pos,double *vec1,double *vec2, double *vec3,double D,double sigma,double dt,gsl_rng *rng){
+void diffuse_vec(double *pos,double *vec1,double *vec2, double *vec3,double D,double dt,gsl_rng *rng){
     double sd = sqrt(2*D*dt);
     double r1 = sd*gsl_ran_gaussian_ziggurat(rng,1.0);
     double r2 = sd*gsl_ran_gaussian_ziggurat(rng,1.0);
@@ -445,42 +386,20 @@ void diffuse(particle *p,vector <species>& specs,double dt,gsl_rng *rng){
 //    }
 }
 
-void divide_into_voxels(group *grp,vector <group>& grps){
-    group temp;
-    int voxel = -1;
-    while((int)(grp->particles.size())>0){
-        temp.particles.resize(0);
-        temp.particles.push_back(grp->particles[0]);
-        voxel = grp->particles[0].voxel;
-        grp->particles.erase(grp->particles.begin());
-        
-        for(int j=0;j<(int)(grp->particles.size());){
-            if(grp->particles[j].voxel==voxel){
-                temp.particles.push_back(grp->particles[j]);
-                grp->particles.erase(grp->particles.begin()+j);
-            }
-            else{
-                ++j;
-            }
-        }
-        grps.push_back(temp);
-    }
-}
-
 void divide_into_cubes(group *grp,vector <group>& grps,int Nx,int Ny,int Nz,double *boundary){
-    
+
     grps.resize(Nx*Ny*Nz);
-    
+
     double hx = (boundary[1]-boundary[0])/Nx;
     double hy = (boundary[3]-boundary[2])/Ny;
     double hz = (boundary[5]-boundary[4])/Nz;
-    
+
     int ix,iy,iz;
-    
+
     int index;
     int M = (int)(grp->particles.size());
     double *pos;
-    
+
     for(int i=0;i<M;i++){
         pos = grp->particles[i].pos;
         ix = (int)(pos[0]/hx);
@@ -499,7 +418,7 @@ void divide_into_cubes(group *grp,vector <group>& grps,int Nx,int Ny,int Nz,doub
         }
         if(index<0){
 //            printf("(%.5g,%.5g,%.5g)\n",grp->particles[i].pos[0],grp->particles[i].pos[1],grp->particles[i].pos[2]);
-            
+
             index = 0;
         }
         grps[index].particles.push_back(grp->particles[i]);
@@ -509,26 +428,26 @@ void divide_into_cubes(group *grp,vector <group>& grps,int Nx,int Ny,int Nz,doub
 void sort_molecules(group *grp,vector <group>& grps,vector <species>& specs){
     int M = (int)(grp->particles.size());
     if(M>1){
-        
+
         int *n1,*n2;
         n1 = (int *)malloc(sizeof(int)*M);
         n2 = (int *)malloc(sizeof(int)*M);
         double *d1,*d2;
         d1 = (double *)malloc(sizeof(double)*M);
         d2 = (double *)malloc(sizeof(double)*M);
-        
+
         for(int i=0;i<M;i++){
             d1[i] = INFINITY;
             d2[i] = INFINITY;
         }
-        
+
         double d_temp,d_temp2;
         int n_temp;
         double *pos_temp1;
         for(int i=0;i<M;i++){
-            
+
             pos_temp1 = grp->particles[i].pos;
-            
+
             for(int j=i+1;j<M;j++){
                 double D = specs[grp->particles[j].type].D+specs[grp->particles[i].type].D;
                 double sigma = specs[grp->particles[j].type].sigma+specs[grp->particles[i].type].sigma;
@@ -540,7 +459,7 @@ void sort_molecules(group *grp,vector <group>& grps,vector <species>& specs){
                 /* ::::::::::::::::::::::::::::::::::::: */
                 if(d_temp<d1[i]){
                     d_temp2 = d1[i];
-                    
+
                     d1[i] = d_temp;//pow(d_temp-sigma,2)/(50*D);
                     d2[i] = d_temp2;
                     n_temp = n1[i];
@@ -594,7 +513,7 @@ void sort_molecules(group *grp,vector <group>& grps,vector <species>& specs){
                 grps.push_back(grp_temp);
                 grp->particles[i].active = false;
             }
-            
+
         }
         free(n1);
         free(n2);
@@ -617,23 +536,23 @@ int cp(const char *to, const char *from)
     char buf[4096];
     ssize_t nread;
     int saved_errno;
-    
+
     fd_from = open(from, O_RDONLY);
     if (fd_from < 0)
         return -1;
-    
+
     fd_to = open(to, O_WRONLY | O_CREAT | O_EXCL, 0666);
     if (fd_to < 0)
         goto out_error;
-    
+
     while (nread = read(fd_from, buf, sizeof buf), nread > 0)
     {
         char *out_ptr = buf;
         ssize_t nwritten;
-        
+
         do {
             nwritten = write(fd_to, out_ptr, nread);
-            
+
             if (nwritten >= 0)
             {
                 nread -= nwritten;
@@ -645,7 +564,7 @@ int cp(const char *to, const char *from)
             }
         } while (nread > 0);
     }
-    
+
     if (nread == 0)
     {
         if (close(fd_to) < 0)
@@ -654,20 +573,21 @@ int cp(const char *to, const char *from)
             goto out_error;
         }
         close(fd_from);
-        
+
         /* Success! */
         return 0;
     }
-    
+
 out_error:
     saved_errno = errno;
-    
+
     close(fd_from);
     if (fd_to >= 0)
         close(fd_to);
-    
+
     errno = saved_errno;
     return -1;
 }
 
 
+#endif

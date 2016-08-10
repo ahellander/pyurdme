@@ -36,7 +36,8 @@
 #include <iostream>
 #endif
 #include <string>
-#include "../hdf5-1.8.16/c++/src/H5Cpp.h"
+#include "H5Cpp.h"
+
 #ifndef H5_NO_NAMESPACE
     using namespace H5;
 #endif

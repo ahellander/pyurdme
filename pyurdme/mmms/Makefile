@@ -1,10 +1,15 @@
-CC=hdf5-1.8.16/c++/src/h5c++
+#CC=hdf5-1.8.16/c++/src/h5c++
+CC=h5c++
 SRC=src/main.cpp mesh.o
 EXECUTABLE=bin/mmms
-FLAGS=-Wall -pedantic -I$(PWD)/include -g -c -O3 `gsl-config --cflags` --std=c++11 -I/home/fenics/pyurdme/pyurdme/mmms/hdf5-1.8.16/hdf5/include/
+FLAGS=-Wall -pedantic -I$(PWD)/include -g -c -O3 `gsl-config --cflags` --std=c++11 -I$(PWD)/hdf5-1.8.16/hdf5/include/
+
 CURR_DIR = $(shell pwd)
-LFLAGS=`gsl-config --libs`
-HDF5FLAGS=-D_LARGEFILE64_SOURCE -D_LARGEFILE_SOURCE -L/home/fenics/pyurdme/pyurdme/mmms/hdf5-1.8.16/hdf5/lib /home/fenics/pyurdme/pyurdme/mmms/hdf5-1.8.16/hdf5/lib/libhdf5_hl_cpp.a /home/fenics/pyurdme/pyurdme/mmms/hdf5-1.8.16/hdf5/lib/libhdf5_cpp.a /home/fenics/pyurdme/pyurdme/mmms/hdf5-1.8.16/hdf5/lib/libhdf5_hl.a /home/fenics/pyurdme/pyurdme/mmms/hdf5-1.8.16/hdf5/lib/libhdf5.a -lz -ldl -lm -Wl,-rpath -Wl,/home/fenics/pyurdme/pyurdme/mmms/hdf5-1.8.16/hdf5/lib
+
+LFLAGS=`gsl-config --libs` -lhdf5_cpp
+
+#HDF5FLAGS=-D_LARGEFILE64_SOURCE -D_LARGEFILE_SOURCE -L$(PWD)/hdf5-1.8.16/hdf5/lib $(PWD)/hdf5-1.8.16/hdf5/lib/libhdf5_hl_cpp.a $(PWD)/hdf5-1.8.16/hdf5/lib/libhdf5_cpp.a $(PWD)/hdf5-1.8.16/hdf5/lib/libhdf5_hl.a $(PWD)/hdf5-1.8.16/hdf5/lib/libhdf5.a -lz -ldl -lm -Wl,-rpath -Wl,$(PWD)/hdf5-1.8.16/hdf5/lib
+
 all: mmms
 
 DEPS=main.o mesh.o utils.o urdmemodel.o read_matfile.o coupling.o
@@ -12,7 +17,7 @@ DEPS=main.o mesh.o utils.o urdmemodel.o read_matfile.o coupling.o
 mmms: bin/mmms
 
 bin/mmms: $(DEPS)
-	$(CC) $(DEPS) $(LFLAGS) -o $(EXECUTABLE)    
+	$(CC) $(DEPS) $(HDF5FLAGS) -o $(EXECUTABLE) $(LFLAGS)
 
 main.o: src/main.cpp
 	$(CC) src/main.cpp $(FLAGS)

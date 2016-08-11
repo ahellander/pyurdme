@@ -530,18 +530,19 @@ int tet_which_macro_element(tetrahedron *tet,double *x)
 void tet_index_to_internal(fem_mesh *mesh)
 {
 	
+    printf("Entering tet_to_internal\n");
 	int i,ntet;
 	double *p=mesh->p;
 	int *t=mesh->t;
 	
 	double *x;
 	ntet = mesh->ntet;
-//    printf("here\n");
+    printf("here\n");
 	tetrahedron **tets =(tetrahedron **)malloc(ntet*sizeof(tetrahedron*));
 	for (i=0; i<ntet; i++) {
 		tets[i]=(tetrahedron *)malloc(sizeof(tetrahedron));
 	}
-//    printf("allocated\n");
+    printf("allocated\n");
     
 	tetrahedron *temp;
 	

@@ -888,29 +888,30 @@ void read_vertex_to_cell(fem_mesh *mesh, H5File *mesh_file,DataSet *dataset){
           (unsigned long)(dims_out[0]) << " x " <<
           (unsigned long)(dims_out[1]) << endl;
 
-
-
-     int ttemp[(int)dims_out[0]][(int)dims_out[1]];
-	
-	for(int i=0;i<(int)dims_out[0];i++)
+    
+    int *ttemp;
+    ttemp = (int *)malloc((int)dims_out[0]*(int)dims_out[1]*sizeof(int));
+    //int ttemp[(int)dims_out[0]][(int)dims_out[1]];
+    int M =(int)dims_out[0];
+    int N =(int)dims_out[1];
+	for(int i=0;i<M;i++)
 	{
-		for(int j=0;j<(int)dims_out[1];j++)
+		for(int j=0;j<N;j++)
 		{
-			ttemp[i][j] = 0.0;
+			ttemp[i*N+j] = 0;
 		}
 	}
 
-
-     dataset->read(ttemp,PredType::NATIVE_INT);
+    dataset->read(ttemp,PredType::NATIVE_INT);
   
     vertex *vtx;
-    for (int i=0; i<(int)dims_out[0];i++){
+    for (int i=0; i<M;i++){
 	
         vtx = mesh->vertices[i];
-        for (int j=0;j<(int)dims_out[1];j++){
+        for (int j=0;j<N;j++){
 //            printf("i=%d,j=%d,t_ij=%d\n",i,j,ttemp[i][j]);
-            if(ttemp[i][j] >= 0){
-                 mesh->vertices[i]->cells.push_back(ttemp[i][j]);
+            if(ttemp[i*N+j] >= 0){
+                 mesh->vertices[i]->cells.push_back(ttemp[i*N+j]);
                 int endp = (int)(mesh->vertices[i]->cells.size())-1;
 //                printf("just pushed back: %d\n",mesh->vertices[i]->cells[endp]);
             }
@@ -962,14 +963,8 @@ int main(int argc, char* argv[]) {
     parse_model(argv[1],&sim,specs,assocs,dissocs,births,parameters);
     dimension = sim.dimension;
     
-    
-    
 //    meso_simulator(vector <particle>& particles,vector <species>& specs,vector <association>& associations,vector <dissociation>& dissociations,vector <voxel>& voxels,double T,gsl_rng *rng,int *UNIQUE_ID)
     
-    
-    
-    
-
     // Read in the legacy urdme_model datastructure. This is still needed for some of the routines.
     char *urdmeinputfile;
     urdmeinputfile= argv[2]; 
@@ -992,13 +987,17 @@ int main(int argc, char* argv[]) {
     read_p(mesh, mesh_file);
     read_t(mesh, mesh_file);
     read_bnd(mesh, mesh_file);
+    
+    printf("fhjsdfhkjs\n");
     DataSet dataset;
     read_vertex_to_cell(mesh, &mesh_file,&dataset);
-
+    printf("OK\n");
     /* Initialize the primal/dual mesh format. Do we need this for pure micro?? */
     cout << "Initializing primal/dual mesh format.\n";
     mesh_primal2dual(mesh);
-
+    
+    mesh_file.close();
+    
     /* Compute all the planes that approximates the boundaries */
 
     /*for (int i=0;i<mesh->Ncells;i++){
@@ -1008,17 +1007,15 @@ int main(int argc, char* argv[]) {
     vector <plane> boundaries;
     boundaries = voxel_boundaries(model, mesh);
     
-    printf("pnts=[");
+    /*printf("pnts=[");
     for(int i=0;i<(int)(boundaries.size());i++){
         if(boundaries[i].isbnd)
         printf("%g %g %g\n",boundaries[i].p[0],boundaries[i].p[1],boundaries[i].p[2]);
     }
-    printf("];");
+    printf("];");*/
     
     
-    
-    
-    
+
     /* *********************************** */
     /* Some stuff for the mesoscopic part. */
     /* *********************************** */
@@ -1068,19 +1065,14 @@ int main(int argc, char* argv[]) {
     /* *********************************** */
     /* *********************************** */
     
-    
-    
-    
-    
-    
-    
 
     // File where the output will be stored
     string output_filename = argv[4];
     std::cout << "Output file: " << output_filename << std::endl;
     /* Create output directory. */
     int UNIQUE_ID = 0;
-   /* Do simulations. */
+   
+      /* Do simulations. */
     for(int l=0;l<sim.ntraj;++l){
 
         /* Initialize random number generator. */
@@ -1159,11 +1151,12 @@ int main(int argc, char* argv[]) {
         }
 
         gsl_rng_free(rng);
+        file.close();
+
     }
     
 
     //print_model(specs,assocs,dissocs,births,&sim);
-
     
     gettimeofday(&end, NULL);
     printf("Run time: %.5g\n",(end.tv_sec+1e-6*end.tv_usec)-(start.tv_sec+1e-6*start.tv_usec));

@@ -231,7 +231,7 @@ class MMMSSolver(pyurdme.URDMESolver):
         try:
             result = MICROResult(self.model,outfile.name)
             return result
-        except IOError,e:
+        except:
             print handle.stderr.read()
             raise
 

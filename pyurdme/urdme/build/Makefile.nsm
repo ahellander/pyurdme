@@ -18,8 +18,8 @@ SRC = $(URDME)/src
 URDME_LIBMAT=yes
 DMAT = -DURDME_LIBMAT
 
-CC	   = gcc
-LINKER = gcc 
+CC	   = mpicc
+LINKER = mpicc 
 
 LBITS := $(shell getconf LONG_BIT)
 ifeq ($(LBITS),64)

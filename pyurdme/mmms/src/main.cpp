@@ -184,7 +184,7 @@ void doAssociation(vector <particle>& particles,vector <species>& specs,tent_eve
         
         particles[0].type = assocs[event->index].products[0];
         particles[0].active = true;
-        
+        particles[0].meso_micro = 1;
         
         particles[0].vec1[0] = vec1[0];
         particles[0].vec1[1] = vec1[1];
@@ -215,6 +215,7 @@ void doAssociation(vector <particle>& particles,vector <species>& specs,tent_eve
         particles[i].pos[2] = new_pos[2];
         particles[i].type = assocs[event->index].products[i];
         particles[i].active = true;
+        particles[i].meso_micro = 1;
       
     }
     
@@ -254,7 +255,7 @@ void doDissociation(vector <particle>& particles,vector <species>& specs,tent_ev
 
         particles[index_temp].type = dissocs[index].products[0];
         particles[index_temp].active = true;
-        
+        particles[index_temp].meso_micro = 0;
         
         particles[index_temp].vec1[0] = vec1[0];
         particles[index_temp].vec1[1] = vec1[1];
@@ -310,7 +311,7 @@ void doDissociation(vector <particle>& particles,vector <species>& specs,tent_ev
         
         particles[index_temp+i].type = dissocs[event->index].products[i];
         particles[index_temp+i].active = true;
-        
+        particles[index_temp+i].meso_micro = 0;
         
         particles[index_temp+i].vec1[0] = vec1[0];
         particles[index_temp+i].vec1[1] = vec1[1];
@@ -1030,6 +1031,38 @@ int main(int argc, char* argv[]) {
     
     
     
+    /* Hard coded for hybrid example. */
+    specs[0].meso_micro = 0;
+    specs[1].meso_micro = 1;
+    specs[2].meso_micro = 1;
+    specs[3].meso_micro = 1;
+    
+    
+    /* *********************************** */
+    /* Check if simulation is either pure  */
+    /* meso or pure micro.                 */
+    /* *********************************** */
+    bool PURE_MESO = true;
+    bool PURE_MICRO = true;
+    
+    for(int i=0;i<(int)(specs.size());++i){
+        if(specs[i].meso_micro==0){
+            PURE_MESO = false;
+            break;
+        }
+    }
+    for(int i=0;i<(int)(specs.size());++i){
+        if(specs[i].meso_micro==1){
+            PURE_MICRO = false;
+            break;
+        }
+    }
+    
+    
+    
+    
+    
+    
 //    FILE *fmesh;
 //    fmesh = fopen(sim.mesh,"r");
 //    if(fmesh==NULL){
@@ -1083,6 +1116,9 @@ int main(int argc, char* argv[]) {
         /* Initialize molecules. */
         group grp;
         
+        /* Group that will hold mesoscale molecules. */
+        group meso_temp;
+        
         for(int i=0;i<(int)(specs.size());i++){
             generate_particles(&grp,specs,mesh,specs[i].initial_value,i,rng);
         }
@@ -1129,18 +1165,128 @@ int main(int argc, char* argv[]) {
 
         while(t<T){
 
-            /* TODO: We should check for birth processes here. */
-//            main_simulator(&grp,specs,assocs,dissocs,boundaries,mesh,dt,rng,l);
+            if(PURE_MICRO){
+                printf("Microscale simulation.\n");
+                main_simulator(&grp,specs,assocs,dissocs,boundaries,mesh,dt,rng,l);
             
-            cout << "Entering simulator...\n";
-            meso_simulator(grp.particles,specs,assocs,dissocs,sim.voxels,dt,rng,&UNIQUE_ID);
-            cout << "Done.\n";
-            for(int k=0;k<(int)(grp.particles.size());k++){
-                grp.particles[k].pos[0] = boundaries[grp.particles[k].voxel].p[0];
-                grp.particles[k].pos[1] = boundaries[grp.particles[k].voxel].p[1];
-                grp.particles[k].pos[2] = boundaries[grp.particles[k].voxel].p[2];
-//                meso2micro2(&grp.particles[k],mesh);
             }
+            else if(PURE_MESO){
+                printf("Mesoscale simulation.\n");
+                meso_simulator(grp.particles,specs,assocs,dissocs,sim.voxels,dt,rng,&UNIQUE_ID);
+            }
+            else{
+                /* *********************************** */
+                /* *********************************** */
+                /*     Simulation of hybrid system.    */
+                /* *********************************** */
+                /* *********************************** */
+                
+                
+                /* Count number of molecules on each scale. */
+                int NMESO=0,NMICRO=0;
+                for(int i=0;i<(int)(grp.particles.size());i++){
+                    if(grp.particles[i].meso_micro==0){
+                        NMICRO++;
+                    }
+                    else{
+                        NMESO++;
+                    }
+                }
+                printf("Number of micro: %d, number of meso: %d\n",NMICRO,NMESO);
+                /* Count copy numbers. */
+                int copy_temp[4];
+                copy_temp[0] = 0;
+                copy_temp[1] = 0;
+                copy_temp[2] = 0;
+                copy_temp[3] = 0;
+                for(int i=0;i<(int)(grp.particles.size());i++){
+                    copy_temp[grp.particles[i].type]++;
+                }
+                printf("S_1:%d, S_11:%d, S_12:%d, S_2:%d\n",copy_temp[0],copy_temp[1],copy_temp[2],copy_temp[3]);
+                
+                /* *********************************** */
+                /* Run mesoscale simulation.           */
+                /* *********************************** */
+                printf("Running mesoscale simulation...\n");
+                meso_simulator(grp.particles,specs,assocs,dissocs,sim.voxels,dt,rng,&UNIQUE_ID);
+                printf("Done.\n");
+                /* *********************************** */
+                
+                /* *********************************** */
+                /* Prepare for microscale step.        */
+                /* *********************************** */
+                
+                /* Set microscale positions. */
+                for(int k=0;k<(int)(grp.particles.size());k++){
+                    //                grp.particles[k].pos[0] = boundaries[grp.particles[k].voxel].p[0];
+                    //                grp.particles[k].pos[1] = boundaries[grp.particles[k].voxel].p[1];
+                    //                grp.particles[k].pos[2] = boundaries[grp.particles[k].voxel].p[2];
+                    
+                    
+//                    meso2micro2(&grp.particles[k],mesh);
+                }
+                /* Store mesoscopic particles in meso_temp during microscopic step. */
+                meso_temp.particles.resize(0);
+                for(int i=0;i<(int)(grp.particles.size());i++){
+                    if(grp.particles[i].meso_micro==1){
+                        meso_temp.particles.push_back(grp.particles[i]);
+                        grp.particles.erase(grp.particles.begin()+i);
+                        --i;
+                    }
+                }
+                
+                
+                
+                
+                NMESO=0,NMICRO=0;
+                for(int i=0;i<(int)(grp.particles.size());i++){
+                    if(grp.particles[i].meso_micro==0){
+                        NMICRO++;
+                    }
+                    else{
+                        NMESO++;
+                    }
+                }
+                printf("Number of micro: %d, number of meso: %d\n",NMICRO,NMESO);
+                /* Count copy numbers. */
+                copy_temp[0] = 0;
+                copy_temp[1] = 0;
+                copy_temp[2] = 0;
+                copy_temp[3] = 0;
+                for(int i=0;i<(int)(grp.particles.size());i++){
+                    copy_temp[grp.particles[i].type]++;
+                }
+                printf("S_1:%d, S_11:%d, S_12:%d, S_2:%d\n",copy_temp[0],copy_temp[1],copy_temp[2],copy_temp[3]);
+                /* *********************************** */
+                /* Run microscale simulation.          */
+                /* *********************************** */
+                printf("Running microscale simulation...\n");
+                if((int)(grp.particles.size())>0){
+                    main_simulator(&grp,specs,assocs,dissocs,boundaries,mesh,dt,rng,l);
+                }
+                printf("Done.\n");
+                /* *********************************** */
+                
+                /* Put mesoscopic particles back. */
+                for(int i=0;i<(int)(meso_temp.particles.size());i++){
+                    grp.particles.push_back(meso_temp.particles[i]);
+                }
+                /* *********************************** */
+                
+                
+                /* Set particles to either mesoscopic or microscopic. */
+                for(int i=0;i<(int)(grp.particles.size());i++){
+                    if(specs[grp.particles[i].type].meso_micro==1){
+                        grp.particles[i].meso_micro = 1;
+                    }
+                    else if(specs[grp.particles[i].type].meso_micro==0){// && grp.particles[i].clock>specs[grp.particles[i].type].min_micro){
+                        grp.particles[i].meso_micro = 0;
+                    }
+                }
+                /* ************************************************** */
+
+            }
+
             
             t += dt;
             time_index++;

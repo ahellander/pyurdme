@@ -27,7 +27,7 @@ EXIT_SUCCESS=0
 EXIT_FAILURE=1
 
 # Where the tool is installed.
-prefix="${prefix:-/home/fenics/pyurdme/pyurdme/mmms/hdf5-1.8.16/hdf5}"
+prefix="${prefix:-/home/pyurdme/pyurdme/mmms/hdf5-1.8.16/hdf5}"
 PARALLEL=no		# Am I in parallel mode?
 AR="ar"
 RANLIB="ranlib"

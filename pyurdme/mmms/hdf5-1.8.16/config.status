@@ -437,7 +437,7 @@ Copyright (C) 2012 Free Software Foundation, Inc.
 This config.status script is free software; the Free Software Foundation
 gives unlimited permission to copy, distribute and modify it."
 
-ac_pwd='/home/fenics/pyurdme/pyurdme/mmms/hdf5-1.8.16'
+ac_pwd='/home/pyurdme/pyurdme/mmms/hdf5-1.8.16'
 srcdir='.'
 INSTALL='/usr/bin/install -c'
 MKDIR_P='/bin/mkdir -p'
@@ -674,8 +674,8 @@ postuninstall_cmds=''
 finish_cmds='PATH="\$PATH:/sbin" ldconfig -n $libdir'
 finish_eval=''
 hardcode_into_libs='yes'
-sys_lib_search_path_spec='/usr/lib/gcc/x86_64-linux-gnu/4.8 /usr/lib/x86_64-linux-gnu /usr/lib /lib/x86_64-linux-gnu /lib '
-sys_lib_dlsearch_path_spec='/lib /usr/lib /usr/lib/x86_64-linux-gnu/libfakeroot /usr/local/lib /lib/x86_64-linux-gnu /usr/lib/x86_64-linux-gnu /usr/lib/x86_64-linux-gnu/mesa '
+sys_lib_search_path_spec='/usr/lib/gcc/x86_64-linux-gnu/5 /usr/lib/x86_64-linux-gnu /usr/lib /lib/x86_64-linux-gnu /lib '
+sys_lib_dlsearch_path_spec='/lib /usr/lib /usr/lib/x86_64-linux-gnu/libfakeroot /usr/local/lib /lib/x86_64-linux-gnu /usr/lib/x86_64-linux-gnu /usr/lib/x86_64-linux-gnu/mesa-egl /usr/lib/x86_64-linux-gnu/mesa '
 hardcode_action='immediate'
 enable_dlopen='yes'
 enable_dlopen_self='yes'
@@ -772,17 +772,17 @@ file_list_spec_CXX=''
 file_list_spec_FC=''
 hardcode_action_CXX='immediate'
 hardcode_action_FC=''
-compiler_lib_search_dirs_CXX='/usr/lib/gcc/x86_64-linux-gnu/4.8 /usr/lib/gcc/x86_64-linux-gnu/4.8/../../../x86_64-linux-gnu /usr/lib/gcc/x86_64-linux-gnu/4.8/../../../../lib /lib/x86_64-linux-gnu /lib/../lib /usr/lib/x86_64-linux-gnu /usr/lib/../lib /usr/lib/gcc/x86_64-linux-gnu/4.8/../../..'
+compiler_lib_search_dirs_CXX='/usr/lib/gcc/x86_64-linux-gnu/5 /usr/lib/gcc/x86_64-linux-gnu/5/../../../x86_64-linux-gnu /usr/lib/gcc/x86_64-linux-gnu/5/../../../../lib /lib/x86_64-linux-gnu /lib/../lib /usr/lib/x86_64-linux-gnu /usr/lib/../lib /usr/lib/gcc/x86_64-linux-gnu/5/../../..'
 compiler_lib_search_dirs_FC=''
-predep_objects_CXX='/usr/lib/gcc/x86_64-linux-gnu/4.8/../../../x86_64-linux-gnu/crti.o /usr/lib/gcc/x86_64-linux-gnu/4.8/crtbeginS.o'
+predep_objects_CXX='/usr/lib/gcc/x86_64-linux-gnu/5/../../../x86_64-linux-gnu/crti.o /usr/lib/gcc/x86_64-linux-gnu/5/crtbeginS.o'
 predep_objects_FC=''
-postdep_objects_CXX='/usr/lib/gcc/x86_64-linux-gnu/4.8/crtendS.o /usr/lib/gcc/x86_64-linux-gnu/4.8/../../../x86_64-linux-gnu/crtn.o'
+postdep_objects_CXX='/usr/lib/gcc/x86_64-linux-gnu/5/crtendS.o /usr/lib/gcc/x86_64-linux-gnu/5/../../../x86_64-linux-gnu/crtn.o'
 postdep_objects_FC=''
 predeps_CXX=''
 predeps_FC=''
 postdeps_CXX='-lstdc++ -lm -lgcc_s -lc -lgcc_s'
 postdeps_FC=''
-compiler_lib_search_path_CXX='-L/usr/lib/gcc/x86_64-linux-gnu/4.8 -L/usr/lib/gcc/x86_64-linux-gnu/4.8/../../../x86_64-linux-gnu -L/usr/lib/gcc/x86_64-linux-gnu/4.8/../../../../lib -L/lib/x86_64-linux-gnu -L/lib/../lib -L/usr/lib/x86_64-linux-gnu -L/usr/lib/../lib -L/usr/lib/gcc/x86_64-linux-gnu/4.8/../../..'
+compiler_lib_search_path_CXX='-L/usr/lib/gcc/x86_64-linux-gnu/5 -L/usr/lib/gcc/x86_64-linux-gnu/5/../../../x86_64-linux-gnu -L/usr/lib/gcc/x86_64-linux-gnu/5/../../../../lib -L/lib/x86_64-linux-gnu -L/lib/../lib -L/usr/lib/x86_64-linux-gnu -L/usr/lib/../lib -L/usr/lib/gcc/x86_64-linux-gnu/5/../../..'
 compiler_lib_search_path_FC=''
 
 LTCC='gcc'
@@ -1016,15 +1016,15 @@ S["DEFAULT_API_VERSION"]="v18"
 S["DEPRECATED_SYMBOLS"]="yes"
 S["BUILD_ALL_CONDITIONAL_FALSE"]=""
 S["BUILD_ALL_CONDITIONAL_TRUE"]="#"
-S["ROOT"]="/home/fenics/pyurdme/pyurdme/mmms/hdf5-1.8.16"
+S["ROOT"]="/home/pyurdme/pyurdme/mmms/hdf5-1.8.16"
 S["CXX_VERSION"]="/usr/bin/g++"
 S["FC_VERSION"]="no"
 S["CC_VERSION"]="/usr/bin/gcc"
 S["WORDS_BIGENDIAN"]="no"
 S["BYTESEX"]="little-endian"
 S["CONFIG_MODE"]="production"
-S["CONFIG_USER"]="fenics@3fb896a80e0c"
-S["CONFIG_DATE"]="Fri Mar 18 15:27:00 UTC 2016"
+S["CONFIG_USER"]="root@80e84924bb73"
+S["CONFIG_DATE"]="Wed Aug 24 02:42:04 UTC 2016"
 S["H5_VERSION"]="1.8.16"
 S["DIRECT_VFD_CONDITIONAL_FALSE"]=""
 S["DIRECT_VFD_CONDITIONAL_TRUE"]="#"
@@ -1128,7 +1128,7 @@ S["ac_ct_CC"]="gcc"
 S["LDFLAGS"]=""
 S["CFLAGS"]=""
 S["CC"]="gcc"
-S["UNAME_INFO"]="Linux 3fb896a80e0c 4.1.13-boot2docker #1 SMP Fri Nov 20 19:05:50 UTC 2015 x86_64 x86_64 x86_64 GNU/Linux"
+S["UNAME_INFO"]="Linux 80e84924bb73 4.4.16-boot2docker #1 SMP Fri Jul 29 00:13:24 UTC 2016 x86_64 x86_64 x86_64 GNU/Linux"
 S["enable_static"]="yes"
 S["enable_shared"]="yes"
 S["STATIC_SHARED"]="static, shared"
@@ -1161,8 +1161,9 @@ S["H5_CFLAGS"]="-std=c99 -pedantic -Wall -Wextra -Wundef -Wshadow -Wpointer-arit
 "t-attribute -Wmissing-noreturn -Wpacked -Wdisabled-optimization -Wformat=2 -Wunreachable-code -Wendif-labels -Wdeclaration-after-statement -Wold-sty"\
 "le-definition -Winvalid-pch -Wvariadic-macros -Winit-self -Wmissing-include-dirs -Wswitch-default -Wswitch-enum -Wunused-macros -Wunsafe-loop-optimi"\
 "zations -Wc++-compat -Wstrict-overflow -Wlogical-op -Wlarger-than=2048 -Wvla -Wsync-nand -Wframe-larger-than=16384 -Wpacked-bitfield-compat -Wstrict"\
-"-overflow=5 -Wjump-misses-init -Wdouble-promotion -Wsuggest-attribute=const -Wtrampolines -Wstack-usage=8192 -Wvector-operation-performance -Wsugges"\
-"t-attribute=pure -Wsuggest-attribute=noreturn -Wsuggest-attribute=format -O3"
+"-overflow=5 -Wjump-misses-init -Wunsuffixed-float-constants -Wdouble-promotion -Wsuggest-attribute=const -Wtrampolines -Wstack-usage=8192 -Wvector-o"\
+"peration-performance -Wsuggest-attribute=pure -Wsuggest-attribute=noreturn -Wsuggest-attribute=format -Wdate-time -Wopenmp-simd -Warray-bounds=2 -Wc"\
+"99-c11-compat -O3 -fstdarg-opt"
 S["CPPFLAGS"]=""
 S["host_os"]="linux-gnu"
 S["host_vendor"]="unknown"
@@ -1189,12 +1190,12 @@ S["mkdir_p"]="$(MKDIR_P)"
 S["MKDIR_P"]="/bin/mkdir -p"
 S["INSTALL_STRIP_PROGRAM"]="$(install_sh) -c -s"
 S["STRIP"]="strip"
-S["install_sh"]="${SHELL} /home/fenics/pyurdme/pyurdme/mmms/hdf5-1.8.16/bin/install-sh"
-S["MAKEINFO"]="${SHELL} /home/fenics/pyurdme/pyurdme/mmms/hdf5-1.8.16/bin/missing makeinfo"
-S["AUTOHEADER"]="${SHELL} /home/fenics/pyurdme/pyurdme/mmms/hdf5-1.8.16/bin/missing autoheader"
-S["AUTOMAKE"]="${SHELL} /home/fenics/pyurdme/pyurdme/mmms/hdf5-1.8.16/bin/missing automake-1.14"
-S["AUTOCONF"]="${SHELL} /home/fenics/pyurdme/pyurdme/mmms/hdf5-1.8.16/bin/missing autoconf"
-S["ACLOCAL"]="${SHELL} /home/fenics/pyurdme/pyurdme/mmms/hdf5-1.8.16/bin/missing aclocal-1.14"
+S["install_sh"]="${SHELL} /home/pyurdme/pyurdme/mmms/hdf5-1.8.16/bin/install-sh"
+S["MAKEINFO"]="${SHELL} /home/pyurdme/pyurdme/mmms/hdf5-1.8.16/bin/missing makeinfo"
+S["AUTOHEADER"]="${SHELL} /home/pyurdme/pyurdme/mmms/hdf5-1.8.16/bin/missing autoheader"
+S["AUTOMAKE"]="${SHELL} /home/pyurdme/pyurdme/mmms/hdf5-1.8.16/bin/missing automake-1.14"
+S["AUTOCONF"]="${SHELL} /home/pyurdme/pyurdme/mmms/hdf5-1.8.16/bin/missing autoconf"
+S["ACLOCAL"]="${SHELL} /home/pyurdme/pyurdme/mmms/hdf5-1.8.16/bin/missing aclocal-1.14"
 S["VERSION"]="1.8.16"
 S["PACKAGE"]="hdf5"
 S["CYGPATH_W"]="echo"
@@ -1230,7 +1231,7 @@ S["libexecdir"]="${exec_prefix}/libexec"
 S["sbindir"]="${exec_prefix}/sbin"
 S["bindir"]="${exec_prefix}/bin"
 S["program_transform_name"]="s,x,x,"
-S["prefix"]="/home/fenics/pyurdme/pyurdme/mmms/hdf5-1.8.16/hdf5"
+S["prefix"]="/home/pyurdme/pyurdme/mmms/hdf5-1.8.16/hdf5"
 S["exec_prefix"]="${prefix}"
 S["PACKAGE_URL"]=""
 S["PACKAGE_BUGREPORT"]="help@hdfgroup.org"

@@ -17,8 +17,8 @@
  * access to either file, you may request a copy from help@hdfgroup.org.     *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  *
- * Created:		Mar 18, 2016
- *			fenics@3fb896a80e0c
+ * Created:		Aug 24, 2016
+ *			root <root@80e84924bb73>
  *
  * Purpose:		This machine-generated source code contains
  *			information about the library build configuration
@@ -38,21 +38,21 @@ char H5libhdf5_settings[]=
 	"General Information:\n"
 	"-------------------\n"
 	"		   HDF5 Version: 1.8.16\n"
-	"		  Configured on: Fri Mar 18 15:27:00 UTC 2016\n"
-	"		  Configured by: fenics@3fb896a80e0c\n"
+	"		  Configured on: Wed Aug 24 02:42:04 UTC 2016\n"
+	"		  Configured by: root@80e84924bb73\n"
 	"		 Configure mode: production\n"
 	"		    Host system: x86_64-unknown-linux-gnu\n"
-	"	      Uname information: Linux 3fb896a80e0c 4.1.13-boot2docker #1 SMP Fri Nov 20 19:05:50 UTC 2015 x86_64 x86_64 x86_64 GNU/Linux\n"
+	"	      Uname information: Linux 80e84924bb73 4.4.16-boot2docker #1 SMP Fri Jul 29 00:13:24 UTC 2016 x86_64 x86_64 x86_64 GNU/Linux\n"
 	"		       Byte sex: little-endian\n"
 	"		      Libraries: static, shared\n"
-	"	     Installation point: /home/fenics/pyurdme/pyurdme/mmms/hdf5-1.8.16/hdf5\n"
+	"	     Installation point: /home/pyurdme/pyurdme/mmms/hdf5-1.8.16/hdf5\n"
 	"\n"
 	"Compiling Options:\n"
 	"------------------\n"
 	"               Compilation Mode: production\n"
 	"                     C Compiler: /usr/bin/gcc\n"
 	"                         CFLAGS: \n"
-	"                      H5_CFLAGS: -std=c99 -pedantic -Wall -Wextra -Wundef -Wshadow -Wpointer-arith -Wbad-function-cast -Wcast-qual -Wcast-align -Wwrite-strings -Wconversion -Waggregate-return -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations -Wredundant-decls -Wnested-externs -Winline -Wfloat-equal -Wmissing-format-attribute -Wmissing-noreturn -Wpacked -Wdisabled-optimization -Wformat=2 -Wunreachable-code -Wendif-labels -Wdeclaration-after-statement -Wold-style-definition -Winvalid-pch -Wvariadic-macros -Winit-self -Wmissing-include-dirs -Wswitch-default -Wswitch-enum -Wunused-macros -Wunsafe-loop-optimizations -Wc++-compat -Wstrict-overflow -Wlogical-op -Wlarger-than=2048 -Wvla -Wsync-nand -Wframe-larger-than=16384 -Wpacked-bitfield-compat -Wstrict-overflow=5 -Wjump-misses-init -Wdouble-promotion -Wsuggest-attribute=const -Wtrampolines -Wstack-usage=8192 -Wvector-operation-performance -Wsuggest-attribute=pure -Wsuggest-attribute=noreturn -Wsuggest-attribute=format -O3\n"
+	"                      H5_CFLAGS: -std=c99 -pedantic -Wall -Wextra -Wundef -Wshadow -Wpointer-arith -Wbad-function-cast -Wcast-qual -Wcast-align -Wwrite-strings -Wconversion -Waggregate-return -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations -Wredundant-decls -Wnested-externs -Winline -Wfloat-equal -Wmissing-format-attribute -Wmissing-noreturn -Wpacked -Wdisabled-optimization -Wformat=2 -Wunreachable-code -Wendif-labels -Wdeclaration-after-statement -Wold-style-definition -Winvalid-pch -Wvariadic-macros -Winit-self -Wmissing-include-dirs -Wswitch-default -Wswitch-enum -Wunused-macros -Wunsafe-loop-optimizations -Wc++-compat -Wstrict-overflow -Wlogical-op -Wlarger-than=2048 -Wvla -Wsync-nand -Wframe-larger-than=16384 -Wpacked-bitfield-compat -Wstrict-overflow=5 -Wjump-misses-init -Wunsuffixed-float-constants -Wdouble-promotion -Wsuggest-attribute=const -Wtrampolines -Wstack-usage=8192 -Wvector-operation-performance -Wsuggest-attribute=pure -Wsuggest-attribute=noreturn -Wsuggest-attribute=format -Wdate-time -Wopenmp-simd -Warray-bounds=2 -Wc99-c11-compat -O3 -fstdarg-opt\n"
 	"                      AM_CFLAGS: \n"
 	"                       CPPFLAGS: \n"
 	"                    H5_CPPFLAGS: -D_GNU_SOURCE -D_POSIX_C_SOURCE=200112L   -DNDEBUG -UH5_DEBUG_API\n"

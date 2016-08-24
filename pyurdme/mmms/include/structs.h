@@ -65,6 +65,7 @@ typedef struct species{
     int dim;
     char name[MAX_CHARACTERS];
     int initial_value;
+    int meso_micro;//0 - meso, 1 - micro
 }species;
 
 typedef struct particle{
@@ -76,7 +77,7 @@ typedef struct particle{
     int voxel;
     
     int dim;
-    int meso_micro;
+    int meso_micro;//0 - meso, 1 - micro
     double clock;
 }particle;
 

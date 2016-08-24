@@ -122,7 +122,7 @@ class MMMSSolver(pyurdme.URDMESolver):
         # Write the model dimension
         (np,dim) = numpy.shape(self.model.mesh.coordinates())
         input_file.write("DIMENSION {0}\n".format(dim))
-        input_file.write("BOUNDARY 0 1e-6 0 1e-6 0 1e-6\n")
+        input_file.write("BOUNDARY 0 0.7 0 0.7 0 0.7\n")
         
         self.model.resolve_parameters()
         params = ""
@@ -223,7 +223,9 @@ class MMMSSolver(pyurdme.URDMESolver):
         solver_str=os.path.dirname(__file__)+"/mmms/bin/mmms"
 
         solver_cmd = [solver_str,self.infile_name, self.urdme_infile_name,self.mesh_infile_name, outfile.name]
-    
+
+
+        
         handle = subprocess.Popen(solver_cmd)#, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         handle.wait()
         

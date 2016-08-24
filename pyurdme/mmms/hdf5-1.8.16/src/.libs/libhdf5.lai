@@ -38,4 +38,4 @@ dlopen=''
 dlpreopen=''
 
 # Directory that this library needs to be installed in:
-libdir='/home/fenics/pyurdme/pyurdme/mmms/hdf5-1.8.16/hdf5/lib'
+libdir='/home/pyurdme/pyurdme/mmms/hdf5-1.8.16/hdf5/lib'

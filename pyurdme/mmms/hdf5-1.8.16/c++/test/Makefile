@@ -387,7 +387,7 @@ TEST_LOGS = $(am__test_logs2:.sh.log=.log)
 SH_LOG_DRIVER = $(SHELL) $(top_srcdir)/bin/test-driver
 SH_LOG_COMPILE = $(SH_LOG_COMPILER) $(AM_SH_LOG_FLAGS) $(SH_LOG_FLAGS)
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
-ACLOCAL = ${SHELL} /home/fenics/pyurdme/pyurdme/mmms/hdf5-1.8.16/bin/missing aclocal-1.14
+ACLOCAL = ${SHELL} /home/pyurdme/pyurdme/mmms/hdf5-1.8.16/bin/missing aclocal-1.14
 ADD_PARALLEL_FILES = no
 AMTAR = $${TAR-tar}
 
@@ -396,7 +396,7 @@ AMTAR = $${TAR-tar}
 # AM_CFLAGS is an automake construct which should be used by Makefiles 
 # instead of CFLAGS, as CFLAGS is reserved solely for the user to define.
 # This applies to FCFLAGS, CXXFLAGS, CPPFLAGS, and LDFLAGS as well.
-AM_CFLAGS =  -std=c99 -pedantic -Wall -Wextra -Wundef -Wshadow -Wpointer-arith -Wbad-function-cast -Wcast-qual -Wcast-align -Wwrite-strings -Wconversion -Waggregate-return -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations -Wredundant-decls -Wnested-externs -Winline -Wfloat-equal -Wmissing-format-attribute -Wmissing-noreturn -Wpacked -Wdisabled-optimization -Wformat=2 -Wunreachable-code -Wendif-labels -Wdeclaration-after-statement -Wold-style-definition -Winvalid-pch -Wvariadic-macros -Winit-self -Wmissing-include-dirs -Wswitch-default -Wswitch-enum -Wunused-macros -Wunsafe-loop-optimizations -Wc++-compat -Wstrict-overflow -Wlogical-op -Wlarger-than=2048 -Wvla -Wsync-nand -Wframe-larger-than=16384 -Wpacked-bitfield-compat -Wstrict-overflow=5 -Wjump-misses-init -Wdouble-promotion -Wsuggest-attribute=const -Wtrampolines -Wstack-usage=8192 -Wvector-operation-performance -Wsuggest-attribute=pure -Wsuggest-attribute=noreturn -Wsuggest-attribute=format -O3
+AM_CFLAGS =  -std=c99 -pedantic -Wall -Wextra -Wundef -Wshadow -Wpointer-arith -Wbad-function-cast -Wcast-qual -Wcast-align -Wwrite-strings -Wconversion -Waggregate-return -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations -Wredundant-decls -Wnested-externs -Winline -Wfloat-equal -Wmissing-format-attribute -Wmissing-noreturn -Wpacked -Wdisabled-optimization -Wformat=2 -Wunreachable-code -Wendif-labels -Wdeclaration-after-statement -Wold-style-definition -Winvalid-pch -Wvariadic-macros -Winit-self -Wmissing-include-dirs -Wswitch-default -Wswitch-enum -Wunused-macros -Wunsafe-loop-optimizations -Wc++-compat -Wstrict-overflow -Wlogical-op -Wlarger-than=2048 -Wvla -Wsync-nand -Wframe-larger-than=16384 -Wpacked-bitfield-compat -Wstrict-overflow=5 -Wjump-misses-init -Wunsuffixed-float-constants -Wdouble-promotion -Wsuggest-attribute=const -Wtrampolines -Wstack-usage=8192 -Wvector-operation-performance -Wsuggest-attribute=pure -Wsuggest-attribute=noreturn -Wsuggest-attribute=format -Wdate-time -Wopenmp-simd -Warray-bounds=2 -Wc99-c11-compat -O3 -fstdarg-opt
 
 # Include src, test, and c++/src directories
 AM_CPPFLAGS = -D_LARGEFILE64_SOURCE -D_LARGEFILE_SOURCE  -D_GNU_SOURCE -D_POSIX_C_SOURCE=200112L   -DNDEBUG -UH5_DEBUG_API -I$(top_srcdir)/src \
@@ -407,9 +407,9 @@ AM_FCFLAGS =
 AM_LDFLAGS =  
 AM_MAKEFLAGS = 
 AR = ar
-AUTOCONF = ${SHELL} /home/fenics/pyurdme/pyurdme/mmms/hdf5-1.8.16/bin/missing autoconf
-AUTOHEADER = ${SHELL} /home/fenics/pyurdme/pyurdme/mmms/hdf5-1.8.16/bin/missing autoheader
-AUTOMAKE = ${SHELL} /home/fenics/pyurdme/pyurdme/mmms/hdf5-1.8.16/bin/missing automake-1.14
+AUTOCONF = ${SHELL} /home/pyurdme/pyurdme/mmms/hdf5-1.8.16/bin/missing autoconf
+AUTOHEADER = ${SHELL} /home/pyurdme/pyurdme/mmms/hdf5-1.8.16/bin/missing autoheader
+AUTOMAKE = ${SHELL} /home/pyurdme/pyurdme/mmms/hdf5-1.8.16/bin/missing automake-1.14
 AWK = mawk
 BYTESEX = little-endian
 CC = gcc
@@ -418,9 +418,9 @@ CC_VERSION = /usr/bin/gcc
 CFLAGS = 
 CLEARFILEBUF = yes
 CODESTACK = no
-CONFIG_DATE = Fri Mar 18 15:27:00 UTC 2016
+CONFIG_DATE = Wed Aug 24 02:42:04 UTC 2016
 CONFIG_MODE = production
-CONFIG_USER = fenics@3fb896a80e0c
+CONFIG_USER = root@80e84924bb73
 CPP = gcc -E
 CPPFLAGS = 
 CXX = g++
@@ -458,7 +458,7 @@ FC_VERSION = no
 FGREP = /bin/grep -F
 FSEARCH_DIRS = 
 GREP = /bin/grep
-H5_CFLAGS = -std=c99 -pedantic -Wall -Wextra -Wundef -Wshadow -Wpointer-arith -Wbad-function-cast -Wcast-qual -Wcast-align -Wwrite-strings -Wconversion -Waggregate-return -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations -Wredundant-decls -Wnested-externs -Winline -Wfloat-equal -Wmissing-format-attribute -Wmissing-noreturn -Wpacked -Wdisabled-optimization -Wformat=2 -Wunreachable-code -Wendif-labels -Wdeclaration-after-statement -Wold-style-definition -Winvalid-pch -Wvariadic-macros -Winit-self -Wmissing-include-dirs -Wswitch-default -Wswitch-enum -Wunused-macros -Wunsafe-loop-optimizations -Wc++-compat -Wstrict-overflow -Wlogical-op -Wlarger-than=2048 -Wvla -Wsync-nand -Wframe-larger-than=16384 -Wpacked-bitfield-compat -Wstrict-overflow=5 -Wjump-misses-init -Wdouble-promotion -Wsuggest-attribute=const -Wtrampolines -Wstack-usage=8192 -Wvector-operation-performance -Wsuggest-attribute=pure -Wsuggest-attribute=noreturn -Wsuggest-attribute=format -O3
+H5_CFLAGS = -std=c99 -pedantic -Wall -Wextra -Wundef -Wshadow -Wpointer-arith -Wbad-function-cast -Wcast-qual -Wcast-align -Wwrite-strings -Wconversion -Waggregate-return -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations -Wredundant-decls -Wnested-externs -Winline -Wfloat-equal -Wmissing-format-attribute -Wmissing-noreturn -Wpacked -Wdisabled-optimization -Wformat=2 -Wunreachable-code -Wendif-labels -Wdeclaration-after-statement -Wold-style-definition -Winvalid-pch -Wvariadic-macros -Winit-self -Wmissing-include-dirs -Wswitch-default -Wswitch-enum -Wunused-macros -Wunsafe-loop-optimizations -Wc++-compat -Wstrict-overflow -Wlogical-op -Wlarger-than=2048 -Wvla -Wsync-nand -Wframe-larger-than=16384 -Wpacked-bitfield-compat -Wstrict-overflow=5 -Wjump-misses-init -Wunsuffixed-float-constants -Wdouble-promotion -Wsuggest-attribute=const -Wtrampolines -Wstack-usage=8192 -Wvector-operation-performance -Wsuggest-attribute=pure -Wsuggest-attribute=noreturn -Wsuggest-attribute=format -Wdate-time -Wopenmp-simd -Warray-bounds=2 -Wc99-c11-compat -O3 -fstdarg-opt
 H5_CPPFLAGS = -D_GNU_SOURCE -D_POSIX_C_SOURCE=200112L   -DNDEBUG -UH5_DEBUG_API
 H5_CXXFLAGS =  
 H5_FCFLAGS =  
@@ -497,7 +497,7 @@ LN_S = ln -s
 LTLIBOBJS = 
 LT_STATIC_EXEC = 
 MAINT = #
-MAKEINFO = ${SHELL} /home/fenics/pyurdme/pyurdme/mmms/hdf5-1.8.16/bin/missing makeinfo
+MAKEINFO = ${SHELL} /home/pyurdme/pyurdme/mmms/hdf5-1.8.16/bin/missing makeinfo
 MANIFEST_TOOL = :
 MKDIR_P = /bin/mkdir -p
 MPE = no
@@ -519,7 +519,7 @@ PARALLEL = no
 PATH_SEPARATOR = :
 PERL = perl
 RANLIB = ranlib
-ROOT = /home/fenics/pyurdme/pyurdme/mmms/hdf5-1.8.16
+ROOT = /home/pyurdme/pyurdme/mmms/hdf5-1.8.16
 RUNPARALLEL = 
 RUNSERIAL = 
 R_INTEGER = 
@@ -538,16 +538,16 @@ THREADSAFE = no
 TIME = 
 TR = /usr/bin/tr
 TRACE_API = no
-UNAME_INFO = Linux 3fb896a80e0c 4.1.13-boot2docker #1 SMP Fri Nov 20 19:05:50 UTC 2015 x86_64 x86_64 x86_64 GNU/Linux
+UNAME_INFO = Linux 80e84924bb73 4.4.16-boot2docker #1 SMP Fri Jul 29 00:13:24 UTC 2016 x86_64 x86_64 x86_64 GNU/Linux
 USE_FILTER_DEFLATE = yes
 USE_FILTER_SZIP = no
 USINGMEMCHECKER = no
 VERSION = 1.8.16
 WORDS_BIGENDIAN = no
-abs_builddir = /home/fenics/pyurdme/pyurdme/mmms/hdf5-1.8.16/c++/test
-abs_srcdir = /home/fenics/pyurdme/pyurdme/mmms/hdf5-1.8.16/c++/test
-abs_top_builddir = /home/fenics/pyurdme/pyurdme/mmms/hdf5-1.8.16
-abs_top_srcdir = /home/fenics/pyurdme/pyurdme/mmms/hdf5-1.8.16
+abs_builddir = /home/pyurdme/pyurdme/mmms/hdf5-1.8.16/c++/test
+abs_srcdir = /home/pyurdme/pyurdme/mmms/hdf5-1.8.16/c++/test
+abs_top_builddir = /home/pyurdme/pyurdme/mmms/hdf5-1.8.16
+abs_top_srcdir = /home/pyurdme/pyurdme/mmms/hdf5-1.8.16
 ac_ct_AR = 
 ac_ct_CC = gcc
 ac_ct_CXX = 
@@ -582,7 +582,7 @@ host_vendor = unknown
 htmldir = ${docdir}
 includedir = ${prefix}/include
 infodir = ${datarootdir}/info
-install_sh = ${SHELL} /home/fenics/pyurdme/pyurdme/mmms/hdf5-1.8.16/bin/install-sh
+install_sh = ${SHELL} /home/pyurdme/pyurdme/mmms/hdf5-1.8.16/bin/install-sh
 libdir = ${exec_prefix}/lib
 libexecdir = ${exec_prefix}/libexec
 localedir = ${datarootdir}/locale
@@ -591,7 +591,7 @@ mandir = ${datarootdir}/man
 mkdir_p = $(MKDIR_P)
 oldincludedir = /usr/include
 pdfdir = ${docdir}
-prefix = /home/fenics/pyurdme/pyurdme/mmms/hdf5-1.8.16/hdf5
+prefix = /home/pyurdme/pyurdme/mmms/hdf5-1.8.16/hdf5
 program_transform_name = s,x,x,
 psdir = ${docdir}
 sbindir = ${exec_prefix}/sbin

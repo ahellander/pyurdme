@@ -28,7 +28,7 @@ EXIT_FAILURE=1
 
 # Where the tool is installed.
 # Note: no '/' after DESTDIR.  Explanation in commence.am
-prefix="${prefix:-${DESTDIR}/home/fenics/pyurdme/pyurdme/mmms/hdf5-1.8.16/hdf5}"
+prefix="${prefix:-${DESTDIR}/home/pyurdme/pyurdme/mmms/hdf5-1.8.16/hdf5}"
 AR="ar"
 RANLIB="ranlib"
 H5TOOL="h5c++"           	# The tool name

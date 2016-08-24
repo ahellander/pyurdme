@@ -162,7 +162,7 @@ void add_diff_event(vector <particle>& particles,vector <species>& specs,vector 
 void get_diff_events(vector <particle>& particles,vector <species>& specs,vector <tent_event>& tent_events,vector <voxel>& voxels,gsl_rng *rng,double t){
     int N = (int)(particles.size());
     for(int i = 0;i<N;i++){
-        if(particles[i].meso_micro==0){
+        if(particles[i].meso_micro==1){
             add_diff_event(particles,specs,tent_events,voxels,rng,t,i);
         }
     }
@@ -176,7 +176,7 @@ void get_diss_events(vector <voxel>& voxels,vector <association>& assocs,vector 
     temp_event.type = 0;
     temp_event.reactants.resize(1);
     for(int i = 0;i<N;i++){
-        if(particles[i].meso_micro==0){
+        if(particles[i].meso_micro==1){
             update_diss(voxels,assocs,particles,spec,tent_events,dissociations,rng,t,i,0);
         }
     }
@@ -266,7 +266,7 @@ void get_assoc_events(vector <voxel>& voxels,vector <particle>& particles,vector
             if(particles[j].voxel==voxel){
                 dist_temp = 0;
             }
-            if((dist_temp==0 || dist_temp==1) && (particles[i].meso_micro==0 || particles[j].meso_micro==0)){
+            if((dist_temp==0 || dist_temp==1) && (particles[i].meso_micro==1 || particles[j].meso_micro==1)){
                 check_association(voxels,particles,specs,tent_events,associations,rng,t,i,j,dist_temp);
             }
         }
@@ -290,7 +290,7 @@ void update_assoc(vector <voxel>& voxels,vector <particle>& particles,vector <sp
             if(particles[i].voxel==voxel){
                 dist_temp = 0;
             }
-            if((dist_temp==0 || dist_temp==1) && (particles[i].meso_micro==0 || particles[index].meso_micro==0)){
+            if((dist_temp==0 || dist_temp==1) && (particles[i].meso_micro==1 || particles[index].meso_micro==1)){
 //                printf("Checking for association...\n");
                 check_association(voxels,particles,specs,tent_events,associations,rng,t,i,index,dist_temp);
             }
@@ -370,7 +370,7 @@ void doDissociation(vector <particle>& particles,vector <voxel>& voxels,vector <
     for(int i = 0;i<N;i++){
      
         new_part.clock = -t;
-        new_part.meso_micro = 0;
+        new_part.meso_micro = 1;
         new_part.unique_id = *UNIQUE_ID;
         *UNIQUE_ID = *UNIQUE_ID+1;
 //        printf("41\n");
@@ -423,7 +423,7 @@ void doAssociation(vector <particle>& particles,vector <voxel>& voxels,vector <s
 
     for(int i = 0;i<N;i++){
         new_part.clock = -t;
-        new_part.meso_micro = 0;
+        new_part.meso_micro = 1;
         new_part.unique_id = *UNIQUE_ID;
 //        printf("a5_2\n");
         *UNIQUE_ID = *UNIQUE_ID+1;
@@ -473,7 +473,7 @@ int meso_simulator(vector <particle>& particles,vector <species>& specs,vector <
     else{
         
         for(int i=0;i<(int)(particles.size());i++){
-            if(particles[i].meso_micro==0){
+            if(particles[i].meso_micro==1){
                 MESO++;
             }
         }
@@ -539,7 +539,7 @@ int meso_simulator(vector <particle>& particles,vector <species>& specs,vector <
         }
         else if(type_next_event==0){
             t = t_next_event;
-            printf("%g %g %g\n",voxels[particles[reactant1].voxel].node[0],voxels[particles[reactant1].voxel].node[1],voxels[particles[reactant1].voxel].node[2]);
+//            printf("%g %g %g\n",voxels[particles[reactant1].voxel].node[0],voxels[particles[reactant1].voxel].node[1],voxels[particles[reactant1].voxel].node[2]);
             doDissociation(particles,voxels,specs,dissociations,tent_events,next_event.index,reactant1,t,associations,rng,UNIQUE_ID);
             //            T_dissociation = T_global+t;
         }

@@ -217,6 +217,7 @@ void generate_particles(group *grp,vector <species>& specs, fem_mesh *mesh,int N
         grp->particles[i].vec3[0] = 0.0;
         grp->particles[i].vec3[1] = 0.0;
         grp->particles[i].vec3[2] = 1.0;
+        grp->particles[i].meso_micro = specs[type].meso_micro;
         
         grp->particles[i].dim=3;
         micro2meso(&(grp->particles[i]),specs,mesh);

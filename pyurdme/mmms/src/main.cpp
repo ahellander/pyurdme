@@ -1111,6 +1111,9 @@ int main(int argc, char* argv[]) {
     /* Create output directory. */
     int UNIQUE_ID = 0;
    
+    
+    double delta_t_split = 5e-6;
+    
       /* Do simulations. */
     for(int l=0;l<sim.ntraj;++l){
 
@@ -1168,138 +1171,153 @@ int main(int argc, char* argv[]) {
 
         int time_index = 0;
         add_time_point_to_file(file,grp,num_specs,l,time_index);
-
-        while(t<T){
-
-            if(PURE_MICRO){
-                printf("Microscale simulation.\n");
-                main_simulator(&grp,specs,assocs,dissocs,boundaries,mesh,dt,rng,l);
-            
-            }
-            else if(PURE_MESO){
-                printf("Mesoscale simulation.\n");
-                meso_simulator(grp.particles,specs,assocs,dissocs,sim.voxels,dt,rng,&UNIQUE_ID);
-            }
-            else{
-                /* *********************************** */
-                /* *********************************** */
-                /*     Simulation of hybrid system.    */
-                /* *********************************** */
-                /* *********************************** */
+        
+        double t_loc = 0.0;
+        double dt_loc = 0.0;
+        while(t<T*0.999999){
+            t_loc = 0.0;
+            while(t_loc<dt*0.999999){
                 
+                dt_loc = min(delta_t_split,dt-t_loc);
                 
-                /* Count number of molecules on each scale. */
-                int NMESO=0,NMICRO=0;
-                for(int i=0;i<(int)(grp.particles.size());i++){
-                    if(grp.particles[i].meso_micro==0){
-                        NMICRO++;
-                    }
-                    else{
-                        NMESO++;
-                    }
+                if(PURE_MICRO){
+                    printf("Microscale simulation.\n");
+                    main_simulator(&grp,specs,assocs,dissocs,boundaries,mesh,dt_loc,rng,l);
+                
                 }
-                printf("Number of micro: %d, number of meso: %d\n",NMICRO,NMESO);
-                /* Count copy numbers. */
-                int copy_temp[4];
-                copy_temp[0] = 0;
-                copy_temp[1] = 0;
-                copy_temp[2] = 0;
-                copy_temp[3] = 0;
-                for(int i=0;i<(int)(grp.particles.size());i++){
-                    copy_temp[grp.particles[i].type]++;
+                else if(PURE_MESO){
+                    printf("Mesoscale simulation.\n");
+                    meso_simulator(grp.particles,specs,assocs,dissocs,sim.voxels,dt_loc,rng,&UNIQUE_ID);
                 }
-                printf("S_1:%d, S_11:%d, S_12:%d, S_2:%d\n",copy_temp[0],copy_temp[1],copy_temp[2],copy_temp[3]);
-                
-                /* *********************************** */
-                /* Run mesoscale simulation.           */
-                /* *********************************** */
-                printf("Running mesoscale simulation...\n");
-                meso_simulator(grp.particles,specs,assocs,dissocs,sim.voxels,dt,rng,&UNIQUE_ID);
-                printf("Done.\n");
-                /* *********************************** */
-                
-                /* *********************************** */
-                /* Prepare for microscale step.        */
-                /* *********************************** */
-                
-                /* Set microscale positions. */
-                for(int k=0;k<(int)(grp.particles.size());k++){
-                    //                grp.particles[k].pos[0] = boundaries[grp.particles[k].voxel].p[0];
-                    //                grp.particles[k].pos[1] = boundaries[grp.particles[k].voxel].p[1];
-                    //                grp.particles[k].pos[2] = boundaries[grp.particles[k].voxel].p[2];
+                else{
+                    /* *********************************** */
+                    /* *********************************** */
+                    /*     Simulation of hybrid system.    */
+                    /* *********************************** */
+                    /* *********************************** */
                     
                     
-//                    meso2micro2(&grp.particles[k],mesh);
-                }
-                /* Store mesoscopic particles in meso_temp during microscopic step. */
-                meso_temp.particles.resize(0);
-                for(int i=0;i<(int)(grp.particles.size());i++){
-                    if(grp.particles[i].meso_micro==1){
-                        meso_temp.particles.push_back(grp.particles[i]);
-                        grp.particles.erase(grp.particles.begin()+i);
-                        --i;
+                    
+                    
+                    /* *********************************** */
+                    /* Run mesoscale simulation.           */
+                    /* *********************************** */
+    //                printf("Running mesoscale simulation...\n");
+                    meso_simulator(grp.particles,specs,assocs,dissocs,sim.voxels,dt_loc,rng,&UNIQUE_ID);
+    //                printf("Done.\n");
+                    /* *********************************** */
+                    
+                    /* *********************************** */
+                    /* Prepare for microscale step.        */
+                    /* *********************************** */
+                    
+                    /* Set microscale positions. */
+                    for(int k=0;k<(int)(grp.particles.size());k++){
+                        //                grp.particles[k].pos[0] = boundaries[grp.particles[k].voxel].p[0];
+                        //                grp.particles[k].pos[1] = boundaries[grp.particles[k].voxel].p[1];
+                        //                grp.particles[k].pos[2] = boundaries[grp.particles[k].voxel].p[2];
+                        
+                        
+    //                    meso2micro2(&grp.particles[k],mesh);
                     }
-                }
-                
-                
-                
-                
-                NMESO=0,NMICRO=0;
-                for(int i=0;i<(int)(grp.particles.size());i++){
-                    if(grp.particles[i].meso_micro==0){
-                        NMICRO++;
+                    /* Store mesoscopic particles in meso_temp during microscopic step. */
+                    meso_temp.particles.resize(0);
+                    for(int i=0;i<(int)(grp.particles.size());i++){
+                        if(grp.particles[i].meso_micro==1){
+                            meso_temp.particles.push_back(grp.particles[i]);
+                            grp.particles.erase(grp.particles.begin()+i);
+                            --i;
+                        }
                     }
-                    else{
-                        NMESO++;
+                    
+                    
+                    
+                    
+    //                NMESO=0,NMICRO=0;
+    //                for(int i=0;i<(int)(grp.particles.size());i++){
+    //                    if(grp.particles[i].meso_micro==0){
+    //                        NMICRO++;
+    //                    }
+    //                    else{
+    //                        NMESO++;
+    //                    }
+    //                }
+    //                printf("Number of micro: %d, number of meso: %d\n",NMICRO,NMESO);
+                    /* Count copy numbers. */
+    //                copy_temp[0] = 0;
+    //                copy_temp[1] = 0;
+    //                copy_temp[2] = 0;
+    //                copy_temp[3] = 0;
+    //                for(int i=0;i<(int)(grp.particles.size());i++){
+    //                    copy_temp[grp.particles[i].type]++;
+    //                }
+    //                printf("S_1:%d, S_11:%d, S_12:%d, S_2:%d\n",copy_temp[0],copy_temp[1],copy_temp[2],copy_temp[3]);
+                    /* *********************************** */
+                    /* Run microscale simulation.          */
+                    /* *********************************** */
+    //                printf("Running microscale simulation...\n");
+                    if((int)(grp.particles.size())>0){
+                        main_simulator(&grp,specs,assocs,dissocs,boundaries,mesh,dt_loc,rng,l);
                     }
-                }
-                printf("Number of micro: %d, number of meso: %d\n",NMICRO,NMESO);
-                /* Count copy numbers. */
-                copy_temp[0] = 0;
-                copy_temp[1] = 0;
-                copy_temp[2] = 0;
-                copy_temp[3] = 0;
-                for(int i=0;i<(int)(grp.particles.size());i++){
-                    copy_temp[grp.particles[i].type]++;
-                }
-                printf("S_1:%d, S_11:%d, S_12:%d, S_2:%d\n",copy_temp[0],copy_temp[1],copy_temp[2],copy_temp[3]);
-                /* *********************************** */
-                /* Run microscale simulation.          */
-                /* *********************************** */
-                printf("Running microscale simulation...\n");
-                if((int)(grp.particles.size())>0){
-                    main_simulator(&grp,specs,assocs,dissocs,boundaries,mesh,dt,rng,l);
-                }
-                printf("Done.\n");
-                /* *********************************** */
-                
-                /* Put mesoscopic particles back. */
-                for(int i=0;i<(int)(meso_temp.particles.size());i++){
-                    grp.particles.push_back(meso_temp.particles[i]);
-                }
-                /* *********************************** */
-                
-                
-                /* Set particles to either mesoscopic or microscopic. */
-                for(int i=0;i<(int)(grp.particles.size());i++){
-                    if(specs[grp.particles[i].type].meso_micro==1){
-                        grp.particles[i].meso_micro = 1;
+    //                printf("Done.\n");
+                    /* *********************************** */
+                    
+                    /* Put mesoscopic particles back. */
+                    for(int i=0;i<(int)(meso_temp.particles.size());i++){
+                        grp.particles.push_back(meso_temp.particles[i]);
                     }
-                    else if(specs[grp.particles[i].type].meso_micro==0){// && grp.particles[i].clock>specs[grp.particles[i].type].min_micro){
-                        grp.particles[i].meso_micro = 0;
+                    /* *********************************** */
+                    
+                    
+                    /* Set particles to either mesoscopic or microscopic. */
+                    for(int i=0;i<(int)(grp.particles.size());i++){
+                        if(specs[grp.particles[i].type].meso_micro==1){
+                            grp.particles[i].meso_micro = 1;
+                        }
+                        else if(specs[grp.particles[i].type].meso_micro==0){// && grp.particles[i].clock>specs[grp.particles[i].type].min_micro){
+                            grp.particles[i].meso_micro = 0;
+                        }
                     }
+                    /* ************************************************** */
+                    
                 }
-                /* ************************************************** */
-
+                t_loc += dt_loc;
             }
 
             
             t += dt;
             time_index++;
-            cout << "Timestep complete, t=" << t << "\n";
+//            cout << "Timestep complete, t=" << t << "\n";
             // Write solution to file.
             add_time_point_to_file(file,grp,num_specs,l,time_index);
-
+            
+            
+            
+            
+            /* Count number of molecules on each scale. */
+            int NMESO=0,NMICRO=0;
+            for(int i=0;i<(int)(grp.particles.size());i++){
+                if(grp.particles[i].meso_micro==0){
+                    NMICRO++;
+                }
+                else{
+                    NMESO++;
+                }
+            }
+            printf("Number of micro: %d, number of meso: %d\n",NMICRO,NMESO);
+            /* Count copy numbers. */
+            int copy_temp[4];
+            copy_temp[0] = 0;
+            copy_temp[1] = 0;
+            copy_temp[2] = 0;
+            copy_temp[3] = 0;
+            for(int i=0;i<(int)(grp.particles.size());i++){
+                copy_temp[grp.particles[i].type]++;
+            }
+            printf("S_1:%d, S_11:%d, S_12:%d, S_2:%d\n",copy_temp[0],copy_temp[1],copy_temp[2],copy_temp[3]);
+            printf("Time: %g\n",t);
+            
+            
         }
 
         gsl_rng_free(rng);

@@ -66,6 +66,7 @@ typedef struct species{
     char name[MAX_CHARACTERS];
     int initial_value;
     int meso_micro;//0 - meso, 1 - micro
+    double min_micro;
 }species;
 
 typedef struct particle{

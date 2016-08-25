@@ -701,6 +701,9 @@ void main_simulator(group *grp,vector <species>& specs,vector <association>& ass
 //            printf("t= %g\n",t);
             
             simulate_group(&grps_final[i],specs,dt,assocs,dissocs,boundaries,mesh,rng,traj_num);
+            
+            
+            
             if(dimension==2){
                 for(int j=0;j<(int)(grps_final[i].particles.size());j++){
                     grps_final[i].particles[j].pos[2] = 0.0;
@@ -1036,7 +1039,10 @@ int main(int argc, char* argv[]) {
     specs[1].meso_micro = 1;
     specs[2].meso_micro = 1;
     specs[3].meso_micro = 1;
-    
+    specs[0].min_micro = 0.0;
+    specs[1].min_micro = 0.0;
+    specs[2].min_micro = 0.0;
+    specs[3].min_micro = 0.0;
     
     /* *********************************** */
     /* Check if simulation is either pure  */

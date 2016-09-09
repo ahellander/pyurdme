@@ -184,7 +184,7 @@ void doAssociation(vector <particle>& particles,vector <species>& specs,tent_eve
         
         particles[0].type = assocs[event->index].products[0];
         particles[0].active = true;
-        particles[0].meso_micro = 1;
+        particles[0].meso_micro = 0;
         
         particles[0].vec1[0] = vec1[0];
         particles[0].vec1[1] = vec1[1];
@@ -215,7 +215,7 @@ void doAssociation(vector <particle>& particles,vector <species>& specs,tent_eve
         particles[i].pos[2] = new_pos[2];
         particles[i].type = assocs[event->index].products[i];
         particles[i].active = true;
-        particles[i].meso_micro = 1;
+        particles[i].meso_micro = 0;
       
     }
     
@@ -609,6 +609,10 @@ void simulate_group(group *grp,vector <species>& specs,double T,vector <associat
 //        reflect_cuboid(grp,boundary,dimension);
 
         t_loc += dt;
+        
+        for(int i=0;i<M;i++){
+            grp->particles[i].clock += dt;
+        }
     }
     
     /* TODO: Should restart pair if distance is less than reaction radius at this point. */
@@ -1039,10 +1043,10 @@ int main(int argc, char* argv[]) {
     specs[1].meso_micro = 1;
     specs[2].meso_micro = 1;
     specs[3].meso_micro = 1;
-    specs[0].min_micro = 0.0;
-    specs[1].min_micro = 0.0;
-    specs[2].min_micro = 0.0;
-    specs[3].min_micro = 0.0;
+    specs[0].min_micro = 1e-4;
+    specs[1].min_micro = 1e-4;
+    specs[2].min_micro = 1e-4;
+    specs[3].min_micro = 1e-4;
     
     /* *********************************** */
     /* Check if simulation is either pure  */
@@ -1271,11 +1275,11 @@ int main(int argc, char* argv[]) {
                     
                     /* Set particles to either mesoscopic or microscopic. */
                     for(int i=0;i<(int)(grp.particles.size());i++){
-                        if(specs[grp.particles[i].type].meso_micro==1){
-                            grp.particles[i].meso_micro = 1;
-                        }
-                        else if(specs[grp.particles[i].type].meso_micro==0){// && grp.particles[i].clock>specs[grp.particles[i].type].min_micro){
+                        if(specs[grp.particles[i].type].meso_micro==0){
                             grp.particles[i].meso_micro = 0;
+                        }
+                        else if(specs[grp.particles[i].type].meso_micro==1 && grp.particles[i].clock>specs[grp.particles[i].type].min_micro){
+                            grp.particles[i].meso_micro = 1;
                         }
                     }
                     /* ************************************************** */

@@ -398,6 +398,8 @@ class URDMEModel(Model):
 
     def one_way_barrier(self, species, subdomain1, subdomain2):
         """ Make transition from subdomain1 to subdomain2 one way. """
+        if not isinstance(species, str):
+            species = str(species)
         barrier = (subdomain1, subdomain2)
         if not isinstance(species, str):
             species = species.name

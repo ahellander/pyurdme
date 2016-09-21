@@ -1156,12 +1156,12 @@ int main(int argc, char* argv[]) {
                 dt_loc = min(delta_t_split,dt-t_loc);
                 
                 if(PURE_MICRO){
-                    printf("Microscale simulation.\n");
+                    //printf("Microscale simulation.\n");
                     main_simulator(&grp,specs,assocs,dissocs,boundaries,mesh,dt_loc,rng,l);
                 
                 }
                 else if(PURE_MESO){
-                    printf("Mesoscale simulation.\n");
+                    //printf("Mesoscale simulation.\n");
                     meso_simulator(grp.particles,specs,assocs,dissocs,sim.voxels,dt_loc,rng,&UNIQUE_ID);
                 }
                 else{

@@ -80,12 +80,16 @@ if __name__ == '__main__':
 
     model = Example2(voxel_size=0.2e-6)
     solver = MMMSSolver(model, min_micro_timestep=1e-4)
-    # Set for hybrid solver 
-    solver.set_modeling_level({"S1":"meso", "S11":"meso", "S12":"micro", "S2":"micro"})
+
+    # To use the meso-micro hybrid solver, simply specify the species partitioning.   
+    solver.set_modeling_level({"S1":"meso", "S11":"meso", "S12":"meso", "S2":"meso"})
+
+    # TODO1: Automatically determine this partitioning based on a priori error estimate
+    # TODO2: Allow the partitioning to be based on subdomain, or based on a URDMEDataFunction
      
     #solver._write_mesh_file("test_mesh.h5")
     #solver.serialize("urdmeinput.mat")
-    solver.create_input_file("test.txt")
+    #solver.create_input_file("test.txt")
     microres = solver.run()
     print microres.get_particles(0,0)
 

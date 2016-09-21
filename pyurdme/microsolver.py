@@ -50,7 +50,7 @@ class MMMSSolver(pyurdme.URDMESolver):
     
     def set_modeling_level(self, model_level_mapping):
 
-        ml = {"meso":0,"micro":1}
+        ml = {"meso":1,"micro":0}
         species = self.model.listOfSpecies
         mlmap = {}
         for spec_name, model_level in model_level_mapping.iteritems():

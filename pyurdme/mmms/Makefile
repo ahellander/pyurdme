@@ -1,5 +1,6 @@
 #CC=hdf5-1.8.16/c++/src/h5c++
 CC=h5c++
+#CC=c++
 SRC=src/main.cpp mesh.o
 EXECUTABLE=bin/mmms
 FLAGS=-Wall -pedantic -I$(PWD)/include -g -c -O3 `gsl-config --cflags` --std=c++11 

@@ -936,11 +936,14 @@ void read_vertex_to_cell(fem_mesh *mesh, H5File *mesh_file,DataSet *dataset){
 
 int main(int argc, char* argv[]) {
 
-// argv[1]: model.txt file
-// argv[2]: model.mat file
-// argv[3]: mesh.h5 file
-// argv[4]: output.h5 file
-
+/*  Input: 
+        argv[1]: model.txt file
+        argv[2]: model.mat file
+        argv[3]: mesh.h5 file
+        argv[4]: output.h5 file
+    Output:
+        The result is witten to output.h5 (defined above)
+*/
     
 #ifdef __MACH__
     uint64_t seed;
@@ -991,15 +994,13 @@ int main(int argc, char* argv[]) {
     string mesh_file_name = argv[3];
     std::cout << "Mesh file: " << mesh_file_name << "\n";
     H5File mesh_file = H5File(mesh_file_name, H5F_ACC_RDONLY );
-    printf("Opened mesh file.\n");
     read_p(mesh, mesh_file);
     read_t(mesh, mesh_file);
     read_bnd(mesh, mesh_file);
     
-    printf("fhjsdfhkjs\n");
     DataSet dataset;
     read_vertex_to_cell(mesh, &mesh_file,&dataset);
-    printf("OK\n");
+    
     /* Initialize the primal/dual mesh format. Do we need this for pure micro?? */
     cout << "Initializing primal/dual mesh format.\n";
     mesh_primal2dual(mesh);
@@ -1007,23 +1008,9 @@ int main(int argc, char* argv[]) {
     mesh_file.close();
     
     /* Compute all the planes that approximates the boundaries */
-
-    /*for (int i=0;i<mesh->Ncells;i++){
-        print_vertex(mesh->vertices[i]);
-    } */  
-
     vector <plane> boundaries;
     boundaries = voxel_boundaries(model, mesh);
     
-    /*printf("pnts=[");
-    for(int i=0;i<(int)(boundaries.size());i++){
-        if(boundaries[i].isbnd)
-        printf("%g %g %g\n",boundaries[i].p[0],boundaries[i].p[1],boundaries[i].p[2]);
-    }
-    printf("];");*/
-    
-    
-
     /* *********************************** */
     /* Some stuff for the mesoscopic part. */
     /* *********************************** */
@@ -1033,12 +1020,13 @@ int main(int argc, char* argv[]) {
         specs[i].dim = 3;
     }
     
-    cout << "Setting mesh mesh.\n";
+//    cout << "Setting mesh mesh.\n";
     set_meso_mesh(model,mesh,sim.voxels,boundaries,&sim,specs);
-    
-    
-    
+      
     /* Hard coded for hybrid example. */
+
+    /* Read system partition settings */
+
     specs[0].meso_micro = 0;
     specs[1].meso_micro = 1;
     specs[2].meso_micro = 1;
@@ -1061,31 +1049,13 @@ int main(int argc, char* argv[]) {
             break;
         }
     }
+
     for(int i=0;i<(int)(specs.size());++i){
         if(specs[i].meso_micro==1){
             PURE_MICRO = false;
             break;
         }
     }
-    
-    
-    
-    
-    
-    
-//    FILE *fmesh;
-//    fmesh = fopen(sim.mesh,"r");
-//    if(fmesh==NULL){
-//        printf("Failed to open mesh file %s: %s\n",sim.mesh,strerror(errno));
-//        exit(0);
-//    }
-//    read_mesh(fmesh,sim.voxels,&sim);
-    
-//    for(int i=0;i<(int)(sim.voxels.size());i++){
-//        printf("vol_%d=%g, D_%d=%g\n",i,sim.voxels[i].vol,i,sim.voxels[i].totalD);
-//        
-//    }
-//    printf("specsD = %g\n",specs[0].D);
     
     
     for(int i=0;i<(int)(dissocs.size());++i){
@@ -1179,6 +1149,7 @@ int main(int argc, char* argv[]) {
         double t_loc = 0.0;
         double dt_loc = 0.0;
         while(t<T*0.999999){
+
             t_loc = 0.0;
             while(t_loc<dt*0.999999){
                 

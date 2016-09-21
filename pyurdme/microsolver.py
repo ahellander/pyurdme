@@ -17,16 +17,18 @@ except:
     pass
 
 class MMMSSolver(pyurdme.URDMESolver):
-    """ Micro solver class.TODO: Add short description. """
+    """ Micro/meso hybrid solver class.TODO: Add short description. """
     
     NAME = 'mmms'
     
-    def __init__(self, model, solver_path=None, report_level=0, model_file=None, sopts=None):
+    def __init__(self, model, solver_path=None, report_level=0, model_file=None, sopts=None,min_micro_timestep=1e-4):
         pyurdme.URDMESolver.__init__(self,model,solver_path,report_level,model_file,sopts)
 
         self.solver_name = 'hybrid'
         self.solver_path = ''
         self.urdme_infile_name = ''
+        self.set_minimial_micro_timestep(min_micro_timestep)
+        self.model_level_mapping = None
     
     def __getstate__(self):
         """ TODO: Implement"""
@@ -42,7 +44,23 @@ class MMMSSolver(pyurdme.URDMESolver):
             except OSError as e:
                 print "Could not delete '{0}'".format(self.infile_name)
     #shutil.rmtree(self.outfolder_name)
+
+    def set_minimial_micro_timestep(self, timestep):
+        self.min_micro_timestep = timestep
     
+    def set_modeling_level(self, model_level_mapping):
+
+        ml = {"meso":0,"micro":1}
+        species = self.model.listOfSpecies
+        mlmap = {}
+        for spec_name, model_level in model_level_mapping.iteritems():
+            if not spec_name in species:
+                raise Exception("Failed to set modeling level, no such species in model: {0}".format(spec_name)) 
+            try:
+                mlmap[spec_name] = ml[model_level]
+            except KeyError, e:
+                raise Exception("Not a valid modeling level."+e)
+        self.model_level_mapping = mlmap
 
     def _write_mesh_file(self, filename=None):
         """ Write the mesh data to a HDF5 file that the mmmms solver understands. """
@@ -138,8 +156,9 @@ class MMMSSolver(pyurdme.URDMESolver):
         
         for i, sname in enumerate(self.model.listOfSpecies):
             S = self.model.listOfSpecies[sname]
+            ml = self.model_level_mapping[sname]
             sum_mol = numpy.sum(self.model.u0[spec_map[sname],:])
-            speciesdef += "SPECIES {0} {1} {2} {3} {4}\n".format(sname, str(S.diffusion_constant), str(S.reaction_radius), sum_mol, "MICRO")
+            speciesdef += "SPECIES {0} {1} {2} {3} {4}\n".format(sname, str(S.diffusion_constant), str(S.reaction_radius), sum_mol, ml)
             
         input_file.write(speciesdef)
     

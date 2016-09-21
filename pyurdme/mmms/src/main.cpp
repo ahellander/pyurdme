@@ -1027,10 +1027,10 @@ int main(int argc, char* argv[]) {
 
     /* Read system partition settings */
 
-    specs[0].meso_micro = 0;
-    specs[1].meso_micro = 1;
-    specs[2].meso_micro = 1;
-    specs[3].meso_micro = 1;
+    //specs[0].meso_micro = 0;
+    //specs[1].meso_micro = 1;
+    //specs[2].meso_micro = 1;
+    //specs[3].meso_micro = 1;
     specs[0].min_micro = 1e-4;
     specs[1].min_micro = 1e-4;
     specs[2].min_micro = 1e-4;

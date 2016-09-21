@@ -303,7 +303,17 @@ void add_species(char *sp,vector <species>& specs,vector <parameter>& params){
         printf("Invalid initial value for species %s: %s\n",temp.name,str);
         exit(EXIT_FAILURE);
     }
-
+    str = strtok(NULL," ");
+    if(str==NULL){
+        printf("Error when reading data for species: %s (4)\n",sp);
+        exit(EXIT_FAILURE);
+    }
+    temp.meso_micro = strtol(str,&ptr,10);
+    if(temp.meso_micro!=0 && temp.meso_micro!=1){
+        printf("Invalid modeling level for species %s: %s\n",temp.name,str);
+        exit(EXIT_FAILURE);
+    }
+    
     specs.push_back(temp);
     printf("Added species: %s\n",temp.name);
 }
@@ -354,9 +364,6 @@ void parse_model(char *filename,simulation *sim,vector <species>& specs,vector <
 
     const int NUM_KEYWORDS = 11;
     const char *keywords[] = {"NAME","SPECIES","PARAMETER","REACTION","DIMENSION","BOUNDARY","OUTPUT","NTRAJ","NCORES","T","NINT"};
-
-
-
 
     FILE *model_in;
     model_in = fopen(filename,"r");

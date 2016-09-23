@@ -1072,7 +1072,7 @@ int main(int argc, char* argv[]) {
     }
     
     
-    print_model(specs,assocs,dissocs,births,&sim);
+    //print_model(specs,assocs,dissocs,births,&sim);
     
     /* *********************************** */
     /* *********************************** */
@@ -1081,7 +1081,7 @@ int main(int argc, char* argv[]) {
 
     // File where the output will be stored
     string output_filename = argv[4];
-    std::cout << "Output file: " << output_filename << std::endl;
+    //std::cout << "Output file: " << output_filename << std::endl;
     /* Create output directory. */
     int UNIQUE_ID = 0;
    
@@ -1132,6 +1132,7 @@ int main(int argc, char* argv[]) {
         
         H5File file = H5File(output_filename, H5F_ACC_TRUNC );
         printf("Opened output file.\n");
+
         /*
         * Create the base group in the file
         */
@@ -1169,10 +1170,7 @@ int main(int argc, char* argv[]) {
                     /* *********************************** */
                     /*     Simulation of hybrid system.    */
                     /* *********************************** */
-                    /* *********************************** */
-                    
-                    
-                    
+                    /* *********************************** */        
                     
                     /* *********************************** */
                     /* Run mesoscale simulation.           */

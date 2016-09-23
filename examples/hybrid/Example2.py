@@ -20,7 +20,6 @@ def mesoreac2D(rho,vol,gamma,kr):
     alpha = kr/(2*math.pi*gamma)
     return math.pi*R*R/kr*(1+alpha*F(lam))
 
-
 class Example2(pyurdme.URDMEModel):
     """ The reversible reaction A+B<->C in 2D.  """
     
@@ -73,6 +72,7 @@ class Example2(pyurdme.URDMEModel):
 
         # Time span of the simulation
         self.timespan(numpy.arange(0,2.0,0.05))
+ 
 
 if __name__ == '__main__':
 
@@ -82,8 +82,8 @@ if __name__ == '__main__':
     solver = MMMSSolver(model, min_micro_timestep=1e-4)
 
     # To use the meso-micro hybrid solver, simply specify the species partitioning.   
-    solver.set_modeling_level({"S1":"meso", "S11":"meso", "S12":"meso", "S2":"meso"})
-
+    solver.set_modeling_level({"S1":"micro", "S11":"micro", "S12":"meso", "S2":"meso"})
+    solver.create_input_file("test.txt")
     # TODO1: Automatically determine this partitioning based on a priori error estimate
     # TODO2: Allow the partitioning to be based on subdomain, or based on a URDMEDataFunction
      
@@ -92,22 +92,3 @@ if __name__ == '__main__':
     #solver.create_input_file("test.txt")
     microres = solver.run()
     print microres.get_particles(0,0)
-
-    #spec = microres.get_species("S1",1)
-    #print microres._export_to_particle_js(["S1"],0)
-    #model = Example2()
-    #res = model.run()
-
-    #import matplotlib.pyplot as plt   
-    #S2 = numpy.sum(res.get_species("S2"), axis=1)
-    #S1 = numpy.sum(res.get_species("S1"), axis=1)
-
-   # plt.plot(model.tspan, S2)
-   # plt.plot(model.tspan, S1)
-    
-   # from pyurdme.microsolver import MMMSSolver 
-   # solver = MMMSSolver(model)
-    #micro_res = solver.run()
-
-#    plt.legend(["S2","S1"])
-#    plt.show()

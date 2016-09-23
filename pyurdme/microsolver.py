@@ -21,14 +21,18 @@ class MMMSSolver(pyurdme.URDMESolver):
     
     NAME = 'mmms'
     
-    def __init__(self, model, solver_path=None, report_level=0, model_file=None, sopts=None,min_micro_timestep=1e-4):
+    def __init__(self, model, solver_path=None, report_level=0, model_file=None, sopts=None,min_micro_timestep=1e-4,hybrid_splitting_timestep=5e-6):
         pyurdme.URDMESolver.__init__(self,model,solver_path,report_level,model_file,sopts)
 
         self.solver_name = 'hybrid'
         self.solver_path = ''
         self.urdme_infile_name = ''
-        self.set_minimial_micro_timestep(min_micro_timestep)
+
+        # Default settings for hybrid simulations
         self.model_level_mapping = None
+        self.hybrid_splitting_timestep = hybrid_splitting_timestep
+        self.set_minimial_micro_timestep(min_micro_timestep)
+
     
     def __getstate__(self):
         """ TODO: Implement"""
@@ -62,8 +66,17 @@ class MMMSSolver(pyurdme.URDMESolver):
                 raise Exception("Not a valid modeling level."+e)
         self.model_level_mapping = mlmap
 
+    def propose_modeling_level(self):
+        """ Compute an a priori system partitioning. """
+
+        reactions = self.model.listOfReactions
+        for R in reactions: 
+            # Bimolecular reactions are affected
+            if len(R.reactants) == 2:
+                ka = R.
+
     def _write_mesh_file(self, filename=None):
-        """ Write the mesh data to a HDF5 file that the mmmms solver understands. """
+        """ Write the mesh data to a HDF5 file. """
         
         meshfile = h5py.File(filename,"w")
         meshfile.create_group("mesh")
@@ -132,6 +145,7 @@ class MMMSSolver(pyurdme.URDMESolver):
         
 
     def create_input_file(self, filename):
+        """  Write a model input file for the MMMS solver. """
     
         input_file = open(filename,'w')
         input_file.write("NAME "+self.model.name+"\n")
@@ -210,14 +224,14 @@ class MMMSSolver(pyurdme.URDMESolver):
         if not os.path.exists(self.urdme_infile_name):
             raise URDMEError("input file not found.")
         
-        # Generate the input file containing the microsolver specific 
+        # Generate the input file containing the microsolver specific information
         infile = tempfile.NamedTemporaryFile(delete=False, dir=os.environ.get('PYURDME_TMPDIR'))
         self.infile_name = infile.name
         self.create_input_file(infile.name)
 
         #  print infile.read()
-        with open('test.txt','w') as fh:
-            fh.write(infile.read())
+       # with open('test.txt','w') as fh:
+        #    fh.write(infile.read())
 
         infile.close()
 

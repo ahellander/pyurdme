@@ -16,6 +16,10 @@ try:
 except:
     pass
 
+class InvalidModelException(Exception):
+    """Base class for exceptions in this module."""
+    pass
+
 class MMMSSolver(pyurdme.URDMESolver):
     """ Micro/meso hybrid solver class.TODO: Add short description. """
     
@@ -196,8 +200,12 @@ class MMMSSolver(pyurdme.URDMESolver):
             
             for j, product in enumerate(R.products):
                 reacstr += str(product)+" "
-            reacstr += " {0}\n".format(str(R.marate.value))
-            
+
+            try: 
+                reacstr += " {0}\n".format(str(R.marate.value))
+            except AttributeError: 
+                raise InvalidModelException("Invalid model. The hybrid solver only supports mass action propensities (mass_action=True)")
+
         input_file.write(reacstr)
 
         input_file.write("T {0}\n".format(str(self.model.tspan[-1])))

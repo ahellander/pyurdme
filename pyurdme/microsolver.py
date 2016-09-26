@@ -21,7 +21,7 @@ class MMMSSolver(pyurdme.URDMESolver):
     
     NAME = 'mmms'
     
-    def __init__(self, model, solver_path=None, report_level=0, model_file=None, sopts=None,min_micro_timestep=1e-4,hybrid_splitting_timestep=5e-6):
+    def __init__(self, model, solver_path=None, report_level=0, model_file=None, sopts=None,model_level_mapping=None, min_micro_timestep=1e-4,hybrid_splitting_timestep=5e-6):
         pyurdme.URDMESolver.__init__(self,model,solver_path,report_level,model_file,sopts)
 
         self.solver_name = 'hybrid'
@@ -30,6 +30,8 @@ class MMMSSolver(pyurdme.URDMESolver):
 
         # Default settings for hybrid simulations
         self.model_level_mapping = None
+        self.set_modeling_level(model_level_mapping=model_level_mapping)
+
         self.hybrid_splitting_timestep = hybrid_splitting_timestep
         self.set_minimial_micro_timestep(min_micro_timestep)
 
@@ -52,18 +54,24 @@ class MMMSSolver(pyurdme.URDMESolver):
     def set_minimial_micro_timestep(self, timestep):
         self.min_micro_timestep = timestep
     
-    def set_modeling_level(self, model_level_mapping):
+    def set_modeling_level(self, model_level_mapping=None):
 
         ml = {"meso":1,"micro":0}
         species = self.model.listOfSpecies
         mlmap = {}
-        for spec_name, model_level in model_level_mapping.iteritems():
-            if not spec_name in species:
-                raise Exception("Failed to set modeling level, no such species in model: {0}".format(spec_name)) 
-            try:
-                mlmap[spec_name] = ml[model_level]
-            except KeyError, e:
-                raise Exception("Not a valid modeling level."+e)
+
+        # As deafult, set all species to "micro"
+        if self.model_level_mapping  == None and model_level_mapping == None:
+            for spec_name, x  in species.iteritems(): 
+                mlmap[spec_name] = ml["micro"]
+        else:
+            for spec_name, model_level in model_level_mapping.iteritems():
+                if not spec_name in species:
+                    raise Exception("Failed to set modeling level, no such species in model: {0}".format(spec_name)) 
+                try:
+                    mlmap[spec_name] = ml[model_level]
+                except KeyError, e:
+                    raise Exception("Not a valid modeling level."+e)
         self.model_level_mapping = mlmap
 
     def propose_modeling_level(self):
@@ -73,7 +81,7 @@ class MMMSSolver(pyurdme.URDMESolver):
         for R in reactions: 
             # Bimolecular reactions are affected
             if len(R.reactants) == 2:
-                ka = R.
+                ka = R
 
     def _write_mesh_file(self, filename=None):
         """ Write the mesh data to a HDF5 file. """

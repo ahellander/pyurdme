@@ -82,7 +82,7 @@ if __name__ == '__main__':
     solver = MMMSSolver(model, min_micro_timestep=1e-4)
 
     # To use the meso-micro hybrid solver, simply specify the species partitioning.   
-    solver.set_modeling_level({"S1":"micro", "S11":"micro", "S12":"meso", "S2":"meso"})
+    #solver.set_modeling_level({"S1":"micro", "S11":"micro", "S12":"meso", "S2":"meso"})
     solver.create_input_file("test.txt")
     # TODO1: Automatically determine this partitioning based on a priori error estimate
     # TODO2: Allow the partitioning to be based on subdomain, or based on a URDMEDataFunction

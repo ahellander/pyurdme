@@ -1,6 +1,6 @@
-var renderPyURDMEMesh= function(pyurdme_mesh_json, tmp, solution, alpha, iswireframe, width, camera_x, camera_y, camera_z)
+var renderPyURDMEMesh= function(pyurdme_mesh_json, div_id, solution, alpha, iswireframe, width, camera_x, camera_y, camera_z)
 {
-    var dom = document.getElementById(tmp);
+    var dom = document.getElementById(div_id);
     var scene = new THREE.Scene();
     var height = 0.75 * width;
     var camera = new THREE.PerspectiveCamera( 75, 4.0 / 3.0, 0.1, 1000 );

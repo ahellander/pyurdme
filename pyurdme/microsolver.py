@@ -9,6 +9,7 @@ from pyurdme import get_N_HexCol
 import json
 import uuid
 import h5py
+import math 
 
 try:
     # This is only needed if we are running in an Ipython Notebook
@@ -78,14 +79,41 @@ class MMMSSolver(pyurdme.URDMESolver):
                     raise Exception("Not a valid modeling level."+e)
         self.model_level_mapping = mlmap
 
+
+    def mesoreac2D(self, rho,vol,gamma,kr):
+        R = math.sqrt(vol/math.pi)
+        lam = rho/R
+        alpha = kr/(2*math.pi*gamma)
+        return math.pi*R*R/kr*(1+alpha*F(lam))
+
+    def ka_ck(self, rho, gamma, kr):
+        ka_ck = 4.0*math.pi*rho*gamma*gamma*kr/(4.0*math.pi*rho*gamma+kr)
+        return ka_ck
+
+    def check_reaction(self, reaction, voxel_volume):
+        ka =  reaction.marate.value
+        gamma = 0.0
+        rho   = 0.0
+        for Sname in reaction.reactants:
+            S = self.model.listOfSpecies[Sname]
+            rho += S.reaction_radius
+            gamma += S.diffusion_constant
+
+        ka_meso = self.ka_ck(rho, gamma, ka)/voxel_volume
+
+        W  = ka/(voxel_volume*ka_meso) - 1.0
+        return W 
+
     def propose_modeling_level(self):
         """ Compute an a priori system partitioning. """
 
         reactions = self.model.listOfReactions
-        for R in reactions: 
+        for Rname, R in reactions.iteritems(): 
             # Bimolecular reactions are affected
             if len(R.reactants) == 2:
-                ka = R
+                print self.check_reaction(R, self.model.voxel_size**3)
+            
+              #  ka = R
 
     def _write_mesh_file(self, filename=None):
         """ Write the mesh data to a HDF5 file. """
@@ -140,6 +168,7 @@ class MMMSSolver(pyurdme.URDMESolver):
 
         grp.create_dataset("vertex2cells",data=temp)       
         meshfile.close()
+
         #for cell in dolfin.cells(mesh):
         #    for face in dolfin.faces(cell):
         #        print [v for v in face.entities(0)] 
@@ -245,10 +274,7 @@ class MMMSSolver(pyurdme.URDMESolver):
         self.infile_name = infile.name
         self.create_input_file(infile.name)
 
-        #  print infile.read()
-       # with open('test.txt','w') as fh:
-        #    fh.write(infile.read())
-
+    
         infile.close()
 
         # Create the mesh input file
@@ -272,12 +298,9 @@ class MMMSSolver(pyurdme.URDMESolver):
         solver_str=os.path.dirname(__file__)+"/mmms/bin/mmms"
 
         solver_cmd = [solver_str,self.infile_name, self.urdme_infile_name,self.mesh_infile_name, outfile.name]
-
-
         
         handle = subprocess.Popen(solver_cmd)#, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         handle.wait()
-        
         
         try:
             result = MICROResult(self.model,outfile.name)

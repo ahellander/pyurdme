@@ -30,7 +30,7 @@ class Example2(pyurdme.URDMEModel):
         gamma = 1e-12
 
         # Substrate and enzymes
-        S1 = pyurdme.Species(name="S1",reaction_radius=sigma,diffusion_constant=gamma)
+        S1  = pyurdme.Species(name="S1",reaction_radius=sigma,diffusion_constant=gamma)
         S11 = pyurdme.Species(name="S11",reaction_radius=sigma,diffusion_constant=gamma)
         S12 = pyurdme.Species(name="S12",reaction_radius=sigma,diffusion_constant=gamma)
         S2  = pyurdme.Species(name="S2",reaction_radius=sigma,diffusion_constant=gamma)
@@ -43,11 +43,11 @@ class Example2(pyurdme.URDMEModel):
         beta = 1.5164
         
         # Microscopic association and disassociation rate
-        # val = 2*3.1416*A.diffusion_constant
+        #val = 2*3.1416*A.diffusion_constant
         kr_micro  = pyurdme.Parameter(name="krm",expression=val)
 
         pi = math.pi
-
+        self.voxel_size = voxel_size
         L = 1e-6
         h = voxel_size
         nx = int(L/h)
@@ -62,7 +62,7 @@ class Example2(pyurdme.URDMEModel):
             
         # Reactions
         R1 = pyurdme.Reaction(name="R1",reactants={S1:1},products={S11:1,S12:1},massaction=True, rate=kd)
-        R2 = pyurdme.Reaction(name="R2",reactants={S11:1,S12:1},products={S2:1},massaction=True, rate=ka_meso)
+        R2 = pyurdme.Reaction(name="R2",reactants={S11:1,S12:1},products={S2:1},massaction=True, rate=kr_micro)
     
         self.add_parameter([ka_meso_val,kr_micro,kd,ka_meso])
         self.add_reaction([R1,R2])
@@ -81,14 +81,15 @@ if __name__ == '__main__':
     model = Example2(voxel_size=0.2e-6)
     solver = MMMSSolver(model, min_micro_timestep=1e-4)
 
+    solver.propose_modeling_level()
+
     # To use the meso-micro hybrid solver, simply specify the species partitioning.   
     #solver.set_modeling_level({"S1":"micro", "S11":"micro", "S12":"meso", "S2":"meso"})
-    solver.create_input_file("test.txt")
     # TODO1: Automatically determine this partitioning based on a priori error estimate
     # TODO2: Allow the partitioning to be based on subdomain, or based on a URDMEDataFunction
      
     #solver._write_mesh_file("test_mesh.h5")
     #solver.serialize("urdmeinput.mat")
     #solver.create_input_file("test.txt")
-    microres = solver.run()
-    print microres.get_particles(0,0)
+    #microres = solver.run()
+    #print microres.get_particles(0,0)

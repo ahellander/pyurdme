@@ -84,23 +84,26 @@ class MMMSSolver(pyurdme.URDMESolver):
         return f
 
     def ka_hhp2D(self, rho,vol,gamma,kr):
+        """ Calculate the HHP reaction rate in 2D. """
         R = math.sqrt(vol/math.pi)
         lam = rho/R
         alpha = kr/(2*math.pi*gamma)
         return math.pi*R*R/kr*(1+alpha*F(lam))
 
     def ka_ck(self, rho, gamma, kr):
+        """ Calculate the Collins-Kimball reaction rate """
         ka_ck = 4.0*math.pi*rho*gamma*kr/(4.0*math.pi*rho*gamma+kr)
         return ka_ck
 
     def ka_hhp3D(self, rho, gamma, kr, vol):
-        """ """
+        """ Calulate the HHP mesoscopic reaction rate in 3D. """
         h = math.pow(vol,1.0/3.0)
         G = 1.0/(4*math.pi*rho)-1.5164/(6*h)
         ka = kr/(vol*(1.0+kr/gamma*G))
         return ka
 
     def check_reaction(self, reaction, vol):
+        """ Compute the relative error. """ 
         ka =  reaction.marate.value
         gamma = 0.0
         rho   = 0.0
@@ -109,14 +112,12 @@ class MMMSSolver(pyurdme.URDMESolver):
             rho += S.reaction_radius
             gamma += S.diffusion_constant
 
-
         ka_meso = self.ka_hhp3D(rho, gamma, ka,vol)
-        print ka_meso
         W  = ka/(vol*ka_meso) - 1.0
         return W 
 
     def partition_system(self, tol=0.025):
-        """ Compute an a priori system partitioning. """
+        """ Compute an a priori system partitioning based on the relative tolerance tol. """
 
         reactions = self.model.listOfReactions
         for Rname, R in reactions.iteritems(): 
@@ -124,7 +125,6 @@ class MMMSSolver(pyurdme.URDMESolver):
             if len(R.reactants) == 2:
                 W = self.check_reaction(R, math.pow(self.model.voxel_size,3))
                 print W
-              #  ka = R
 
     def _write_mesh_file(self, filename=None):
         """ Write the mesh data to a HDF5 file. """

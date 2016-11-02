@@ -78,7 +78,7 @@ if __name__ == '__main__':
 
     from pyurdme.microsolver import MMMSSolver 
 
-    model = Example2(voxel_size=0.05e-6)
+    model = Example2(voxel_size=0.1e-6)
     solver = MMMSSolver(model, min_micro_timestep=1e-4)
 
     solver.partition_system(tol=0.05)

@@ -21,9 +21,9 @@ def mesoreac2D(rho,vol,gamma,kr):
     return math.pi*R*R/kr*(1+alpha*F(lam))
 
 class Example2(pyurdme.URDMEModel):
-    """ The reversible reaction A+B<->C in 2D.  """
+    """ The reversible reaction A+B <->C in 3D.  """
     
-    def __init__(self,voxel_size=0.2e-6, val=1e-18, sigma=1e-9):
+    def __init__(self,voxel_size=0.1e-6, val=1e-20, sigma=1e-9):
         
         pyurdme.URDMEModel.__init__(self,name="Example2")
 
@@ -78,10 +78,10 @@ if __name__ == '__main__':
 
     from pyurdme.microsolver import MMMSSolver 
 
-    model = Example2(voxel_size=0.2e-6)
+    model = Example2(voxel_size=0.05e-6)
     solver = MMMSSolver(model, min_micro_timestep=1e-4)
 
-    solver.propose_modeling_level()
+    solver.partition_system(tol=0.05)
 
     # To use the meso-micro hybrid solver, simply specify the species partitioning.   
     #solver.set_modeling_level({"S1":"micro", "S11":"micro", "S12":"meso", "S2":"meso"})

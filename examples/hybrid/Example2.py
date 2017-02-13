@@ -34,17 +34,7 @@ class Example2(pyurdme.URDMEModel):
         S11 = pyurdme.Species(name="S11",reaction_radius=sigma,diffusion_constant=gamma)
         S12 = pyurdme.Species(name="S12",reaction_radius=sigma,diffusion_constant=gamma)
         S2  = pyurdme.Species(name="S2",reaction_radius=sigma,diffusion_constant=gamma)
-
         self.add_species([S1,S11,S12,S2])
-
-        # Mesoscopic association and dissacosiation rate according to Hellander et. al.
-        D = S11.diffusion_constant+S12.diffusion_constant
-        rho = S11.reaction_radius+S12.reaction_radius
-        beta = 1.5164
-        
-        # Microscopic association and disassociation rate
-        #val = 2*3.1416*A.diffusion_constant
-        kr_micro  = pyurdme.Parameter(name="krm",expression=val)
 
         pi = math.pi
         self.voxel_size = voxel_size
@@ -54,20 +44,20 @@ class Example2(pyurdme.URDMEModel):
 
         N = nx*nx*nx
         self.mesh = pyurdme.URDMEMesh.generate_cube_mesh(L,nx,nx,nx)
-        
-        ka_kc = 4.0*pi*rho*D*kr_micro.value/(4.0*pi*rho*D+kr_micro.value)
-        ka_meso_val = pyurdme.Parameter(name="ka_meso_val",expression=ka_kc/(1-beta*ka_kc/(6*D*h)))
-        ka_meso  = pyurdme.Parameter(name="ka_meso",expression="ka_meso_val")
+       
+        # Microscopic association and disassociation rate
+        kr  = pyurdme.Parameter(name="krm",expression=val)
         kd  = pyurdme.Parameter(name="kd",expression=10.0)
+
+        self.add_parameter([kr,kd])
+    
             
         # Reactions
         R1 = pyurdme.Reaction(name="R1",reactants={S1:1},products={S11:1,S12:1},massaction=True, rate=kd)
-        R2 = pyurdme.Reaction(name="R2",reactants={S11:1,S12:1},products={S2:1},massaction=True, rate=kr_micro)
-    
-        self.add_parameter([ka_meso_val,kr_micro,kd,ka_meso])
+        R2 = pyurdme.Reaction(name="R2",reactants={S11:1,S12:1},products={S2:1},massaction=True, rate=kr)
         self.add_reaction([R1,R2])
         
-        # Distribute the molecules over the mesh
+        # Scatter the molecules over the mesh
         self.set_initial_condition_scatter({S1:100})
 
         # Time span of the simulation
@@ -78,10 +68,15 @@ if __name__ == '__main__':
 
     from pyurdme.microsolver import MMMSSolver 
 
-    model = Example2(voxel_size=0.1e-6)
+    model = Example2(voxel_size=0.3e-6)
     solver = MMMSSolver(model, min_micro_timestep=1e-4)
 
-    solver.partition_system(tol=0.05)
+    res = solver.propose_mesh_resolution_per_reaction(rel_tol=0.05)
+    #print res
+
+
+   #print res
+    #solver.partition_system(rel_tol=0.05)
 
     # To use the meso-micro hybrid solver, simply specify the species partitioning.   
     #solver.set_modeling_level({"S1":"micro", "S11":"micro", "S12":"meso", "S2":"meso"})

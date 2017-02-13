@@ -22,7 +22,11 @@ class InvalidModelException(Exception):
     pass
 
 class MMMSSolver(pyurdme.URDMESolver):
-    """ Micro/meso hybrid solver class.TODO: Add short description. """
+    """ Mesoscopic-microscopic hybrid solver.
+
+        TODO: Description. 
+
+    """
     
     NAME = 'mmms'
     
@@ -102,7 +106,7 @@ class MMMSSolver(pyurdme.URDMESolver):
         ka = kr/(vol*(1.0+kr/gamma*G))
         return ka
 
-    def check_reaction(self, reaction, vol):
+    def estimate_relative_error_in_reaction(self, reaction, vol):
         """ Compute the relative error. """ 
         ka =  reaction.marate.value
         gamma = 0.0
@@ -116,14 +120,68 @@ class MMMSSolver(pyurdme.URDMESolver):
         W  = ka/(vol*ka_meso) - 1.0
         return W 
 
-    def partition_system(self, tol=0.025):
-        """ Compute an a priori system partitioning based on the relative tolerance tol. """
+
+    def propose_mesh_resolution_per_reaction(self, rel_tol=0.025):
+
+        reactions = self.model.listOfReactions
+        res = {}
+        for Rname, R in reactions.iteritems(): 
+            # Bimolecular reactions are affected
+            if len(R.reactants) == 2:
+                mz  = self.estimate_mesh_resolution(reaction=R, rel_tol=rel_tol)
+                res[Rname]=mz
+        return res
+
+    def estimate_mesh_resolution(self, reaction=None, rel_tol=None):
+        """ Compute a mesh resolution that satiesfies rel_tol relative tolerance
+            for all bimolecular reactions. """
+
+        # Initial guess
+        sigma_max = 0.0
+        for s_name, spec in self.model.listOfSpecies.iteritems():
+            if sigma_max < spec.reaction_radius:
+                sigma_max = spec.reaction_radius
+        h = 40*sigma_max     
+
+        W_max  = 100
+        while W_max > rel_tol:
+
+            if h < 3.2*sigma_max:
+                h = 3.2*sigma_max
+
+            W_max = 0.0
+
+            # Bimolecular reactions are affected
+            if len(reaction.reactants) == 2:
+                W = self.estimate_relative_error_in_reaction(reaction, math.pow(h,3))
+                if W > W_max:
+                    W_max = W
+
+            if h < 3.2*sigma_max:
+                break
+            else:
+                h = 0.9*h
+    
+        return (h, W_max)
+
+    def predict_mesoscale_simulation_time(self, mesh_size):
+        """  Predict the simulation time of the RDME solver for the current
+             model and solver setting. """
+
+        # Hmm, this is probably not going to work
+
+        # TODO: This parameter needs to be obtained from a (one-time per platform) profiling step 
+        diffusion_events_per_second = 10^6
+
+
+    def partition_system(self, rel_tol=0.025):
+        """ Compute an initial system partitioning given the relative tolerance rel_tol. """
 
         reactions = self.model.listOfReactions
         for Rname, R in reactions.iteritems(): 
             # Bimolecular reactions are affected
             if len(R.reactants) == 2:
-                W = self.check_reaction(R, math.pow(self.model.voxel_size,3))
+                W = self.estimate_relative_error_in_reaction(R, math.pow(self.model.voxel_size,3))
                 print W
 
     def _write_mesh_file(self, filename=None):

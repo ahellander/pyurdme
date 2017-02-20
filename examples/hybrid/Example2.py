@@ -57,8 +57,8 @@ if __name__ == '__main__':
     from pyurdme.microsolver import MMMSSolver 
 
     model = Example2(voxel_size=0.3e-6)
-    print model.to_json()
     solver = MMMSSolver(model, min_micro_timestep=1e-4)
+    solver.create_input_file("Example2.json")
 
     #res = solver.propose_mesh_resolution_per_reaction(rel_tol=0.05)
     #solver.partition_system(rel_tol=0.05)

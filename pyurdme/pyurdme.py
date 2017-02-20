@@ -910,13 +910,6 @@ class URDMEModel(Model):
 
         return {'K':stiffness_matrices, 'M':mass_matrices}
 
-    def to_json(self):
-        """ Serialize the model to JSON """
-        #self.listOfSpecies
-        return json.dumps(self, cls=ModelEncoder)
-        #for name, spec in self.listOfSpecies.iteritems():
-        #    print json.dumps(spec.__dict__)
-
 
     def run(self, number_of_trajectories=1, solver='nsm', seed=None, report_level=0):
         """ Simulate the model.
@@ -2557,40 +2550,6 @@ class CubeMeshPeriodicBoundary(dolfin.SubDomain):
             y[0] = x[0]
             y[1] = x[1]
             y[2] = x[2]
-
-
-class ModelEncoder(json.JSONEncoder):
-    def default(self, obj):
-
-        if isinstance(obj,URDMEModel):
-
-            model_doc = {}
-            spec_list = []
-            for name, species in obj.listOfSpecies.iteritems():
-                spec_list.append(species.__dict__)
-            model_doc["species_list"] = spec_list
-
-            parameter_list = []
-            for name, parameter in obj.listOfParameters.iteritems():
-                #print parameter.__dict__
-                parameter_list.append(parameter.__dict__)
-            model_doc["parameter_list"] = parameter_list
-
-            reaction_list = []
-            for name, reaction in obj.listOfReactions.iteritems():
-                reaction_doc  = reaction.__dict__
-                if "marate" in reaction_doc:
-                    param = reaction_doc.pop("marate")
-                    reaction_doc["marate"] = param.name
-                reaction_list.append(reaction_doc)
-
-            model_doc["reaction_list"] = reaction_list
-
-            return model_doc
-
-        return json.JSONEncoder.default(self, obj)
-
-
 
 
 if __name__ == '__main__':

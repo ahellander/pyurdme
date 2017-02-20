@@ -252,10 +252,14 @@ class MMMSSolver(pyurdme.URDMESolver):
         #print numpy.array(edges)
 
         #grp.create_dataset("edges",data=numpy.array(edges))
-        
-
+     
     def create_input_file(self, filename):
-        """  Write a model input file for the MMMS solver. """
+        """ Write a model input file for the MMMS solver, new format  """ 
+        with open(filename, "w") as fh:
+            fh.write(json.dumps(self.model, cls=ModelEncoder))
+
+    def create_input_file_old(self, filename):
+        """  Write a model input file for the MMMS solver, old format. """
     
         input_file = open(filename,'w')
         input_file.write("NAME "+self.model.name+"\n")
@@ -491,6 +495,38 @@ class MICROResult():
             #print "URDMEResult.__del__: Could not delete result file'{0}': {1}".format(self.filename, e)
             pass
 
+class ModelEncoder(json.JSONEncoder):
+    """ Encoder for an URDMEModel """ 
+
+    def default(self, obj):
+
+        if isinstance(obj,pyurdme.URDMEModel):
+
+            model_doc = {}
+            spec_list = []
+            for name, species in obj.listOfSpecies.iteritems():
+                spec_list.append(species.__dict__)
+            model_doc["species_list"] = spec_list
+
+            parameter_list = []
+            for name, parameter in obj.listOfParameters.iteritems():
+                #print parameter.__dict__
+                parameter_list.append(parameter.__dict__)
+            model_doc["parameter_list"] = parameter_list
+
+            reaction_list = []
+            for name, reaction in obj.listOfReactions.iteritems():
+                reaction_doc  = reaction.__dict__
+                if "marate" in reaction_doc:
+                    param = reaction_doc.pop("marate")
+                    reaction_doc["marate"] = param.name
+                reaction_list.append(reaction_doc)
+
+            model_doc["reaction_list"] = reaction_list
+
+            return model_doc
+
+        return json.JSONEncoder.default(self, obj)
 
 
 

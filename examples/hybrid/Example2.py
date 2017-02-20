@@ -9,17 +9,6 @@ import math
 from scipy import integrate
 import datetime as dt
 
-
-def F(x):
-    f = (4*math.log(1/x)-(1-x*x)*(3-x*x))/(4*(1-x*x)*(1-x*x))
-    return f
-
-def mesoreac2D(rho,vol,gamma,kr):
-    R = math.sqrt(vol/math.pi)
-    lam = rho/R
-    alpha = kr/(2*math.pi*gamma)
-    return math.pi*R*R/kr*(1+alpha*F(lam))
-
 class Example2(pyurdme.URDMEModel):
     """ The reversible reaction A+B <->C in 3D.  """
     
@@ -46,12 +35,11 @@ class Example2(pyurdme.URDMEModel):
         self.mesh = pyurdme.URDMEMesh.generate_cube_mesh(L,nx,nx,nx)
        
         # Microscopic association and disassociation rate
-        kr  = pyurdme.Parameter(name="krm",expression=val)
+        kr  = pyurdme.Parameter(name="kr",expression=val)
         kd  = pyurdme.Parameter(name="kd",expression=10.0)
 
         self.add_parameter([kr,kd])
     
-            
         # Reactions
         R1 = pyurdme.Reaction(name="R1",reactants={S1:1},products={S11:1,S12:1},massaction=True, rate=kd)
         R2 = pyurdme.Reaction(name="R2",reactants={S11:1,S12:1},products={S2:1},massaction=True, rate=kr)
@@ -69,22 +57,13 @@ if __name__ == '__main__':
     from pyurdme.microsolver import MMMSSolver 
 
     model = Example2(voxel_size=0.3e-6)
+    print model.to_json()
     solver = MMMSSolver(model, min_micro_timestep=1e-4)
 
-    res = solver.propose_mesh_resolution_per_reaction(rel_tol=0.05)
-    #print res
-
-
-   #print res
+    #res = solver.propose_mesh_resolution_per_reaction(rel_tol=0.05)
     #solver.partition_system(rel_tol=0.05)
 
-    # To use the meso-micro hybrid solver, simply specify the species partitioning.   
-    #solver.set_modeling_level({"S1":"micro", "S11":"micro", "S12":"meso", "S2":"meso"})
-    # TODO1: Automatically determine this partitioning based on a priori error estimate
-    # TODO2: Allow the partitioning to be based on subdomain, or based on a URDMEDataFunction
-     
-    #solver._write_mesh_file("test_mesh.h5")
-    #solver.serialize("urdmeinput.mat")
-    #solver.create_input_file("test.txt")
+    # To use the meso-micro hybrid solver, simply specify the initial species partitioning.   
+    solver.set_modeling_level({"S1":"micro", "S11":"micro", "S12":"meso", "S2":"meso"})
     #microres = solver.run()
     #print microres.get_particles(0,0)

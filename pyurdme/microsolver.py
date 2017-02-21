@@ -258,62 +258,6 @@ class MMMSSolver(pyurdme.URDMESolver):
         with open(filename, "w") as fh:
             fh.write(json.dumps(self.model, cls=ModelEncoder))
 
-    def create_input_file_old(self, filename):
-        """  Write a model input file for the MMMS solver, old format. """
-    
-        input_file = open(filename,'w')
-        input_file.write("NAME "+self.model.name+"\n")
-        
-        
-        # Write the model dimension
-        (np,dim) = numpy.shape(self.model.mesh.coordinates())
-        input_file.write("DIMENSION {0}\n".format(dim))
-        input_file.write("BOUNDARY 0 0.7 0 0.7 0 0.7\n")
-        
-        self.model.resolve_parameters()
-        params = ""
-        for i, pname in enumerate(self.model.listOfParameters):
-            P = self.model.listOfParameters[pname]
-            params += "PARAMETER {0} {1}\n".format(pname, str(P.value))
-        input_file.write(params)
-
-        speciesdef = ""
-        
-        initial_data = self.model.u0
-        spec_map = self.model.get_species_map()
-        
-        for i, sname in enumerate(self.model.listOfSpecies):
-            S = self.model.listOfSpecies[sname]
-            ml = self.model_level_mapping[sname]
-            sum_mol = numpy.sum(self.model.u0[spec_map[sname],:])
-            speciesdef += "SPECIES {0} {1} {2} {3} {4}\n".format(sname, str(S.diffusion_constant), str(S.reaction_radius), sum_mol, ml)
-            
-        input_file.write(speciesdef)
-    
-        reacstr = ""
-        for i, rname in enumerate(self.model.listOfReactions):
-            R = self.model.listOfReactions[rname]
-            reacstr += "REACTION "
-
-            for j, reactant in enumerate(R.reactants):
-                reacstr += str(reactant)+" "
-            
-            reacstr += "> "
-            
-            for j, product in enumerate(R.products):
-                reacstr += str(product)+" "
-
-            try: 
-                reacstr += " {0}\n".format(str(R.marate.value))
-            except AttributeError: 
-                raise InvalidModelException("Invalid model. The hybrid solver only supports mass action propensities (mass_action=True)")
-
-        input_file.write(reacstr)
-
-        input_file.write("T {0}\n".format(str(self.model.tspan[-1])))
-        nint = len(self.model.tspan)
-        input_file.write("NINT {0}\n".format(str(int(nint))))
-
     def run(self, number_of_trajectories=1, seed=None, input_file=None, loaddata=False):
         """ Run one simulation of the model.
             

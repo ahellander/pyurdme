@@ -907,7 +907,6 @@ class URDMEModel(Model):
             stiffness_matrices[spec_name] = species.diffusion_constant * stiffness_matrices[spec_name]
             mass_matrices[spec_name] = dolfin.assemble(weak_form_M[spec_name])
 
-
         return {'K':stiffness_matrices, 'M':mass_matrices}
 
 

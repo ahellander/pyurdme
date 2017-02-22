@@ -256,7 +256,7 @@ class MMMSSolver(pyurdme.URDMESolver):
     def create_input_file(self, filename):
         """ Write a model input file for the MMMS solver, new format  """ 
         with open(filename, "w") as fh:
-            fh.write(json.dumps(self.model, cls=ModelEncoder))
+            fh.write(json.dumps(self.model, cls=RDSIMModelEncoder))
 
     def run(self, number_of_trajectories=1, seed=None, input_file=None, loaddata=False):
         """ Run one simulation of the model.
@@ -439,8 +439,8 @@ class MICROResult():
             #print "URDMEResult.__del__: Could not delete result file'{0}': {1}".format(self.filename, e)
             pass
 
-class ModelEncoder(json.JSONEncoder):
-    """ Encoder for an URDMEModel """ 
+class RDSIMModelEncoder(json.JSONEncoder):
+    """ Encoder for an URDMEModel into a json reaction input file for the rdsim solver. """ 
 
     def default(self, obj):
 
@@ -463,7 +463,7 @@ class ModelEncoder(json.JSONEncoder):
                 reaction_doc  = reaction.__dict__
                 if "marate" in reaction_doc:
                     param = reaction_doc.pop("marate")
-                    reaction_doc["marate"] = param.name
+                    reaction_doc["marate"] = param.value
                 reaction_list.append(reaction_doc)
 
             model_doc["reaction_list"] = reaction_list

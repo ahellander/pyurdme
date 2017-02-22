@@ -449,7 +449,11 @@ class RDSIMModelEncoder(json.JSONEncoder):
             model_doc = {}
             spec_list = []
             for name, species in obj.listOfSpecies.iteritems():
-                spec_list.append(species.__dict__)
+                species_doc = species.__dict__
+                species_map = obj.get_species_map()
+                specindx = species_map[name]
+                species_doc["urdme_dof_nr"] = specindx
+                spec_list.append(species_doc)
             model_doc["species_list"] = spec_list
 
             parameter_list = []

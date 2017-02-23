@@ -59,11 +59,12 @@ if __name__ == '__main__':
     model = Example2(voxel_size=0.3e-6)
     solver = MMMSSolver(model, min_micro_timestep=1e-4)
     solver.create_input_file("Example2.json")
+    res = solver.run()
 
     #res = solver.propose_mesh_resolution_per_reaction(rel_tol=0.05)
     #solver.partition_system(rel_tol=0.05)
 
     # To use the meso-micro hybrid solver, simply specify the initial species partitioning.   
-    solver.set_modeling_level({"S1":"micro", "S11":"micro", "S12":"meso", "S2":"meso"})
+    #solver.set_modeling_level({"S1":"micro", "S11":"micro", "S12":"meso", "S2":"meso"})
     #microres = solver.run()
     #print microres.get_particles(0,0)

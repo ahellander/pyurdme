@@ -33,7 +33,7 @@ class MMMSSolver(pyurdme.URDMESolver):
     def __init__(self, model, solver_path=None, report_level=0, model_file=None, sopts=None,model_level_mapping=None, min_micro_timestep=1e-4,hybrid_splitting_timestep=5e-6):
         pyurdme.URDMESolver.__init__(self,model,solver_path,report_level,model_file,sopts)
 
-        self.solver_name = 'hybrid'
+        self.solver_name = 'rdsim'
         self.solver_path = ''
         self.urdme_infile_name = ''
 
@@ -267,9 +267,10 @@ class MMMSSolver(pyurdme.URDMESolver):
             loaddata: boolean, should the result object load the data into memory on creation.
             
             Returns:
-            URDMEResult object.
+            MICROResult object.
             or, if number_of_trajectories > 1
             a list of URDMEResult objects
+
         """
         
         # Create the urdme input file that contains connectivity matrices etc
@@ -290,8 +291,6 @@ class MMMSSolver(pyurdme.URDMESolver):
         infile = tempfile.NamedTemporaryFile(delete=False, dir=os.environ.get('PYURDME_TMPDIR'))
         self.infile_name = infile.name
         self.create_input_file(infile.name)
-
-    
         infile.close()
 
         # Create the mesh input file
@@ -312,7 +311,9 @@ class MMMSSolver(pyurdme.URDMESolver):
         if number_of_trajectories > 1:
             result_list = []
 
-        solver_str=os.path.dirname(__file__)+"/mmms/bin/mmms"
+        solver_str = solver_name
+
+        #solver_str=os.path.dirname(__file__)+"/mmms/bin/mmms"
 
         solver_cmd = [solver_str,self.infile_name, self.urdme_infile_name,self.mesh_infile_name, outfile.name]
         

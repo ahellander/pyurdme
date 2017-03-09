@@ -1,6 +1,0 @@
-#ifndef GLOBAL_PARAMTERS
-#define GLOBAL_PARAMTERS
-
-const int MAX_CHARACTERS = 301;
-
-#endif

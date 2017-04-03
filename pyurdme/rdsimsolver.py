@@ -9,7 +9,9 @@ from pyurdme import get_N_HexCol
 import json
 import uuid
 import h5py
-import math 
+import math
+import copy
+
 
 try:
     # This is only needed if we are running in an Ipython Notebook
@@ -445,7 +447,7 @@ class RDSIMResult(pyurdme.URDMEResult):
             pass
 
 class RDSIMModelEncoder(json.JSONEncoder):
-    """ Encoder for an URDMEModel into a json reaction input file for the rdsim solver. """ 
+    """ Encoder for an URDMEModel into a json reaction input file for the rdsim solver. """
 
     def default(self, obj):
 
@@ -469,9 +471,7 @@ class RDSIMModelEncoder(json.JSONEncoder):
 
             reaction_list = []
             for name, reaction in obj.listOfReactions.iteritems():
-                reaction_doc  = reaction.__dict__
-                
-                #print name,  reaction_doc
+                reaction_doc = (copy.deepcopy(reaction)).__dict__
                 if "marate" in reaction_doc:
                     param = reaction_doc.pop("marate")
                     #print param

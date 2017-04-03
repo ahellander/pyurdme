@@ -20,10 +20,17 @@ class Example2(pyurdme.URDMEModel):
 
         # Substrate and enzymes
         S1  = pyurdme.Species(name="S1",reaction_radius=sigma,diffusion_constant=gamma)
+        S2  = pyurdme.Species(name="S2",reaction_radius=sigma,diffusion_constant=gamma)
+        S3  = pyurdme.Species(name="S3",reaction_radius=sigma,diffusion_constant=gamma)
+        S4  = pyurdme.Species(name="S4",reaction_radius=sigma,diffusion_constant=gamma)
         S11 = pyurdme.Species(name="S11",reaction_radius=sigma,diffusion_constant=gamma)
         S12 = pyurdme.Species(name="S12",reaction_radius=sigma,diffusion_constant=gamma)
-        S2  = pyurdme.Species(name="S2",reaction_radius=sigma,diffusion_constant=gamma)
-        self.add_species([S1,S11,S12,S2])
+        S21  = pyurdme.Species(name="S21",reaction_radius=sigma,diffusion_constant=gamma)
+        S22  = pyurdme.Species(name="S22",reaction_radius=sigma,diffusion_constant=gamma)
+        S31  = pyurdme.Species(name="S31",reaction_radius=sigma,diffusion_constant=gamma)
+        S32  = pyurdme.Species(name="S32",reaction_radius=sigma,diffusion_constant=gamma)
+
+        self.add_species([S1,S2,S3,S4,S11,S12,S21,S22,S31,S32])
 
         pi = math.pi
         self.voxel_size = voxel_size
@@ -35,15 +42,26 @@ class Example2(pyurdme.URDMEModel):
         self.mesh = pyurdme.URDMEMesh.generate_cube_mesh(L,nx,nx,nx)
        
         # Microscopic association and disassociation rate
-        kr  = pyurdme.Parameter(name="kr",expression=val)
-        kd  = pyurdme.Parameter(name="kd",expression=10.0)
-
-        self.add_parameter([kr,kd])
+        k11  = pyurdme.Parameter(name="k11",expression=1.0)
+        k12  = pyurdme.Parameter(name="k12",expression=val)
+        k13  = pyurdme.Parameter(name="k13",expression=1.0)
+        k21  = pyurdme.Parameter(name="k21",expression=1.0)
+        k22  = pyurdme.Parameter(name="k22",expression=val)
+        k32  = pyurdme.Parameter(name="k32",expression=val)
+        
+        
+        self.add_parameter([k11,k12,k13,k21,k22,k32])
     
         # Reactions
-        R1 = pyurdme.Reaction(name="R1",reactants={S1:1},products={S11:1,S12:1},massaction=True, rate=kd)
-        R2 = pyurdme.Reaction(name="R2",reactants={S11:1,S12:1},products={S2:1},massaction=True, rate=kr)
-        self.add_reaction([R1,R2])
+        R1 = pyurdme.Reaction(name="R1",reactants={S1:1},products={S11:1,S12:1},massaction=True, rate=k11)
+        R2 = pyurdme.Reaction(name="R2",reactants={S11:1,S12:1},products={S2:1},massaction=True, rate=k12)
+        R3 = pyurdme.Reaction(name="R3",reactants={S2:1},products={S21:1,S22:1},massaction=True, rate=k21)
+        R4 = pyurdme.Reaction(name="R4",reactants={S21:1,S22:1},products={S3:1},massaction=True, rate=k22)
+        R5 = pyurdme.Reaction(name="R5",reactants={S3:1},products={S31:1,S32:1},massaction=True, rate=k13)
+        R6 = pyurdme.Reaction(name="R6",reactants={S31:1,S32:1},products={S4:1},massaction=True, rate=k32)
+
+
+        self.add_reaction([R1,R2,R3,R4,R5,R6])
         
         # Scatter the molecules over the mesh
         self.set_initial_condition_scatter({S1:100})
@@ -57,8 +75,11 @@ if __name__ == '__main__':
     from pyurdme.microsolver import MMMSSolver 
 
     model = Example2(voxel_size=0.3e-6)
+    # Run NSM Solver
+#res = model.run()
+    
     solver = MMMSSolver(model, min_micro_timestep=1e-4)
-    solver.create_input_file("Example2.json")
+    #solver.create_input_file("Example2.json")
     res = solver.run()
 
     #res = solver.propose_mesh_resolution_per_reaction(rel_tol=0.05)

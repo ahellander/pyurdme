@@ -81,6 +81,7 @@ if __name__ == '__main__':
     solver = MMMSSolver(model, min_micro_timestep=1e-4)
     #solver.create_input_file("Example2.json")
     res = solver.run()
+    print res.get_summary_statistic("S1")
 
     #res = solver.propose_mesh_resolution_per_reaction(rel_tol=0.05)
     #solver.partition_system(rel_tol=0.05)

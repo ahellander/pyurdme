@@ -72,17 +72,46 @@ class Example2(pyurdme.URDMEModel):
 
 if __name__ == '__main__':
 
-    from pyurdme.microsolver import MMMSSolver 
+    from pyurdme.rdsimsolver import RDSIMSolver
+    from pyurdme.nsmsolver import NSMSolver
+    import numpy
+    import time
 
-    model = Example2(voxel_size=0.3e-6)
-    # Run NSM Solver
-#res = model.run()
+    model = Example2(voxel_size=0.1e-6)
     
-    solver = MMMSSolver(model, min_micro_timestep=1e-4)
-    #solver.create_input_file("Example2.json")
-    res = solver.run()
-    print res.get_summary_statistic("S1")
+    solver = NSMSolver(model)
+    N = 100
+    time_pyurdme = []
+    for i in range(N):
+        tic = time.time()
+        res = solver.run()
+        time_pyurdme.append(time.time()-tic)
 
+        try:
+            meanS1 = meanS1 + numpy.sum(res.get_species("S1"),axis=1)
+        except:
+            meanS1 = numpy.sum(res.get_species("S1"),axis=1)
+    print meanS1/N
+    print "PyURDME: {0}".format(numpy.sum(time_pyurdme[1:-1]))
+
+    solver = RDSIMSolver(model)
+    time_rdsim = []
+    for i in range(N):
+        tic = time.time()
+        res = solver.run()
+        time_rdsim.append(time.time()-tic)
+        try:
+            meanS1_rdsim = meanS1_rdsim + res.get_summary_statistic("S1")
+        except:
+            meanS1_rdsim = res.get_summary_statistic("S1")
+    print meanS1_rdsim/float(N)
+    print "RDSIM: {0}".format(numpy.sum(time_rdsim[1:-1]))
+
+
+# import matplotlib.pyplot as plt
+#    plt.plot(model.tspan, meanS1,model.tspan,meanS1_rdsim)
+
+#plt.show()
     #res = solver.propose_mesh_resolution_per_reaction(rel_tol=0.05)
     #solver.partition_system(rel_tol=0.05)
 

@@ -8,7 +8,7 @@ URDME=$(URDME_ROOT)
 LIB = $(URDME)/lib
 BIN = $(URDME)/bin
 
-INCLUDE = -I$(URDME)/include 
+INCLUDE = -I$(URDME)/include -I/usr/include/hdf5/serial/
 SRC = $(URDME)/src
 
 ###########################################################################
@@ -30,7 +30,8 @@ else
 endif
 
 
-LFLAGS_BASE= -l hdf5 -l hdf5_hl 
+#LFLAGS_BASE= -l hdf5 -l hdf5_hl -l hdf5_serial_hl -l hdf5_serial
+LFLAGS_BASE = -l hdf5_serial_hl -l hdf5_serial
 LFLAGS = $(LFLAGS_BASE) -lm
 
 ###########################################################################

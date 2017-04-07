@@ -23,14 +23,14 @@ class InvalidModelException(Exception):
     """Base class for exceptions in this module."""
     pass
 
-class MMMSSolver(pyurdme.URDMESolver):
+class RDSIMSolver(pyurdme.URDMESolver):
     """ Mesoscopic-microscopic hybrid solver.
 
         TODO: Description. 
 
     """
     
-    NAME = 'mmms'
+    NAME = 'rdsim'
     
     def __init__(self, model, solver_path=None, report_level=0, model_file=None, sopts=None,model_level_mapping=None, min_micro_timestep=1e-4,hybrid_splitting_timestep=5e-6):
         pyurdme.URDMESolver.__init__(self,model,solver_path,report_level,model_file,sopts)
@@ -38,6 +38,8 @@ class MMMSSolver(pyurdme.URDMESolver):
         self.solver_name = 'rdsim'
         self.solver_path = ''
         self.urdme_infile_name = ''
+        self.mesh_infile_name = ''
+        self.infile_name = ''
 
         # Default settings for hybrid simulations
         self.model_level_mapping = None
@@ -274,7 +276,6 @@ class MMMSSolver(pyurdme.URDMESolver):
             a list of URDMEResult objects
 
         """
-        solver_name = "rdsim"
         
         # Create the urdme input file that contains connectivity matrices etc
         if self.urdme_infile_name is None or not os.path.exists(self.urdme_infile_name):
@@ -291,16 +292,22 @@ class MMMSSolver(pyurdme.URDMESolver):
             raise URDMEError("input file not found.")
         
         # Generate the input file containing the microsolver specific information
-        infile = tempfile.NamedTemporaryFile(delete=False, dir=os.environ.get('PYURDME_TMPDIR'))
-        self.infile_name = infile.name
-        self.create_input_file(infile.name)
-        infile.close()
+        if self.infile_name is None or not os.path.exists(self.infile_name):
+            infile = tempfile.NamedTemporaryFile(delete=False, dir=os.environ.get('PYURDME_TMPDIR'))
+            self.infile_name = infile.name
+            self.create_input_file(infile.name)
+            infile.close()
+        
+        if not os.path.exists(self.infile_name):
+            raise URDMEError("RDSIM JSON input file not found.")
+
 
         # Create the mesh input file
-        mesh_infile = tempfile.NamedTemporaryFile(delete=False, dir=os.environ.get('PYURDME_TMPDIR'))
-        self._write_mesh_file(mesh_infile.name)
-        self.mesh_infile_name=mesh_infile.name
-        mesh_infile.close()
+        if self.mesh_infile_name is None or not os.path.exists(self.mesh_infile_name):
+            mesh_infile = tempfile.NamedTemporaryFile(delete=False, dir=os.environ.get('PYURDME_TMPDIR'))
+            self._write_mesh_file(mesh_infile.name)
+            self.mesh_infile_name=mesh_infile.name
+            mesh_infile.close()
 
         if not os.path.exists(self.mesh_infile_name):
             raise URDMEError("Mesh input file not found.")
@@ -314,7 +321,7 @@ class MMMSSolver(pyurdme.URDMESolver):
         if number_of_trajectories > 1:
             result_list = []
 
-        solver_str = solver_name
+        solver_str = self.solver_name
         solver_cmd = [solver_str,self.infile_name, self.urdme_infile_name,self.mesh_infile_name, outfile.name]
         
         handle = subprocess.Popen(solver_cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -326,6 +333,28 @@ class MMMSSolver(pyurdme.URDMESolver):
         except:
             print handle.stderr.read()
             raise
+
+
+    def __del__(self):
+        """ Deconstructor.  Removes the solver input files."""
+        if self.delete_infile:
+            try:
+                os.remove(self.infile_name)
+                os.remove(self.urdme_infile_name)
+                os.remove(self.mesh_infile_name)
+            except OSError as e:
+                print "Could not delete '{0}'".format(self.infile_name)
+    
+        if self.solver_base_dir is not None:
+            try:
+                shutil.rmtree(self.solver_base_dir)
+            except OSError as e:
+                print "Could not delete '{0}'".format(self.solver_base_dir)
+        if self.temp_urdme_root is not None:
+            try:
+                shutil.rmtree(self.temp_urdme_root)
+            except OSError as e:
+                print "Could not delete '{0}'".format(self.temp_urdme_root)
 
 class RDSIMResult(pyurdme.URDMEResult):
 
@@ -339,9 +368,9 @@ class RDSIMResult(pyurdme.URDMEResult):
 
         file = h5py.File(self.filename,'r')
         return {
-                'unique_ids':numpy.array(file.get("Trajectories/0/Type_{0}/unique_ids_{1}".format(species, time_index))),
-                'positions':numpy.array(file.get("Trajectories/0/Type_{0}/positions_{1}".format(species,time_index)))
-                }
+            'unique_ids':numpy.array(file.get("Trajectories/0/Type_{0}/unique_ids_{1}".format(species, time_index))),
+            'positions':numpy.array(file.get("Trajectories/0/Type_{0}/positions_{1}".format(species,time_index)))
+        }
 
     def get_species(self,spec_name, time_index):
         """ Return copy number of spec_name in each voxel of the mesh. This function mimics the
@@ -368,8 +397,8 @@ class RDSIMResult(pyurdme.URDMEResult):
         """
         
         if time_indices == None:
-            tind = range(len(self.model.tspan))
-
+            tind = range(len(self.model.tspan)-1)
+                #print tind
         num_mol = []
         for ti in tind:
             r = self.get_particles(species, ti)
@@ -443,7 +472,7 @@ class RDSIMResult(pyurdme.URDMEResult):
             # Clean up data file
             os.remove(self.filename)
         except OSError as e:
-            #print "URDMEResult.__del__: Could not delete result file'{0}': {1}".format(self.filename, e)
+            print "URDMEResult.__del__: Could not delete result file'{0}': {1}".format(self.filename, e)
             pass
 
 class RDSIMModelEncoder(json.JSONEncoder):

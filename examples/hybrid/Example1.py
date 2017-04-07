@@ -9,7 +9,7 @@ import math
 from scipy import integrate
 import datetime as dt
 
-class Example2(pyurdme.URDMEModel):
+class Example1(pyurdme.URDMEModel):
     """ The reversible reaction A+B <->C in 3D.  """
     
     def __init__(self,voxel_size=0.1e-6, val=1e-20, sigma=1e-9):
@@ -54,12 +54,16 @@ class Example2(pyurdme.URDMEModel):
 
 if __name__ == '__main__':
 
-    from pyurdme.microsolver import MMMSSolver 
+    from pyurdme.rdsimsolver import RDSIMSolver
 
-    model = Example2(voxel_size=0.3e-6)
-    solver = MMMSSolver(model, min_micro_timestep=1e-4)
-    solver.create_input_file("Example2.json")
+    model = Example1(voxel_size=0.3e-6)
+    solver = RDSIMSolver(model, min_micro_timestep=1e-4)
+    solver.create_input_file("Example1.json")
     res = solver.run()
+    #tind = range(len(model.tspan))
+    # print tind
+    #print res.get_particles("S1",41)
+    print res.get_summary_statistic("S1")
 
     #res = solver.propose_mesh_resolution_per_reaction(rel_tol=0.05)
     #solver.partition_system(rel_tol=0.05)
@@ -67,4 +71,4 @@ if __name__ == '__main__':
     # To use the meso-micro hybrid solver, simply specify the initial species partitioning.   
     #solver.set_modeling_level({"S1":"micro", "S11":"micro", "S12":"meso", "S2":"meso"})
     #microres = solver.run()
-    #print microres.get_particles(0,0)
+#print res.get_particles(0,0)

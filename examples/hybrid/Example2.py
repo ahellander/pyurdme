@@ -12,7 +12,7 @@ import datetime as dt
 class Example2(pyurdme.URDMEModel):
     """ The reversible reaction A+B <->C in 3D.  """
     
-    def __init__(self,voxel_size=0.1e-6, val=1e-20, sigma=1e-9):
+    def __init__(self,voxel_size=0.1e-6, val=1e-21, sigma=1e-9):
         
         pyurdme.URDMEModel.__init__(self,name="Example2")
 
@@ -25,10 +25,10 @@ class Example2(pyurdme.URDMEModel):
         S4  = pyurdme.Species(name="S4",reaction_radius=sigma,diffusion_constant=gamma)
         S11 = pyurdme.Species(name="S11",reaction_radius=sigma,diffusion_constant=gamma)
         S12 = pyurdme.Species(name="S12",reaction_radius=sigma,diffusion_constant=gamma)
-        S21  = pyurdme.Species(name="S21",reaction_radius=sigma,diffusion_constant=gamma)
-        S22  = pyurdme.Species(name="S22",reaction_radius=sigma,diffusion_constant=gamma)
-        S31  = pyurdme.Species(name="S31",reaction_radius=sigma,diffusion_constant=gamma)
-        S32  = pyurdme.Species(name="S32",reaction_radius=sigma,diffusion_constant=gamma)
+        S21 = pyurdme.Species(name="S21",reaction_radius=sigma,diffusion_constant=gamma)
+        S22 = pyurdme.Species(name="S22",reaction_radius=sigma,diffusion_constant=gamma)
+        S31 = pyurdme.Species(name="S31",reaction_radius=sigma,diffusion_constant=gamma)
+        S32 = pyurdme.Species(name="S32",reaction_radius=sigma,diffusion_constant=gamma)
 
         self.add_species([S1,S2,S3,S4,S11,S12,S21,S22,S31,S32])
 
@@ -78,9 +78,15 @@ if __name__ == '__main__':
     import time
 
     model = Example2(voxel_size=0.1e-6)
+    solver = RDSIMSolver(model)
+    meso_rates = solver.meso_rates(0.1e-18)
+        
+
+    print meso_rates
+    model_nsm = Example2(voxel_size=0.1e-6,val=meso_rates["k12"])
     
-    solver = NSMSolver(model)
-    N = 100
+    solver = NSMSolver(model_nsm)
+    N = 10
     time_pyurdme = []
     for i in range(N):
         tic = time.time()

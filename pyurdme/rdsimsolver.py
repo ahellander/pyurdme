@@ -109,6 +109,23 @@ class RDSIMSolver(pyurdme.URDMESolver):
         G = 1.0/(4*math.pi*rho)-1.5164/(6*h)
         ka = kr/(vol*(1.0+kr/gamma*G))
         return ka
+    
+    def meso_rates(self,vol):
+        
+        meso_rates = {}
+        for rname, R in self.model.listOfReactions.iteritems():
+            if len(R.reactants) == 2:
+                rate = R.marate
+                ka =  R.marate.value
+                gamma = 0.0
+                rho   = 0.0
+                for Sname in R.reactants:
+                    S = self.model.listOfSpecies[Sname]
+                    rho += S.reaction_radius
+                    gamma += S.diffusion_constant
+                ka_meso = self.ka_hhp3D(rho, gamma, ka,vol)
+                meso_rates[rate.name] = ka_meso
+        return meso_rates
 
     def estimate_relative_error_in_reaction(self, reaction, vol):
         """ Compute the relative error. """ 
@@ -397,7 +414,7 @@ class RDSIMResult(pyurdme.URDMEResult):
         """
         
         if time_indices == None:
-            tind = range(len(self.model.tspan)-1)
+            tind = range(len(self.model.tspan))
                 #print tind
         num_mol = []
         for ti in tind:

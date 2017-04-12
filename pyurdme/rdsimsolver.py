@@ -23,6 +23,9 @@ class InvalidModelException(Exception):
     """Base class for exceptions in this module."""
     pass
 
+class RDMSIMSolverException(Exception):
+    pass
+
 class RDSIMSolver(pyurdme.URDMESolver):
     """ Mesoscopic-microscopic hybrid solver.
 
@@ -32,7 +35,8 @@ class RDSIMSolver(pyurdme.URDMESolver):
     
     NAME = 'rdsim'
     
-    def __init__(self, model, solver_path=None, report_level=0, model_file=None, sopts=None,model_level_mapping=None, min_micro_timestep=1e-4,hybrid_splitting_timestep=5e-6):
+    def __init__(self, model, solver_path=None, report_level=0, solver_type="RDME", model_file=None, sopts=None,model_level_mapping=None, min_micro_timestep=1e-4,hybrid_splitting_timestep=5e-6):
+        
         pyurdme.URDMESolver.__init__(self,model,solver_path,report_level,model_file,sopts)
 
         self.solver_name = 'rdsim'
@@ -40,6 +44,7 @@ class RDSIMSolver(pyurdme.URDMESolver):
         self.urdme_infile_name = ''
         self.mesh_infile_name = ''
         self.infile_name = ''
+        self.solver_type = solver_type
 
         # Default settings for hybrid simulations
         self.model_level_mapping = None
@@ -47,8 +52,13 @@ class RDSIMSolver(pyurdme.URDMESolver):
 
         self.hybrid_splitting_timestep = hybrid_splitting_timestep
         self.set_minimial_micro_timestep(min_micro_timestep)
-
     
+        # Solver type
+        valid_solver_types = ["RDME", "Smol", "SSA", "Hybrid"]
+        if self.solver_type not in valid_solver_types:
+            raise RDMSIMSolverException("{0} is not a valid solver type. Valid types are {1}".format(self.solver_type, valid_solver_types))
+
+
     def __getstate__(self):
         """ TODO: Implement"""
     
@@ -339,7 +349,7 @@ class RDSIMSolver(pyurdme.URDMESolver):
             result_list = []
 
         solver_str = self.solver_name
-        solver_cmd = [solver_str,self.infile_name, self.urdme_infile_name,self.mesh_infile_name, outfile.name]
+        solver_cmd = [solver_str,self.infile_name, self.urdme_infile_name,self.mesh_infile_name, outfile.name, self.solver_type]
         
         handle = subprocess.Popen(solver_cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         handle.wait()

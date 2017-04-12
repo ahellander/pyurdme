@@ -78,7 +78,7 @@ if __name__ == '__main__':
     import time
 
     model = Example2(voxel_size=0.1e-6)
-    solver = RDSIMSolver(model)
+    solver = RDSIMSolver(model, solver_type="RDME")
     meso_rates = solver.meso_rates(0.1e-18)
         
 

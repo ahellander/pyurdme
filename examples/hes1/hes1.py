@@ -33,6 +33,7 @@ class hes1(pyurdme.URDMEModel):
         cytoplasm = [1]
         promoter_site = [3]
         #Domains
+
         self.add_subdomain(Nucleus(), nucleus[0])
         self.get_subdomain_vector()
         self.sd[self.mesh.closest_vertex([0,0,0])] = promoter_site[0]

@@ -5,7 +5,7 @@ setup(name="pyurdme",
       packages=['pyurdme'],
       
       #include_package_data = True,
-      package_data={'pyurdme':['data/*.c','data/three.js_templates/js/*','data/three.js_templates/*.html','urdme/AUTHORS','urdme/LICENCE','urdme/bin/*','urdme/build/*','urdme/include/*','urdme/src/*.c','urdme/src/nsm/*']},
+      package_data={'pyurdme':['data/*.c','data/three.js_templates/js/*','data/three.js_templates/*.html','urdme/AUTHORS','urdme/LICENCE','urdme/bin/*','urdme/build/*','urdme/include/*','urdme/src/*.c','urdme/src/nsm/*', 'urdme/src/nsm2/*']},
       
       install_requires = ["numpy",
                           "scipy",

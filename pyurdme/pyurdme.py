@@ -49,8 +49,24 @@ except:
 
 import pickle
 import json
-
 import functools
+
+# module-level variable to for javascript export in IPython/Jupyter notebooks
+__pyurdme_javascript_libraries_loaded = False
+def load_pyurdme_javascript_libraries():
+    global __pyurdme_javascript_libraries_loaded
+    if not __pyurdme_javascript_libraries_loaded:
+        __pyurdme_javascript_libraries_loaded = True
+        import os.path
+        import IPython.display
+        with open(os.path.join(os.path.dirname(__file__),'data/three.js_templates/js/three.js')) as fd:
+            bufa = fd.read()
+        with open(os.path.join(os.path.dirname(__file__),'data/three.js_templates/js/render.js')) as fd:
+            bufb = fd.read()
+        with open(os.path.join(os.path.dirname(__file__),'data/three.js_templates/js/OrbitControls.js')) as fd:
+            bufc = fd.read()
+        IPython.display.display(IPython.display.HTML('<script>'+bufa+bufc+bufb+'</script>'))
+
 
 def deprecated(func):
     '''This is a decorator which can be used to mark functions
@@ -94,6 +110,7 @@ class URDMEModel(Model):
         self.xmesh = None
         self.stiffness_matrices = None
         self.mass_matrices = None
+        self.system_matrix = None
 
         # subdomains is a list of MeshFunctions with subdomain marker information
         self.subdomains = OrderedDict()
@@ -101,6 +118,10 @@ class URDMEModel(Model):
 
         # This dictionary hold information about the subdomains each species is active on
         self.species_to_subdomains = {}
+
+        # This dictionary defines how species jump between subdomains
+        self.barriers = {}
+
         self.tspan = None
 
         # URDMEDataFunction objects to construct the data vector.
@@ -237,8 +258,9 @@ class URDMEModel(Model):
             for ndx, val in enumerate(sd):
                 fd.write("{0},{1}\n".format(ndx, val))
 
-    def display_mesh(self, subdomains, width=500, height=375):
+    def display_mesh(self, subdomains, width=500, height=375, camera=[0,0,1]):
         ''' WebGL display of the wireframe mesh.'''
+        load_pyurdme_javascript_libraries()
         if isinstance(subdomains, int):
             jstr = self._subdomains_to_threejs(subdomains={1:'blue', subdomains:'red'})
         elif isinstance(subdomains, list):
@@ -258,6 +280,10 @@ class URDMEModel(Model):
         # div in Ipython notebook
         displayareaid = str(uuid.uuid4())
         hstr = hstr.replace('###DISPLAYAREAID###', displayareaid)
+        # ###CAMERA_X###, ###CAMERA_Y###, ###CAMERA_Z###
+        hstr = hstr.replace('###CAMERA_X###',str(camera[0]))
+        hstr = hstr.replace('###CAMERA_Y###',str(camera[1]))
+        hstr = hstr.replace('###CAMERA_Z###',str(camera[2]))
         html = '<div style="width: {0}px; height: {1}px;" id="{2}" ></div>'.format(width, height, displayareaid)
         IPython.display.display(IPython.display.HTML(html+hstr))
 
@@ -395,6 +421,18 @@ class URDMEModel(Model):
     def restrict(self, species, subdomains):
         """ Restrict the diffusion of a species to a subdomain. """
         self.species_to_subdomains[species] = subdomains
+
+    def one_way_barrier(self, species, subdomain1, subdomain2):
+        """ Make transition from subdomain1 to subdomain2 one way. """
+        if not isinstance(species, str):
+            species = str(species)
+        barrier = (subdomain1, subdomain2)
+        if not isinstance(species, str):
+            species = species.name
+        if species not in self.barriers:
+            self.barriers[species] = [barrier]
+        else:
+            self.barriers[species].append(barrier)
 
 
     def set_subdomain_vector(self, sd):
@@ -607,6 +645,9 @@ class URDMEModel(Model):
             stiffness_matrices = self.stiffness_matrices
             mass_matrices = self.mass_matrices
 
+        #if self.system_matrix :
+        #    return self.system_matrix
+
         # Make a dok matrix of dimension (Ndofs,Ndofs) for easier manipulation
         i = 1
         Mspecies = len(self.listOfSpecies)
@@ -686,6 +727,10 @@ class URDMEModel(Model):
                 # equivalent to how boundary species are handled in legacy URDME.
                 if sd[ir] not in sdmap:
                     val = 0.0
+                if species in self.barriers:
+                    for barrier in self.barriers[species]:
+                        if sd[ir] in barrier[0] and sd[ij] in barrier[1]:
+                            val = 0.0
 
                 S[Mspecies*ir+spec, Mspecies*ij+spec] = -val/vi[Mspecies*ij+spec]
 
@@ -749,6 +794,7 @@ class URDMEModel(Model):
            sd   - the subdomain vector
            data - the data vector
            u0   - the intial condition
+           R    - the list of the reactions
 
            The follwing data is also returned, unlike in the legacy URDME interface:
 
@@ -833,6 +879,49 @@ class URDMEModel(Model):
                 for cndx in range(num_species):
                     u0_dof[cndx, dof_ndx] = self.u0[cndx, vox_ndx]
         urdme_solver_data['u0'] = u0_dof
+
+
+        R, I = [], []
+        Ms = int(max(self.get_subdomain_vector()))
+        S = numpy.ones((Ms+1,len(self.listOfReactions)), dtype=numpy.int)
+
+        species_map = self.get_species_map()
+
+        for i, reaction in enumerate(self.listOfReactions.values()):
+            if not reaction.massaction:
+                #We need all the reactions to be mass action
+                break
+            if sum(reaction.reactants.values()) not in [0,1,2]:
+                #We need all the reactions to be elementary
+                break
+
+            if len(reaction.reactants) == 0:
+                R += [[0,0,reaction.marate.value]]
+                I += [[-1,-1,-1]]
+            elif len(reaction.reactants) == 1:
+                if reaction.reactants.values()[0] == 1:
+                    R += [[0,reaction.marate.value,0]]
+                    I += [[-1,-1,species_map[reaction.reactants.keys()[0]]]]
+                elif reaction.reactants.values()[0] == 2:
+                    R += [[reaction.marate.value, 0, 0]]
+                    I += [[species_map[reaction.reactants.keys()[0]], species_map[reaction.reactants.keys()[0]], -1]]
+            elif len(reaction.reactants) == 2:
+                R += [[reaction.marate.value,0,0]]
+                I += [[species_map[reaction.reactants.keys()[0]],species_map[reaction.reactants.keys()[1]],-1]]
+            else:
+                #We need all the reactions to be elementary
+                break
+
+            if reaction.restrict_to:
+                for sd in reaction.restrict_to:
+                    S[sd,i] = 0
+            else:
+                for sd in range(Ms+1):
+                    S[sd,i] = 0
+        else:
+            urdme_solver_data['R'] = R
+            urdme_solver_data['I'] = I
+            urdme_solver_data['S'] = S
 
         tspan = numpy.asarray(self.tspan, dtype=numpy.float)
         urdme_solver_data['tspan'] = tspan
@@ -929,6 +1018,9 @@ class URDMEModel(Model):
             if solver == 'nsm':
                 from nsmsolver import NSMSolver
                 sol = NSMSolver(self, report_level=report_level)
+            elif solver == 'nsm2':
+                from nsm2solver import NSM2Solver
+                sol = NSM2Solver(self, report_level=report_level)
             else:
                 raise URDMEError("Unknown solver: {0}".format(solver_name))
         else:
@@ -1344,7 +1436,8 @@ class URDMEMesh(dolfin.Mesh):
     def _ipython_display_(self, filename=None, colors=None, width=500):
         self.display(filename=filename, colors=colors, width=width)
 
-    def display(self, filename=None, colors=None, width=500):
+    def display(self, filename=None, colors=None, width=500, camera=[0,0,1]):
+        load_pyurdme_javascript_libraries()
         jstr = self.export_to_three_js(colors=colors)
         hstr = None
         with open(os.path.dirname(os.path.abspath(__file__))+"/data/three.js_templates/mesh.html",'r') as fd:
@@ -1358,6 +1451,10 @@ class URDMEMesh(dolfin.Mesh):
         # div in Ipython notebook
         displayareaid=str(uuid.uuid4())
         hstr = hstr.replace('###DISPLAYAREAID###',displayareaid)
+        # ###CAMERA_X###, ###CAMERA_Y###, ###CAMERA_Z###
+        hstr = hstr.replace('###CAMERA_X###',str(camera[0]))
+        hstr = hstr.replace('###CAMERA_Y###',str(camera[1]))
+        hstr = hstr.replace('###CAMERA_Z###',str(camera[2]))
         html = '<div style="width: {0}px; height: {1}px;" id="{2}" ></div>'.format(width, height, displayareaid)
 
         if filename is not None:
@@ -1895,6 +1992,7 @@ class URDMEResult(dict):
         return colors
 
     def display_particles(self,species, time_index, width=500):
+        load_pyurdme_javascript_libraries()
         hstr = self._export_to_particle_js(species, time_index)
         displayareaid=str(uuid.uuid4())
         hstr = hstr.replace('###DISPLAYAREAID###',displayareaid)
@@ -1907,6 +2005,7 @@ class URDMEResult(dict):
 
     def display(self, species, time_index, opacity=1.0, wireframe=True, width=500, camera=[0,0,1]):
         """ Plot the trajectory as a PDE style plot. """
+        load_pyurdme_javascript_libraries()
         data = self.get_species(species,time_index,concentration=True)
         fun = DolfinFunctionWrapper(self.model.mesh.get_function_space())
         vec = fun.vector()
@@ -2243,6 +2342,8 @@ class URDMESolver:
                 self.serialize(filename=infile, report_level=self.report_level)
                 infile.close()
                 self.infile_name = infile.name
+                #self.delete_infile = False
+                #print self.infile_name
                 self.delete_infile = True
         else:
             self.infile_name = input_file
@@ -2270,19 +2371,21 @@ class URDMESolver:
                     handle = subprocess.Popen(urdme_solver_cmd, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
                     stdout, stderr = handle.communicate()
                 return_code = handle.wait()
-            except OSError as e:
-                print "Error, execution of solver raised an exception: {0}".format(e)
-                print "urdme_solver_cmd = {0}".format(urdme_solver_cmd)
-
-            if return_code != 0:
-                if self.report_level >= 1:
-                    try:
+                if return_code != 0:
+                    if self.report_level >= 1:
                         print stderr, stdout
-                    except Exception as e:
-                        pass
-                print "urdme_solver_cmd = {0}".format(urdme_solver_cmd)
-                raise URDMEError("Solver execution failed, return code = {0}".format(return_code))
-
+                    raise URDMEError(
+                        "Solver execution failed, return code = {0}".format(return_code) +
+                        "\nurdme_solver_cmd = {0}".format(urdme_solver_cmd)
+                    )
+            except OSError as e:
+                # Add urdme command to exception message
+                raise URDMEError(
+                        str(e) +
+                        "\nurdme_solver_cmd = {0}".format(urdme_solver_cmd)
+                )
+                print e.args
+                raise e
 
             #Load the result from the hdf5 output file.
             try:

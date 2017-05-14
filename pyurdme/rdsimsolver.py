@@ -117,7 +117,8 @@ class RDSIMSolver(pyurdme.URDMESolver):
         """ Calulate the HHP mesoscopic reaction rate in 3D. """
         h = math.pow(vol,1.0/3.0)
         G = 1.0/(4*math.pi*rho)-1.5164/(6*h)
-        ka = kr/(vol*(1.0+kr/gamma*G))
+        #ka = kr/(vol*(1.0+kr/gamma*G))
+        ka = kr/((1.0+kr/gamma*G))
         return ka
     
     def meso_rates(self,vol):
@@ -229,6 +230,13 @@ class RDSIMSolver(pyurdme.URDMESolver):
         cells = mesh.cells()
         grp.create_dataset("t", data = cells)
         vertices = mesh.coordinates()
+        
+        # Convert to dof-order:
+        p_dof = numpy.zeros((num_dofvox, 3))
+        for vox_ndx, row in enumerate(self.mesh.get_voxels()):
+            p_dof[vertex_to_dof[vox_ndx], :len(row)] = row
+        
+        urdme_solver_data['p'] = p_dof
         grp.create_dataset("p",data=vertices)
 
         # Create the bounday mesh triangle entities 

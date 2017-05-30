@@ -49,8 +49,24 @@ except:
 
 import pickle
 import json
-
 import functools
+
+# module-level variable to for javascript export in IPython/Jupyter notebooks
+__pyurdme_javascript_libraries_loaded = False
+def load_pyurdme_javascript_libraries():
+    global __pyurdme_javascript_libraries_loaded
+    if not __pyurdme_javascript_libraries_loaded:
+        __pyurdme_javascript_libraries_loaded = True
+        import os.path
+        import IPython.display
+        with open(os.path.join(os.path.dirname(__file__),'data/three.js_templates/js/three.js')) as fd:
+            bufa = fd.read()
+        with open(os.path.join(os.path.dirname(__file__),'data/three.js_templates/js/render.js')) as fd:
+            bufb = fd.read()
+        with open(os.path.join(os.path.dirname(__file__),'data/three.js_templates/js/OrbitControls.js')) as fd:
+            bufc = fd.read()
+        IPython.display.display(IPython.display.HTML('<script>'+bufa+bufc+bufb+'</script>'))
+
 
 def deprecated(func):
     '''This is a decorator which can be used to mark functions
@@ -237,8 +253,9 @@ class URDMEModel(Model):
             for ndx, val in enumerate(sd):
                 fd.write("{0},{1}\n".format(ndx, val))
 
-    def display_mesh(self, subdomains, width=500, height=375):
+    def display_mesh(self, subdomains, width=500, height=375, camera=[0,0,1]):
         ''' WebGL display of the wireframe mesh.'''
+        load_pyurdme_javascript_libraries()
         if isinstance(subdomains, int):
             jstr = self._subdomains_to_threejs(subdomains={1:'blue', subdomains:'red'})
         elif isinstance(subdomains, list):
@@ -258,6 +275,10 @@ class URDMEModel(Model):
         # div in Ipython notebook
         displayareaid = str(uuid.uuid4())
         hstr = hstr.replace('###DISPLAYAREAID###', displayareaid)
+        # ###CAMERA_X###, ###CAMERA_Y###, ###CAMERA_Z###
+        hstr = hstr.replace('###CAMERA_X###',str(camera[0]))
+        hstr = hstr.replace('###CAMERA_Y###',str(camera[1]))
+        hstr = hstr.replace('###CAMERA_Z###',str(camera[2]))
         html = '<div style="width: {0}px; height: {1}px;" id="{2}" ></div>'.format(width, height, displayareaid)
         IPython.display.display(IPython.display.HTML(html+hstr))
 
@@ -1344,7 +1365,8 @@ class URDMEMesh(dolfin.Mesh):
     def _ipython_display_(self, filename=None, colors=None, width=500):
         self.display(filename=filename, colors=colors, width=width)
 
-    def display(self, filename=None, colors=None, width=500):
+    def display(self, filename=None, colors=None, width=500, camera=[0,0,1]):
+        load_pyurdme_javascript_libraries()
         jstr = self.export_to_three_js(colors=colors)
         hstr = None
         with open(os.path.dirname(os.path.abspath(__file__))+"/data/three.js_templates/mesh.html",'r') as fd:
@@ -1358,6 +1380,10 @@ class URDMEMesh(dolfin.Mesh):
         # div in Ipython notebook
         displayareaid=str(uuid.uuid4())
         hstr = hstr.replace('###DISPLAYAREAID###',displayareaid)
+        # ###CAMERA_X###, ###CAMERA_Y###, ###CAMERA_Z###
+        hstr = hstr.replace('###CAMERA_X###',str(camera[0]))
+        hstr = hstr.replace('###CAMERA_Y###',str(camera[1]))
+        hstr = hstr.replace('###CAMERA_Z###',str(camera[2]))
         html = '<div style="width: {0}px; height: {1}px;" id="{2}" ></div>'.format(width, height, displayareaid)
 
         if filename is not None:
@@ -1729,7 +1755,7 @@ class URDMEResult(dict):
 
         #self._initialize_sol()
         subprocess.call(["mkdir", "-p", folder_name])
-        fd = dolfin.File(os.path.join(folder_name, "trajectory.xdmf").encode('ascii', 'ignore'))
+        fd = dolfin.XDMFFile(os.path.join(folder_name, "trajectory.xdmf").encode('ascii', 'ignore'))
         func = dolfin.Function(self.model.mesh.get_function_space())
         func_vector = func.vector()
         vertex_to_dof_map = self.get_v2d()
@@ -1738,7 +1764,7 @@ class URDMEResult(dict):
             solvector = self.get_species(species,i,concentration=True)
             for j, val in enumerate(solvector):
                 func_vector[vertex_to_dof_map[j]] = val
-            fd << func
+            fd.write(func)
 
     def export_to_xyx(self, filename, species=None, file_format="VMD"):
         """ Dump the solution attached to a model as a xyz file. This format can be
@@ -1895,6 +1921,7 @@ class URDMEResult(dict):
         return colors
 
     def display_particles(self,species, time_index, width=500):
+        load_pyurdme_javascript_libraries()
         hstr = self._export_to_particle_js(species, time_index)
         displayareaid=str(uuid.uuid4())
         hstr = hstr.replace('###DISPLAYAREAID###',displayareaid)
@@ -1907,6 +1934,7 @@ class URDMEResult(dict):
 
     def display(self, species, time_index, opacity=1.0, wireframe=True, width=500, camera=[0,0,1]):
         """ Plot the trajectory as a PDE style plot. """
+        load_pyurdme_javascript_libraries()
         data = self.get_species(species,time_index,concentration=True)
         fun = DolfinFunctionWrapper(self.model.mesh.get_function_space())
         vec = fun.vector()
@@ -2270,19 +2298,21 @@ class URDMESolver:
                     handle = subprocess.Popen(urdme_solver_cmd, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
                     stdout, stderr = handle.communicate()
                 return_code = handle.wait()
-            except OSError as e:
-                print "Error, execution of solver raised an exception: {0}".format(e)
-                print "urdme_solver_cmd = {0}".format(urdme_solver_cmd)
-
-            if return_code != 0:
-                if self.report_level >= 1:
-                    try:
+                if return_code != 0:
+                    if self.report_level >= 1:
                         print stderr, stdout
-                    except Exception as e:
-                        pass
-                print "urdme_solver_cmd = {0}".format(urdme_solver_cmd)
-                raise URDMEError("Solver execution failed, return code = {0}".format(return_code))
-
+                    raise URDMEError(
+                        "Solver execution failed, return code = {0}".format(return_code) +
+                        "\nurdme_solver_cmd = {0}".format(urdme_solver_cmd)
+                    )
+            except OSError as e:
+                # Add urdme command to exception message
+                raise URDMEError(
+                        str(e) +
+                        "\nurdme_solver_cmd = {0}".format(urdme_solver_cmd)
+                )
+                print e.args
+                raise e
 
             #Load the result from the hdf5 output file.
             try:

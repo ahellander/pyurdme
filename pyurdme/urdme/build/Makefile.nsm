@@ -8,7 +8,8 @@ URDME=$(URDME_ROOT)
 LIB = $(URDME)/lib
 BIN = $(URDME)/bin
 
-INCLUDE = -I$(URDME)/include -I/usr/include/hdf5/serial/
+
+INCLUDE = -I$(URDME)/include -I /usr/include/hdf5/serial 
 SRC = $(URDME)/src
 
 ###########################################################################
@@ -17,7 +18,7 @@ SRC = $(URDME)/src
 URDME_LIBMAT=yes
 DMAT = -DURDME_LIBMAT
 
-CC	   = gcc
+CC     = gcc
 LINKER = gcc 
 
 LBITS := $(shell getconf LONG_BIT)
@@ -29,10 +30,8 @@ else
     CFLAGS = -gdwarf-2 -m32 -c  -O3 -std=gnu99 $(MEMOPTS) -Wall -Wlong-long -Wformat -Wpointer-arith  $(INCLUDE) $(DMAT)
 endif
 
-
-#LFLAGS_BASE= -l hdf5 -l hdf5_hl -l hdf5_serial_hl -l hdf5_serial
-LFLAGS_BASE = -l hdf5_serial_hl -l hdf5_serial
-LFLAGS = $(LFLAGS_BASE) -lm
+LFLAGS_BASE= -l hdf5 -l hdf5_hl -l hdf5_serial 
+LFLAGS = $(LFLAGS_BASE) -lm -L /usr/lib/x86_64-linux-gnu/hdf5/serial/
 
 ###########################################################################
 ifeq ($(URDME_MODEL),)

@@ -9,7 +9,7 @@ URDME=$(URDME_ROOT)
 LIB = $(URDME)/lib
 BIN = $(URDME)/bin
 
-INCLUDE = -I$(URDME)/include 
+INCLUDE = -I$(URDME)/include -I/usr/include/hdf5/serial 
 SRC = $(URDME)/src
 
 ###########################################################################
@@ -32,7 +32,7 @@ endif
 
 
 LFLAGS_BASE= -l hdf5 -l hdf5_hl 
-LFLAGS = $(LFLAGS_BASE) -lm
+LFLAGS = $(LFLAGS_BASE) -lm -L /usr/lib/x86_64-linux-gnu/hdf5/serial/
 
 # destination directory
 OUT=$(URDME)/build/nsm2/

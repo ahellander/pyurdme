@@ -1829,7 +1829,7 @@ class URDMEResult(dict):
 
         #self._initialize_sol()
         subprocess.call(["mkdir", "-p", folder_name])
-        fd = dolfin.File(os.path.join(folder_name, "trajectory.xdmf").encode('ascii', 'ignore'))
+        fd = dolfin.XDMFFile(os.path.join(folder_name, "trajectory.xdmf").encode('ascii', 'ignore'))
         func = dolfin.Function(self.model.mesh.get_function_space())
         func_vector = func.vector()
         vertex_to_dof_map = self.get_v2d()
@@ -1838,7 +1838,7 @@ class URDMEResult(dict):
             solvector = self.get_species(species,i,concentration=True)
             for j, val in enumerate(solvector):
                 func_vector[vertex_to_dof_map[j]] = val
-            fd << func
+            fd.write(func)
 
     def export_to_xyx(self, filename, species=None, file_format="VMD"):
         """ Dump the solution attached to a model as a xyz file. This format can be

@@ -232,11 +232,11 @@ class RDSIMSolver(pyurdme.URDMESolver):
         vertices = mesh.coordinates()
         
         # Convert to dof-order:
-        p_dof = numpy.zeros((num_dofvox, 3))
-        for vox_ndx, row in enumerate(self.mesh.get_voxels()):
-            p_dof[vertex_to_dof[vox_ndx], :len(row)] = row
+        #p_dof = numpy.zeros((num_dofvox, 3))
+        #for vox_ndx, row in enumerate(self.mesh.get_voxels()):
+        #    p_dof[vertex_to_dof[vox_ndx], :len(row)] = row
         
-        urdme_solver_data['p'] = p_dof
+        #urdme_solver_data['p'] = p_dof
         grp.create_dataset("p",data=vertices)
 
         # Create the bounday mesh triangle entities 

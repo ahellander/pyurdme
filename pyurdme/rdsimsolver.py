@@ -231,10 +231,8 @@ class RDSIMSolver(pyurdme.URDMESolver):
         grp.create_dataset("t", data = cells)
         vertices = mesh.coordinates()
         
-        # Convert to dof-order:
-        #p_dof = numpy.zeros((num_dofvox, 3))
-        #for vox_ndx, row in enumerate(self.mesh.get_voxels()):
-        #    p_dof[vertex_to_dof[vox_ndx], :len(row)] = row
+        vertex_to_dof = dolfin.vertex_to_dof_map(self.model.mesh.get_function_space())
+        grp.create_dataset("vertex2dof",data=vertex_to_dof)
         
         #urdme_solver_data['p'] = p_dof
         grp.create_dataset("p",data=vertices)
@@ -259,11 +257,11 @@ class RDSIMSolver(pyurdme.URDMESolver):
         mesh.init(0,0)
         f = dolfin.MeshEntity(mesh, 0,0)
         v2t = []
+        
         for v in dolfin.vertices(mesh):
-            #for c in dolfin.cells(v):
             v2t.append([ci.index() for ci in dolfin.cells(v)])
-                #print v.index(), c.index()
-        v2t = numpy.array(v2t)        
+
+        v2t = numpy.array(v2t)
         lmax = 0;
         for l in numpy.array(v2t):
             if len(l) > lmax:
@@ -277,21 +275,7 @@ class RDSIMSolver(pyurdme.URDMESolver):
         grp.create_dataset("vertex2cells",data=temp)       
         meshfile.close()
 
-        #for cell in dolfin.cells(mesh):
-        #    for face in dolfin.faces(cell):
-        #        print [v for v in face.entities(0)] 
-        
-        #print cells
-        #D = mesh.topology().dim()
-        #fct = dolfin.facets(mesh)
 
-        #edges = []
-        #for facet in fct:
-        #   edges.append([v for v in facet.entities(D)])
-        #print numpy.array(edges)
-
-        #grp.create_dataset("edges",data=numpy.array(edges))
-     
     def create_input_file(self, filename):
         """ Write a model input file for the MMMS solver, new format  """ 
         with open(filename, "w") as fh:

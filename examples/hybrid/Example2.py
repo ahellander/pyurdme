@@ -81,6 +81,13 @@ if __name__ == '__main__':
 
     model = Example2(voxel_size=0.1e-6)
     solver = RDSIMSolver(model, solver_type="RDME")
+    
+    # res = solver.run()
+    #res.get_summary_statistic(["S1"])
+    solver._write_mesh_file("Example2_mesh.h5")
+    solver.create_input_file("Example2.json")
+    solver.serialize("Example2_model.mat")
+    
     meso_rates = solver.meso_rates(0.1e-18)
     
     #print meso_rates
@@ -120,6 +127,7 @@ if __name__ == '__main__':
         for i in range(N):
             tic = time.time()
             res = solver.run()
+            res.get_summary_statistic(["S1"])
             mst += (time.time()-tic)
         time_rdsim.append(mst/N)
         print time_rdsim

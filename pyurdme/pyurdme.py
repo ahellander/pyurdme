@@ -33,7 +33,6 @@ except:
 
 try:
     import dolfin
-    import mshr
 except:
     raise Exception("PyURDME requires FeniCS/Dolfin.")
 
@@ -41,6 +40,12 @@ try:
     dolfin.parameters["linear_algebra_backend"] = "uBLAS"
 except:
     dolfin.parameters["linear_algebra_backend"] = "Eigen"
+
+try:
+    import mshr
+except:
+    pass
+
 
 import pickle
 import json
@@ -105,6 +110,7 @@ class URDMEModel(Model):
         self.xmesh = None
         self.stiffness_matrices = None
         self.mass_matrices = None
+        self.system_matrix = None
 
         # subdomains is a list of MeshFunctions with subdomain marker information
         self.subdomains = OrderedDict()
@@ -112,6 +118,10 @@ class URDMEModel(Model):
 
         # This dictionary hold information about the subdomains each species is active on
         self.species_to_subdomains = {}
+
+        # This dictionary defines how species jump between subdomains
+        self.barriers = {}
+
         self.tspan = None
 
         # URDMEDataFunction objects to construct the data vector.
@@ -264,7 +274,7 @@ class URDMEModel(Model):
         with open(os.path.dirname(os.path.abspath(__file__))+"/data/three.js_templates/mesh.html", 'r') as fd:
             hstr = fd.read()
         if hstr is None:
-            raise Exception("could note open template mesh.html")
+            raise Exception("could not open template mesh.html")
         hstr = hstr.replace('###PYURDME_MESH_JSON###', jstr)
         # Create a random id for the display div. This is to avioid multiple plots ending up in the same
         # div in Ipython notebook
@@ -411,6 +421,18 @@ class URDMEModel(Model):
     def restrict(self, species, subdomains):
         """ Restrict the diffusion of a species to a subdomain. """
         self.species_to_subdomains[species] = subdomains
+
+    def one_way_barrier(self, species, subdomain1, subdomain2):
+        """ Make transition from subdomain1 to subdomain2 one way. """
+        if not isinstance(species, str):
+            species = str(species)
+        barrier = (subdomain1, subdomain2)
+        if not isinstance(species, str):
+            species = species.name
+        if species not in self.barriers:
+            self.barriers[species] = [barrier]
+        else:
+            self.barriers[species].append(barrier)
 
 
     def set_subdomain_vector(self, sd):
@@ -623,6 +645,9 @@ class URDMEModel(Model):
             stiffness_matrices = self.stiffness_matrices
             mass_matrices = self.mass_matrices
 
+        #if self.system_matrix :
+        #    return self.system_matrix
+
         # Make a dok matrix of dimension (Ndofs,Ndofs) for easier manipulation
         i = 1
         Mspecies = len(self.listOfSpecies)
@@ -644,7 +669,7 @@ class URDMEModel(Model):
             rows, cols, vals = dolfin.as_backend_type(M).data()
             SM = scipy.sparse.csr_matrix((vals, cols, rows))
             vols = SM.sum(axis=1)
-
+            
             spec = self.species_map[species]
             for j in range(len(vols)):
                 vx = j
@@ -669,6 +694,7 @@ class URDMEModel(Model):
         sd = sd_vec_dof
 
         tic  = time.time()
+        
         # If a volume is zero, we need to set it to 1.
         vi = vol+(vol<=0.0)
 
@@ -682,15 +708,13 @@ class URDMEModel(Model):
 
             rows, cols, vals = dolfin.as_backend_type(K).data()
 
-            # Filter the matrix: get rid of all elements < 0 (inlcuding the diagonal)
-            vals *= vals < 0
+            # Filter the matrix: get rid of all elements < 0 (including the diagonal)
+            vals *= vals < 0.0
             Kcrs = scipy.sparse.csr_matrix((vals, cols, rows))
 
             sdmap  = self.species_to_subdomains[self.listOfSpecies[species]]
 
-            # Filter the matrix: get rid of all elements < 0 (inlcuding the diagonal)
             Kdok = Kcrs.todok()
-
 
             for ind, val in Kdok.iteritems():
 
@@ -702,6 +726,10 @@ class URDMEModel(Model):
                 # equivalent to how boundary species are handled in legacy URDME.
                 if sd[ir] not in sdmap:
                     val = 0.0
+                if species in self.barriers:
+                    for barrier in self.barriers[species]:
+                        if sd[ir] in barrier[0] and sd[ij] in barrier[1]:
+                            val = 0.0
 
                 S[Mspecies*ir+spec, Mspecies*ij+spec] = -val/vi[Mspecies*ij+spec]
 
@@ -735,7 +763,7 @@ class URDMEModel(Model):
         colsum = numpy.abs(urdme_solver_data['D'].sum(axis=0))
         colsum = colsum.flatten()
         maxcolsum = numpy.argmax(colsum)
-        if colsum[0, maxcolsum] > 1e-10:
+        if colsum[0, maxcolsum] > 1.0:
             D = urdme_solver_data["D"]
             raise InvalidSystemMatrixException("Invalid diffusion matrix. The sum of the columns does not sum to zero. " + str(maxcolsum) + ' ' + str(colsum[0,maxcolsum]) + "\nThis can be caused by a large difference between the largest and smallest diffusion coefficients.")
 
@@ -765,6 +793,7 @@ class URDMEModel(Model):
            sd   - the subdomain vector
            data - the data vector
            u0   - the intial condition
+           R    - the list of the reactions
 
            The follwing data is also returned, unlike in the legacy URDME interface:
 
@@ -850,6 +879,49 @@ class URDMEModel(Model):
                     u0_dof[cndx, dof_ndx] = self.u0[cndx, vox_ndx]
         urdme_solver_data['u0'] = u0_dof
 
+
+        R, I = [], []
+        Ms = int(max(self.get_subdomain_vector()))
+        S = numpy.ones((Ms+1,len(self.listOfReactions)), dtype=numpy.int)
+
+        species_map = self.get_species_map()
+
+        for i, reaction in enumerate(self.listOfReactions.values()):
+            if not reaction.massaction:
+                #We need all the reactions to be mass action
+                break
+            if sum(reaction.reactants.values()) not in [0,1,2]:
+                #We need all the reactions to be elementary
+                break
+
+            if len(reaction.reactants) == 0:
+                R += [[0,0,reaction.marate.value]]
+                I += [[-1,-1,-1]]
+            elif len(reaction.reactants) == 1:
+                if reaction.reactants.values()[0] == 1:
+                    R += [[0,reaction.marate.value,0]]
+                    I += [[-1,-1,species_map[reaction.reactants.keys()[0]]]]
+                elif reaction.reactants.values()[0] == 2:
+                    R += [[reaction.marate.value, 0, 0]]
+                    I += [[species_map[reaction.reactants.keys()[0]], species_map[reaction.reactants.keys()[0]], -1]]
+            elif len(reaction.reactants) == 2:
+                R += [[reaction.marate.value,0,0]]
+                I += [[species_map[reaction.reactants.keys()[0]],species_map[reaction.reactants.keys()[1]],-1]]
+            else:
+                #We need all the reactions to be elementary
+                break
+
+            if reaction.restrict_to:
+                for sd in reaction.restrict_to:
+                    S[sd,i] = 0
+            else:
+                for sd in range(Ms+1):
+                    S[sd,i] = 0
+        else:
+            urdme_solver_data['R'] = R
+            urdme_solver_data['I'] = I
+            urdme_solver_data['S'] = S
+
         tspan = numpy.asarray(self.tspan, dtype=numpy.float)
         urdme_solver_data['tspan'] = tspan
 
@@ -923,8 +995,8 @@ class URDMEModel(Model):
             stiffness_matrices[spec_name] = species.diffusion_constant * stiffness_matrices[spec_name]
             mass_matrices[spec_name] = dolfin.assemble(weak_form_M[spec_name])
 
-
         return {'K':stiffness_matrices, 'M':mass_matrices}
+
 
     def run(self, number_of_trajectories=1, solver='nsm', seed=None, report_level=0):
         """ Simulate the model.
@@ -945,6 +1017,9 @@ class URDMEModel(Model):
             if solver == 'nsm':
                 from nsmsolver import NSMSolver
                 sol = NSMSolver(self, report_level=report_level)
+            elif solver == 'nsm2':
+                from nsm2solver import NSM2Solver
+                sol = NSM2Solver(self, report_level=report_level)
             else:
                 raise URDMEError("Unknown solver: {0}".format(solver_name))
         else:
@@ -1753,7 +1828,7 @@ class URDMEResult(dict):
 
         #self._initialize_sol()
         subprocess.call(["mkdir", "-p", folder_name])
-        fd = dolfin.File(os.path.join(folder_name, "trajectory.xdmf").encode('ascii', 'ignore'))
+        fd = dolfin.XDMFFile(os.path.join(folder_name, "trajectory.xdmf").encode('ascii', 'ignore'))
         func = dolfin.Function(self.model.mesh.get_function_space())
         func_vector = func.vector()
         vertex_to_dof_map = self.get_v2d()
@@ -1762,7 +1837,7 @@ class URDMEResult(dict):
             solvector = self.get_species(species,i,concentration=True)
             for j, val in enumerate(solvector):
                 func_vector[vertex_to_dof_map[j]] = val
-            fd << func
+            fd.write(func)
 
     def export_to_xyx(self, filename, species=None, file_format="VMD"):
         """ Dump the solution attached to a model as a xyz file. This format can be
@@ -1865,11 +1940,11 @@ class URDMEResult(dict):
                     x.append((coordinates[i,0]+random.uniform(-1,1)*hix))
                     y.append((coordinates[i,1]+random.uniform(-1,1)*hiy))
                     z.append((coordinates[i,2]+random.uniform(-1,1)*hiz))
-                    if self.model.listOfSpecies[spec].reaction_radius:
-                        radius.append(factor*self.model.listOfSpecies[spec].reaction_radius)
-                    else:
-                        radius.append(0.01)
-
+#                    if self.model.listOfSpecies[spec].reaction_radius:
+#                        radius.append(factor*self.model.listOfSpecies[spec].reaction_radius)
+#                    else:
+#                        radius.append(0.01)
+		    radius.append(0.01)
                     c.append(colors[j])
 
         template = template.replace("__X__",str(x))
@@ -1902,6 +1977,7 @@ class URDMEResult(dict):
         scaled_sol = numpy.zeros(shape)
         scaled_sol[:,:] = copy_number_data
         dims = numpy.shape(scaled_sol)
+    
 
         for t in range(dims[0]):
             timeslice = scaled_sol[t,:]
@@ -1973,7 +2049,7 @@ class DolfinFunctionWrapper(dolfin.Function):
             raise Exception("could note open template solution.html")
         hstr = hstr.replace('###PYURDME_MESH_JSON###',jstr)
 
-        # Create a random id for the display div. This is to avioid multiple plots ending up in the same
+        # Create a random id for the display div. This is to avoid multiple plots ending up in the same
         # div in Ipython notebook
         displayareaid=str(uuid.uuid4())
         hstr = hstr.replace('###DISPLAYAREAID###',displayareaid)
@@ -2269,6 +2345,8 @@ class URDMESolver:
                 self.serialize(filename=infile, report_level=self.report_level)
                 infile.close()
                 self.infile_name = infile.name
+                #self.delete_infile = False
+                #print self.infile_name
                 self.delete_infile = True
         else:
             self.infile_name = input_file
@@ -2577,8 +2655,6 @@ class CubeMeshPeriodicBoundary(dolfin.SubDomain):
             y[0] = x[0]
             y[1] = x[1]
             y[2] = x[2]
-
-
 
 
 if __name__ == '__main__':

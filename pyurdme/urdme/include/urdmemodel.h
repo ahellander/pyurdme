@@ -49,6 +49,7 @@ typedef struct{
 	int Mspecies;
 	int Mreactions;
 	int Ncells;
+    int Msubdomains;
 
 	/* Diffusion matrix (sparse CCS) */
 	size_t * irD;
@@ -86,6 +87,10 @@ typedef struct{
 	int dsize;
 	double *data;
 	
+    /* Reaction Matrices */
+    double * R;
+    int * I;
+    int * S;
 	/* 
      
        Output. It is up to the solver to attach the results after

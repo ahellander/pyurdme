@@ -1,0 +1,1 @@
+docker run --rm -ti --env MAKEFLAGS=-j1 --env INSTANT_CACHE_DIR=/home/fenics/.instant --expose 8888 -p 8888:8888 -v '/Users/andreash/github/pyurdme':/home/fenics/shared -w /home/fenics/shared rdsim '/bin/bash -l -c "export TERM=xterm; bash -i"'

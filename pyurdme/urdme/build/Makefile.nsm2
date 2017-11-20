@@ -1,4 +1,5 @@
-###########################################################################
+##########################################################################
+# this file is normally executed by the MATLAB interface
 ###########################################################################
 
 ifeq ($(URDME_ROOT),)
@@ -8,8 +9,7 @@ URDME=$(URDME_ROOT)
 LIB = $(URDME)/lib
 BIN = $(URDME)/bin
 
-
-INCLUDE = -I$(URDME)/include -I /usr/include/hdf5/serial 
+INCLUDE = -I$(URDME)/include -I/usr/include/hdf5/serial 
 SRC = $(URDME)/src
 
 ###########################################################################
@@ -18,9 +18,8 @@ SRC = $(URDME)/src
 URDME_LIBMAT=yes
 DMAT = -DURDME_LIBMAT
 
-CC     = gcc
-LINKER = gcc 
-
+CC	   = mpicc
+LINKER = mpicc 
 
 LBITS := $(shell getconf LONG_BIT)
 ifeq ($(LBITS),64)
@@ -31,52 +30,45 @@ else
     CFLAGS = -gdwarf-2 -m32 -c  -O3 -std=gnu99 $(MEMOPTS) -Wall -Wlong-long -Wformat -Wpointer-arith  $(INCLUDE) $(DMAT)
 endif
 
-LFLAGS_BASE= -l hdf5 -l hdf5_hl -l hdf5_serial 
+
+LFLAGS_BASE= -l hdf5 -l hdf5_hl 
 LFLAGS = $(LFLAGS_BASE) -lm -L /usr/lib/x86_64-linux-gnu/hdf5/serial/
 
-###########################################################################
-ifeq ($(URDME_MODEL),)
-     $(error URDME_MODEL not set)
-endif
-###########################################################################
 # destination directory
-OUT=.urdme/
+OUT=$(URDME)/build/nsm2/
 ###########################################################################
 ###########################################################################
 ###########################################################################
 ###########################################################################
 
-all:  nsm
-nsm: $(OUT)$(URDME_MODEL).nsm
+all:  nsm2
+nsm2: $(OUT)solver.nsm2
 
 ###########################################################################
 
 ifeq ($(URDME_LIBMAT),)
-OBJS=nsm.o nsmcore.o report.o binheap.o urdmemodel.o outputwriter.o $(URDME_MODEL).o
+OBJS=nsm2.o nsm2core.o report.o binheap.o urdmemodel.o outputwriter.o
 else
-OBJS=nsm.o nsmcore.o report.o binheap.o urdmemodel.o read_matfile.o outputwriter.o $(URDME_MODEL).o
+OBJS=nsm2.o nsm2core.o report.o binheap.o urdmemodel.o read_matfile.o outputwriter.o
 endif
 
 DEPS= $(addprefix $(OUT),$(OBJS))
 
 testmakefile: 
-	-echo $(URDME_MODEL).nsm
+	-echo solver.nsm2
 	-echo $(URDME)
 
-$(OUT)$(URDME_MODEL).nsm: $(OUT) $(DEPS)
-	$(LINKER) -o $(OUT)$(URDME_MODEL).nsm $(DEPS) $(LFLAGS)
+$(OUT)solver.nsm2: $(OUT) $(DEPS)
+	$(LINKER) -o $(OUT)solver.nsm2 $(DEPS) $(LFLAGS)
 
 $(OUT):
 	-mkdir -p $(OUT)
 
-$(OUT)$(URDME_MODEL).o: $(OUT)$(URDME_MODEL).c
-	$(CC) $(CFLAGS) $(OUT)$(URDME_MODEL).c -o $(OUT)$(URDME_MODEL).o 
+$(OUT)nsm2.o: $(SRC)/nsm2/nsm2.c 
+	$(CC) $(CFLAGS) $(SRC)/nsm2/nsm2.c -o $(OUT)nsm2.o
 
-$(OUT)nsm.o: $(SRC)/nsm/nsm.c 
-	$(CC) $(CFLAGS) $(SRC)/nsm/nsm.c -o $(OUT)nsm.o
-
-$(OUT)nsmcore.o: $(SRC)/nsm/nsmcore.c 
-	$(CC) $(CFLAGS) $(SRC)/nsm/nsmcore.c -o $(OUT)nsmcore.o
+$(OUT)nsm2core.o: $(SRC)/nsm2/nsm2core.c 
+	$(CC) $(CFLAGS) $(SRC)/nsm2/nsm2core.c -o $(OUT)nsm2core.o
 
 $(OUT)report.o: $(SRC)/report.c
 	$(CC) $(CFLAGS) $(SRC)/report.c -o $(OUT)report.o
@@ -91,10 +83,10 @@ $(OUT)outputwriter.o: $(SRC)/outputwriter.c
 $(OUT)read_matfile.o: $(SRC)/read_matfile.c 
 	$(CC) $(CFLAGS) $(SRC)/read_matfile.c -o $(OUT)read_matfile.o
 
-$(OUT)binheap.o: $(SRC)/nsm/binheap.c
-	$(CC) $(CFLAGS) $(SRC)/nsm/binheap.c -o $(OUT)binheap.o
+$(OUT)binheap.o: $(SRC)/nsm2/binheap.c
+	$(CC) $(CFLAGS) $(SRC)/nsm2/binheap.c -o $(OUT)binheap.o
 
 clean:
 	rm -f $(DEPS)
-	rm -f $(OUT)$(URDME_MODEL).nsm 
+	rm -f $(OUT)solver.nsm2 
 

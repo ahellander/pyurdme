@@ -669,7 +669,7 @@ class URDMEModel(Model):
             rows, cols, vals = dolfin.as_backend_type(M).data()
             SM = scipy.sparse.csr_matrix((vals, cols, rows))
             vols = SM.sum(axis=1)
-
+            
             spec = self.species_map[species]
             for j in range(len(vols)):
                 vx = j
@@ -694,6 +694,7 @@ class URDMEModel(Model):
         sd = sd_vec_dof
 
         tic  = time.time()
+        
         # If a volume is zero, we need to set it to 1.
         vi = vol+(vol<=0.0)
 
@@ -707,15 +708,13 @@ class URDMEModel(Model):
 
             rows, cols, vals = dolfin.as_backend_type(K).data()
 
-            # Filter the matrix: get rid of all elements < 0 (inlcuding the diagonal)
-            vals *= vals < 0
+            # Filter the matrix: get rid of all elements < 0 (including the diagonal)
+            vals *= vals < 0.0
             Kcrs = scipy.sparse.csr_matrix((vals, cols, rows))
 
             sdmap  = self.species_to_subdomains[self.listOfSpecies[species]]
 
-            # Filter the matrix: get rid of all elements < 0 (inlcuding the diagonal)
             Kdok = Kcrs.todok()
-
 
             for ind, val in Kdok.iteritems():
 
@@ -1978,6 +1977,7 @@ class URDMEResult(dict):
         scaled_sol = numpy.zeros(shape)
         scaled_sol[:,:] = copy_number_data
         dims = numpy.shape(scaled_sol)
+    
 
         for t in range(dims[0]):
             timeslice = scaled_sol[t,:]
@@ -2049,7 +2049,7 @@ class DolfinFunctionWrapper(dolfin.Function):
             raise Exception("could note open template solution.html")
         hstr = hstr.replace('###PYURDME_MESH_JSON###',jstr)
 
-        # Create a random id for the display div. This is to avioid multiple plots ending up in the same
+        # Create a random id for the display div. This is to avoid multiple plots ending up in the same
         # div in Ipython notebook
         displayareaid=str(uuid.uuid4())
         hstr = hstr.replace('###DISPLAYAREAID###',displayareaid)

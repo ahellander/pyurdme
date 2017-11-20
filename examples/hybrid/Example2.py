@@ -84,9 +84,9 @@ if __name__ == '__main__':
     
     # res = solver.run()
     #res.get_summary_statistic(["S1"])
-    solver._write_mesh_file("Example2_mesh.h5")
-    solver.create_input_file("Example2.json")
-    solver.serialize("Example2_model.mat")
+    #solver._write_mesh_file("Example2_mesh.h5")
+    #solver.create_input_file("Example2.json")
+    #solver.serialize("Example2_model.mat")
     
     meso_rates = solver.meso_rates(0.1e-18)
     

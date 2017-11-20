@@ -234,18 +234,13 @@ class RDSIMSolver(pyurdme.URDMESolver):
         vertex_to_dof = dolfin.vertex_to_dof_map(self.model.mesh.get_function_space())
         grp.create_dataset("vertex2dof",data=vertex_to_dof)
         
-        #urdme_solver_data['p'] = p_dof
         grp.create_dataset("p",data=vertices)
 
         # Create the bounday mesh triangle entities 
         boundary_mesh = dolfin.BoundaryMesh(mesh, "exterior")
-
-        #print numpy.shape(boundary_mesh.coordinates())
-       # print numpy.shape(boundary_mesh.cells())
     
         # Vertex map
         vm = boundary_mesh.entity_map(0).array()
-        #print vm
         
         bndtri= []
         for tri in boundary_mesh.cells():
